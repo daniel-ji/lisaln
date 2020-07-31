@@ -1,0 +1,94 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+
+thisfile=$0
+doout=0 #=1: user define output
+chain='' ;dochain=0
+dostart=0;sstart=0
+
+oldline=$*   #all argvs
+echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -chain) chain=$2;dochain=1;shift 2;;
+   -out) output=$2; doout=1;shift 2;;
+   -start)sstart=$2; dostart=1;shift 2;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!"; exit;;
+  esac
+  aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+ done
+fi
+
+if [ -n "$1" ] ; then
+ input=$1
+ num=$2
+ if [ -n "$3" ] ; then
+   output=$3
+   doout=1
+ fi
+else
+cat << ttt
+ Renumber PDB's residue number : All original residue number will be shifted according to FirstResidueNumber 
+ Usage: [Options] $0 Infile FirstResidueNumber [OutputPDB]
+ Options:
+  -chain CHAIN : Chain Number to re-number residue
+  -start StartResid : Start Residue Number to start renumbering [default: from the first residue]
+  -out OutputPDB
+ Example: $0 rlip76.pdb 177   #Renumbering residues as the first residue will be 177
+          $0 -start 598 -out flt3ITD1.pdb flt3.pdb 600   #Renumbering residues started from 598 to renumber as 600. Before 598 will keep old number
+
+ NOTE: This is differnt to ./pdb_renumber which re-number of all residues as continue numbers
+
+ttt
+  exit
+fi
+
+input=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+input=$input'.pdb'
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'
+[ $doout -ne 1 ] && output=$temp
+
+cat $input | awk 'BEGIN{num='$num';dochain='$dochain';chain="'$chain'";first=-9999;dostart='$dostart';start='$sstart'}
+{
+ did=0
+ if($1=="ATOM"){
+  ch=substr($_,22,1)
+  res=strtonum(substr($_,23,4))
+  l=length($_)
+  if(dochain==0||(dochain==1&&ch==chain)){
+   if(first==-9999){first=res}
+   if(dostart==0){
+    resnew=res+num-first
+    printf("%s%4d%s\n",substr($_,1,22),resnew,substr($_,27,l-26))
+    did=1
+   }
+   if(dostart==1&&res>=start){
+    resnew=res+num-start
+    printf("%s%4d%s\n",substr($_,1,22),resnew,substr($_,27,l-26))
+    did=1
+   }
+  }
+ } 
+ if(did==0){ print $_}
+ 
+}' > $output
+
+if [ $doout -ne 1 ] ; then
+ echo "Backup original $input to $input.bak"
+ mv $input $input.bak
+ mv $output $input
+ output=$input
+fi
+
+if [ $dostart -ne 1 ] ; then
+ echo "Renumber of first residue as $num for chain $chain of $input "
+else
+ echo "Renumber from residue #$sstart as $num for chain $chain of $input . Residues < $sstart will keep original number"
+fi
+echo "Output is $output"
+
+rm -f $temp $temp2 $temp3 $temp4 ; exit

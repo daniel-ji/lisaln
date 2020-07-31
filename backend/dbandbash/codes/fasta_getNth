@@ -1,0 +1,128 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+nth=1
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -get)nth=$2;shift 2;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Return Nth fasta and also fasta simplified name
+  Auto-determine fasta type: downloaded by PDBid or UniprotID 
+
+Screen dump:
+Full name is: >sp|P39748|FEN1_HUMAN    #Downloaded from Uniprot
+Simple name is: FEN1_HUMAN
+Simplist name is: FEN1
+2nd name is: P39748
+
+Full name is: >pdb|4LXL|A   #Downloaded from PDB id
+Simple name is: 4LXL
+Simplist name is: 4LXL
+2nd name is: 4LXL
+
+ Usage: $0 [Options] Input
+ Options:
+  -debug : debug model on
+  -out Output : User defined output
+  -get Nth : get Nth fasta
+
+ Example: 
+  $0 -get 2 nuclease_purepdb.fasta.txt
+    #Get 2nd fasta in Nuclease/  Downloaded by Uniprot ID by ./sequence_download
+  $0 -get 2 jmjc_pdb2.fasta.txt
+    #Get 2nd fasta in JMJD1B/PDBs/ Downloaded by PDBid by ./sequence_download
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+[ $doout -ne 1 ] && output=$infile'_'$nth'.fasta.txt'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/symbol.txt .
+fi
+
+awk 'BEGIN{n='$nth'}{
+ if(substr($1,1,1)==">"){m++};
+ if(m==n){
+  k++
+  if(NF==0||(substr($1,1,1)==">"&&k>1)){  #stop at empty line or next >
+   exit
+  }else{
+   print $_
+  }
+ }
+}' $input > $output
+
+#Downloaded by Uniprot ID: >sp|P39748|FEN1_HUMAN
+#Downloaded by PDB id: >pdb|4LXL|A
+#>NP_796284.1 in XPNPEP3/XPNPEP3.fasta_blastp_landmark.fasta.txt
+name=`head -1 $output | awk '{print $1}'`
+
+simname=`echo $name | awk '{t=0;if(substr($1,1,4)==">pdb"){t=1};
+n=split($1,a,"|"); name=a[n]
+if(t==1){name=a[2]}
+split(name,b,"_");print b[1]}'`  #remove both | and _
+
+simname2=`echo $name | awk '{t=0;if(substr($1,1,4)==">pdb"){t=1};
+n=split($1,a,"|"); name=a[n]
+if(t==1){name=a[2]}
+print name}'`  #remove only |
+
+simname3=`echo $name | awk '{
+n=split($1,a,"|"); name=a[2]
+split(name,b,"_");print b[1]}'`  #remove both | and _, and always 2nd name
+
+
+echo "#$nth fasta of $input saved as $output"
+echo "Full name is: $name"
+echo "Simple name is: $simname2"
+echo "Simplist name is: $simname"
+echo "2nd name is: $simname3"
+
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

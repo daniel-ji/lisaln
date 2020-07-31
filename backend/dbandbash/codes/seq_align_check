@@ -1,0 +1,602 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+itype=1 #=1: fasta format (each protein has one line)
+        #=2: Clustral format (all proteins are in same block, general)
+        #=3: special Clustral format from CLUSTAL web-server downloaded format. No CONSENSUS title for consensus line. Called by ./clustal_seq_align
+istart=1;iend=100;name='NA';doname=0;keeporder=0;noid=0;head=1;dosel=0
+ncol=1;rhead=0;doref=0;front=0
+doless=0;doreplace=0
+space=2 #space between col 1 and 2
+change='-change'
+cap='-cap'
+speciesfile='species_mapping.txt'  #mapping file of species from scientific name to normal name
+plot=1;plotout=''
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in 
+   -noplot)plot=0;shift;;
+   -plot)plot=1;shift;;
+   -plotout)plot=1;plotout="$2";shift 2;;
+   -nocap)cap='';shift;;
+   -debug) debug=1; shift;;
+   -fasta)itype=1;dosel=1;shift;;
+   -f)itype=1;dosel=1;shift;;
+   -clustral)itype=2;dosel=1;shift;;
+   -c)itype=2;dosel=1;shift;;
+   -cd)itype=3;dosel=1;shift;;
+   -range)istart=$2;iend=$3;shift 3;;
+   -name)name=$2;doname=1;shift 2;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -keep)keeporder=1;shift;;
+   -noidentity)noid=1;shift;;
+   -nohead)head=0;shift;;
+   -head)head=1;shift;;
+   -ref)doref=1;ref=$2;keeporder=1;shift 2;;
+   -col)ncol=$2;shift 2;;
+   -rhead)rhead=1;shift;;
+   -front)front=1;shift;;
+   -both)front=2;shift;;
+   -less)doless=1;shift;;
+   -replace)doreplace=1;repfile=$2;shift 2;;
+   -space)space=$2;shift 2;;
+   -change)change=$1;shift;;
+   -nochange)change='';shift;;
+   
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Find out/cut-out seq align for a specific range from seq alignment file
+  Also generate align plot by my own ./gnuplot_LisAln
+
+How to use SMART and Pfam domain database to find all sequences for a domain and do sequence aligment?
+      Ref: nature reviews:genetics 2006. vol7 715
+ 1. If do not know domain name/ID, search PDB id in Pfam database: http://pfam.xfam.org/   For example: JMJD1B PDB as 4c8d
+ 2. In return page of 4c8d, click "Domain organisation". Then  click on Jmjc domain
+ 3. In Jmjc domain page (Family: JmjC (PF02373)), shows 305 structures, 6374 sequences in 248 architectures
+ 4 Click on Trees to show phylogenetic tree
+ 5. Click on 305 structures to see all PDBs
+ 6. Click on 248 archtectures to see all domain-chains that contain jmjc-domain
+      For each archtecture, click on "Show all sequences with this architecture" to see human ones
+    Best to view architecture in SAMRT database: http://smart.embl-heidelberg.de
+     Click "Normal" in SMART homepage
+     Search "Domain Selection" for jmjc
+      Then 'Expand all nodes' to search 'homo sapiens' 97 architectures: check all humans
+      In 'Action selection' can download 97 human sequences. Or 'display the domain architecture'
+        Click 'Display proteins'
+
+How to align sequence from different species?
+  Recommended:
+   1. Use EBI to search all sequences of a protein name (Search DNA2, then click 'Protein seqences').
+   2. Pick the interested species, such as _HUMAN _MOUSE _BOVIN(cow) _XENTR(frog)
+   3. Download as CSV format with Uniprot ID
+   4. Use ./sequence_download -uniport  to download sequence from Uniport ID : https://www.uniprot.org/uniprot/UniprotID.fasta
+    For DNA2 (5642 seqs): https://www.ebi.ac.uk/ebisearch/search.ebi?db=proteinSequences&query=DNA2
+     Select 9 species as DNA2_HUMAN, DNA2_MOUSE, DNA2_CHICK
+     Download seqs: ./sequence_download -uniprot -head -ncol 2 species.csv
+   5. Use alignment tools to align the downloaded sequences (MultAlin etc.)
+      Best align is T-coffee (need remove empty lines in fasta file. Put human in first record)
+       http://tcoffee.crg.cat/apps/tcoffee/do:regular
+      Best view is MultAlin : it changed the order of species, put best seq as first. Not good to analys
+       http://multalin.toulouse.inra.fr/multalin
+      Manage seq align file by ./seq_align_rearrange
+      Display a range of seq align: ./seq_align_check -fasta -name DNA2_HUMAN -range 215 230 species_fasta.aln.txt
+ NOTE: recommend to download Clustral aln format with consensus score (for MultAlien, save the colored text webpage)
+
+
+ Align file type: Clustral format is best as it has consensus score to assist view
+ 1. Fasta format:
+>sp|F6QXW0|DNA2_XENTR 
+--------------------------------------------------
+-----------MEPVSAECQLPPEDDLLEMMMEQSFTEPEEKSKDKSTRK
+----IIPKTKLCRGLNNRYCVLNV--KEVYAQG--EEKHLTITASQEGDD
+LELCILKDDWVALHIKPGDIIHLEGNCAFDNTWTISRDTG---------Y
+>sp|Q5ZKG3|DNA2_CHICK
+--MADPSNAALRSGLNNRYRVLEV--RVVRGEGRDPEKHLAVSSDPSLGD
+TELCVLQNGWESVPVVPGDIVHLEGDCS-SGTWVINEQSG---------Y
+LILYPDLLLSGTTISSSIRCMRKAVLSERFRGS-ECGSRQTLVGTILHEI
+FQQSVTNNLSPEKVEELAKKIVYGQKYLKEMYHLKLKQTEIMQEIEEYLP
+
+ 2. Clustral format:
+sp|P51530|DNA2_   TVQNK-EGNCEKRLVITASQSLENKELCILRNDWCSVPVEPGDIIHL-EGDCT-SDTWIIDKD
+sp|D3ZG52|DNA2_   TKLNE-RGAEEKHLLITVSQEGEQEVLCILRNGWSSVPVEPGDIIHI-EGDCT-SEPWIVDDD
+sp|F6QXW0|DNA2_   EVYAQ-G--EEKHLTITASQEGDDLELCILKDDWVALHIKPGDIIHL-EGNCAFDNTWTISRD
+sp|P38859|DNA2_   -----------------ID-GKGEQSSVVVRHPWVYLEFEVGDVIHIIEGKNI-ENKRLLSDD
+sp|Q9URU2|DNA2_   EDFIFHEGNHFRQLKLILE-ANDILHQLFLRGDWTETSIFVGDSIRV-EATFDKDNTAIVDND
+consuse                                                   p**     *             *
+
+ Usage: $0 [Options] SeqAlignFile
+ Options:
+  -debug : debug model on
+  -less : only display seq aln results. No others
+  -out Output : User defined output for Clustal aln file
+  -noplot | [-plot] : Not plot the seq aln graphic from my own code 
+  -nocap : will not force to show upper-case for residue. [dafault]: force to show upper-case, as clustal aln output could be lower-case
+  [-c | -clustral] : align file is Clustral Format (all proteins are aligned in one block). Will check file type automatically
+   -nohead | [-head] : there is no header line in clustral format input
+   -cd : special Clustral format from CLUSTAL web-server downloaded format. No CONSENSUS title for consensus line. Called by ./clustal_seq_align
+   #Debugged on 8/6/2019: actually both -c and -cd should work. The bug is at change species name. Forgot to deal with concensus line
+  [-f | -fasta] : align file is fasta format (each protein has one line or multiple lines)
+  -ref ProteinOrderFile : file to determine protein orders. MultAlin re-ranked proteins to give best aligned protein on top   
+     ProteinOrderFile can be .csv file or normal text file
+   -rhead : there is headline in referecne ProteinOrderFile
+   -col NameCol : protein name is in col NameCol [$ncol]
+  -replace ProteinNameReplaceFile : file to replace protein names for display
+    It must have two cols, first col is ori seq protein name. 2nd col is the replacement name
+  -name ProteinName : line contains ProteinName to check for resid range. Default: first protein
+   -space SpaceNum : space between col 1 and 2  after change name [$space]
+  -nochange | [-change] : not change species name to simply one as human, mouse, or shorter as H.sapien. Mapping file saved in species_mapping.txt 
+  -range startResid endResid : resid range for protein defined by ProteinName
+  -keep : keep same order as input file. [default]: first protein is ProteinName
+  -front : put first residue id at begin of each protein. [default]: put last residue ID at end of each protein
+   -both : put both first/last resid at begin/end of each protein
+  -noidentity : will not add extra line at last to show identity resid as '*'
+   For Clustra format, if there is Consensus line already in align file, it will use this original Consensus line
+     Consensus line is determined by: 1. there is 'consensus' (any cases) in $1 or 2: last $NF has letter as one of .:*
+
+ Example: 
+
+    $0 -c -range 2212 2262 both_aln.fasta.txt  
+      #For Clustal aln file in ~/ARI1, show range 2212-2262aa in first protein. -c can omit as file type auto-determined
+    $0 -cd ...
+      #special Clustral format from CLUSTAL web-server downloaded format. No CONSENSUS title for consensus line. Called by ./clustal_seq_align
+    $0 -f -name DNA2_HUMAN -range 215 230 -ref species.csv -rhead -col 2 species_fasta.aln.txt
+      #find seq align at range of 215-230aa for DNA2_HUMAN from fasta format seq align file downloaded from MultAlin. Run in DNA2/
+      #As MultAlin re-ranked proteins to give best aligned protein on top, now back to same order as original rank as in species.csv
+    $0 -c -name DNA2_HUMAN -range 215 230 species_clustral.aln.txt
+      #find seq align at range of 215-230aa for DNA2_HUMAN from clustral seq align file downloaded from T-coffee. Run in DNA2/
+      # will keep the original consensus line for identical residues ect.
+    $0 -replace nameFile ...
+      #replace protein name by the two col file: col 1 is original name, col 2 is final display name
+
+ NOTE: To get aln across species etc, run ./NCBI_blast
+ NOTE: To rearrange output, run ./seq_align_rearrange
+ NOTE: recommend to download Clustral aln format with consensus score (for MultAlien, save the colored text webpage)
+ NOTE: to run Clustral seq alignment, run ./clustal_seq_align
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+#infile=`basename $input ${extension}`
+[ $doout -ne 1 ] && output=$infile'_.xls'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/gnuplot_LisAln $ed/CSV_getCol  $ed/seq_align_rearrange  $ed/clustal_seq_align $ed/blast_trim $ed/species_mapping.txt .
+fi
+
+#check file type whether fasta started as >
+isfasta=`awk '{if(substr($_,1,1)!="#"&&NF>0){start=1};if(start==1){if(substr($1,1,1)==">"){print 1}else{print 0};exit}}' $input`
+if [ $dosel -eq 0 ] ; then
+ if [ $itype -eq 1 ] && [ $isfasta -eq 0 ] ; then
+  [ $doless -ne 1 ] && echo "$input is treated as clustral format. Otherwise use: $0 -fasta $oldline"
+  itype=2
+ fi
+ if [ $itype -eq 2 ] && [ $isfasta -eq 1 ] ; then
+  [ $doless -ne 1 ] && echo "$input is treated as fasta format. Otherwise use: $0 -c $oldline"
+  itype=1
+ fi
+fi
+
+
+#get ref protein names
+if [ $doref -eq 1 ] ; then
+ if [ -s $ref ] ; then
+  extension=`echo $ref | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+  if [ "$extension" == ".csv" ] ; then
+   ./CSV_getCol -out $temp.xls $ref
+   awk '{n='$ncol';h='$rhead';if(NR>h&&NF>0&&substr($1,1,1)!="#"){print $n}}' $temp.xls > $temp.ref
+  else
+   awk '{n='$ncol';h='$rhead';if(NR>h&&NF>0&&substr($1,1,1)!="#"){print $n}}' $input > $temp.ref
+  fi
+  echo "Protein name will be re-ordered as in $ref"
+ else
+  echo "WARNing: reference $ref does not exists"
+  doref=0
+ fi
+fi
+
+############################## Fasta format
+if [ $itype -eq 1 ] ; then
+ awk 'BEGIN{m=0;mmax=0;n=0;nfind=0;name="'$name'";istart='$istart';iend='$iend';keeporder='$keeporder';noid='$noid'
+   doref='$doref';ref="'$temp.ref'";rhead='$rhead';ncol='$ncol';doname='$doname';
+  }{
+  if(substr($1,1,1)==">"){
+   n++;tit=substr($1,2,length($1)-1);nam[n]=tit;m=0
+   if(doname==0&&n==1){name=nam[1]}
+   if(index(tit,name)>0){nfind=n}
+  }else{
+   if(NF>0&&$1!=""){for(i=1;i<=length($1);i++){m++;res[n,m]=substr($1,i,1)};if(m>mmax){mmax=m}}
+  }
+ }END{
+  if(nfind==0){print "Fatal error! Does not find protein name",name;exit}
+  for(i=1;i<=mmax;i++){
+   if(res[nfind,i]!="-"){v++;if(v==istart){x=i};if(v==iend){y=i;break}}
+  }
+  if(keeporder!=1){printf("%-30s %-4d ",nam[nfind],istart);for(j=x;j<=y;j++){printf("%s",res[nfind,j])};printf(" %s\n",iend)}
+   for(i=1;i<=n;i++){
+   if(keeporder==1||(keeporder!=1&&i!=nfind)){
+    v=0;x1=1;z=0
+    for(j=1;j<=mmax;j++){
+     z++
+     if(res[i,j]!="-"){v++}
+     if(z==x){
+      x1=v;
+      if(res[i,j]=="-"){x1++} #add one in case empty - 
+     }
+     if(z==y){y1=v;break}
+    }
+    printf("%-30s %-4d ",nam[i],x1);for(j=x;j<=y;j++){printf("%s",res[i,j])};printf(" %s\n",y1)
+   }
+  }
+  if(noid!=1){
+   printf("Consensus                           ")
+   for(j=x;j<=y;j++){
+    a=" ";v=1
+    for(i=2;i<=n;i++){
+     if(res[i,j]==res[1,j]){v++}
+    }
+    if(v==n){a="*"}
+    printf("%s",a)
+   }
+   printf("\n")
+  }
+ }' $input > $temp.out
+fi
+
+############################## Clustal format : general may with CONSENSUS for consensus line
+### xNot working with summer_student/Daniel/codes/flap_landmark_homolo_aln.txt which has none-aln for first blocks
+if [ $itype -eq 2 ] ; then
+ awk 'BEGIN{start=0;m=0;mmax=0;lmax=0;n=0;nfind=0;name="'$name'";doname='$doname';istart='$istart';iend='$iend';
+  keeporder='$keeporder';noid='$noid';head='$head'
+  doref='$doref';ref="'$temp.ref'";rhead='$rhead';ncol='$ncol'}
+ {
+  if(NR>head&&NF>0&&start==0){n=0;start=1}  #start first block of record
+  first=substr($NF,1,1) #bypass line with cons .:*
+  iscons=index(toupper($1),"CONSENSUS") #where has consensus in $1 
+  #if(start>0&&NF>0&&NF<4&&((first!="."&&first!=":"&&first!="*")||iscons>0)){  #not concensus
+  if(start>0&&NF>0&&NF<4&&(first!="."&&first!=":"&&first!="*"&&iscons==0)){  #not concensus
+   n++; doconcensus=0;totn=n 
+   if(doname==0&&n==1){name=$1}
+   if(start==2&&nam[n]!=$1){print "Fatal error. Not same name for line",n,nam[n],$1}
+   nam[n]=$1
+   startpos=index($_,$2);if(lmax<length($2)){lmax=length($2)}
+   for(j=1;j<=length($2);j++){num[n]++;res[n,num[n]]=substr($2,j,1)}
+   if(num[n]>mmax){mmax=num[n]}
+  }
+  if(start>0&&NF>0&&(first=="."||first==":"||first=="*"||iscons>0)&&doconcensus==0){  #concensus line
+   doconcensus=1;hasconcensus=1
+   for(j=startpos;j<(startpos+lmax);j++){ncons++;cons[ncons]=substr($_,j,1)}
+  }   
+  if(NF==0&&start>=1){
+   if(doconcensus==0){  #empty concensus line
+    for(j=startpos;j<(startpos+lmax);j++){ncons++;cons[ncons]=" "}
+    doconcensus=1
+   }
+   start=2;n=0
+  }  #empty line after first block
+  #print n,$1,nam[n],iscons,doconcensus
+ }END{
+  n=totn
+  for(i=1;i<=n;i++){if(index(nam[i],name)>0){nfind=i;break}}
+  if(nfind==0){print "Fatal error! Does not find protein name",name;exit}
+  for(i=1;i<=mmax;i++){
+   if(res[nfind,i]!="-"){v++;if(v==istart){x=i};if(v==iend){y=i;break}}
+  }
+  if(keeporder!=1){printf("%-30s %-4d ",nam[nfind],istart);for(j=x;j<=y;j++){printf("%s",res[nfind,j])};printf(" %s\n",iend)}
+  for(i=1;i<=n;i++){
+   if(keeporder==1||(keeporder!=1&&i!=nfind)){
+    v=0;x1=1;z=0
+    for(j=1;j<=mmax;j++){
+     z++
+     if(res[i,j]!="-"){v++}
+     if(z==x){
+      x1=v   
+      if(res[i,j]=="-"){x1++} #add one in case empty -     
+     }
+     if(z==y){y1=v;break}
+    }
+    printf("%-30s %-4d ",nam[i],x1);for(j=x;j<=y;j++){printf("%s",res[i,j])};printf(" %s\n",y1)
+   }
+  }
+  if(hasconcensus==1){  #consensus from input
+   printf("Consensus                           "); for(j=x;j<=y;j++){printf("%s",cons[j])}
+  }
+  if(noid!=1&&hasconcensus==0){
+   printf("Consensus                           ")
+   for(j=x;j<=y;j++){
+    a=" ";v=1
+    for(i=2;i<=n;i++){
+     if(res[i,j]==res[1,j]){v++}
+    }
+    if(v==n){a="*"}
+    printf("%s",a)
+   }
+  }
+  printf("\n")
+ }' $input > $temp.out
+fi
+
+################# Clustal format : special from CLUSTAL web-server downloaded format. No CONSENSUS title for consensus line. Called by ./clustal_seq_align
+## Consus line is last of block. xNOT working yet 
+if [ $itype -eq 3 ] ; then
+ awk 'BEGIN{start=0;m=0;mmax=0;lmax=0;n=0;nfind=0;name="'$name'";doname='$doname';istart='$istart';iend='$iend';
+  keeporder='$keeporder';noid='$noid';head='$head'
+  doref='$doref';ref="'$temp.ref'";rhead='$rhead';ncol='$ncol'}
+ {
+  if(NR>head&&NF>0&&start==0){n=0;start=1}  #start first block of record
+  first=substr($NF,1,1) #bypass line with cons .:*
+  iscons=index(toupper($1),"CONSENSUS") #where has consensus in $1
+  if(iscons==0&&substr($_,1,1)==" "){iscons=1}  #first char is empty (but not NF=0) then it is consensus. This line is only different to type=2  
+  if(start>0&&NF>0&&NF<4&&(first!="."&&first!=":"&&first!="*"&&iscons==0)){  #not concensus
+   n++; doconcensus=0;totn=n 
+   if(doname==0&&n==1){name=$1}
+   if(start==2&&nam[n]!=$1){print "Fatal error. Not same name for line",n,nam[n],$1}
+   nam[n]=$1
+   startpos=index($_,$2);if(lmax<length($2)){lmax=length($2)}
+   for(j=1;j<=length($2);j++){num[n]++;res[n,num[n]]=substr($2,j,1)}
+   if(num[n]>mmax){mmax=num[n]}
+  }
+  if(start>0&&NF>0&&(first=="."||first==":"||first=="*"||iscons>0)&&doconcensus==0){  #concensus line
+   doconcensus=1;hasconcensus=1;
+   for(j=startpos;j<(startpos+lmax);j++){ncons++;cons[ncons]=substr($_,j,1)}
+  }   
+  if(NF==0&&start>=1){ #block seperate empty line NF=0 
+   if(doconcensus==0){  #empty concensus line
+    for(j=startpos;j<(startpos+lmax);j++){ncons++;cons[ncons]=" "}
+    doconcensus=1
+   }
+   start=2;n=0;iscons=0
+  }  #empty line after first block
+  #print n,$1,nam[n],iscons,doconcensus
+  #if(iscons==1){print NR,$_}
+ }END{
+  n=totn
+  for(i=1;i<=n;i++){if(index(nam[i],name)>0){nfind=i;break}}
+  if(nfind==0){print "Fatal error! Does not find protein name",name;exit}
+  for(i=1;i<=mmax;i++){
+   if(res[nfind,i]!="-"){v++;if(v==istart){x=i};if(v==iend){y=i;break}}
+  }
+  if(keeporder!=1){printf("%-30s %-4d ",nam[nfind],istart);for(j=x;j<=y;j++){printf("%s",res[nfind,j])};printf(" %s\n",iend)}
+  for(i=1;i<=n;i++){
+   if(keeporder==1||(keeporder!=1&&i!=nfind)){
+    v=0;x1=1;z=0
+    for(j=1;j<=mmax;j++){
+     z++
+     if(res[i,j]!="-"){v++}
+     if(z==x){
+      x1=v   
+      if(res[i,j]=="-"){x1++} #add one in case empty -     
+     }
+     if(z==y){y1=v;break}
+    }
+    printf("%-30s %-4d ",nam[i],x1);for(j=x;j<=y;j++){printf("%s",res[i,j])};printf(" %s\n",y1)
+   }
+  }
+  if(hasconcensus==1){  #consensus from input
+   printf("Consensus                           "); for(j=x;j<=y;j++){printf("%s",cons[j])}
+  }
+  if(noid!=1&&hasconcensus==0){
+   printf("Consensus                           ")
+   for(j=x;j<=y;j++){
+    a=" ";v=1
+    for(i=2;i<=n;i++){
+     if(res[i,j]==res[1,j]){v++}
+    }
+    if(v==n){a="*"}
+    printf("%s",a)
+   }
+  }
+  printf("\n")
+ }' $input > $temp.out
+fi
+
+
+#re-order protein names
+if [ $doref -eq 1 ] ; then
+ awk 'BEGIN{
+ file="'$temp.ref'";  n=0;m=0
+ while ((getline line < file) > 0) {
+  n++; nf=split(line,d," "); a[n]=d[1]
+ }
+ close(file)
+ }{m++;b[m]=$_;name[m]=$1;use[m]=0}
+ END{
+  for(i=1;i<=n;i++){
+   for(j=1;j<=m;j++){
+    if(index(name[j],a[i])>0){print b[j];use[j]=1;break}
+   }
+  }
+  for(j=1;j<=m;j++){
+   if(use[j]==0){print b[j]}
+  }
+}' $temp.out > $temp2.out
+ mv $temp2.out $temp.out
+fi
+
+#Make name space shorter
+oldcode=0 #=1: old code Not working with summer_student/Daniel/codes/flap_landmark_homolo_aln.txt as it has much longer protein name: Methanothermobacter_thermautotrophicus
+namemax=`awk '{if(length($1)>max&&(tolower($1)!="consensus"&&substr($_,1,2!="  "))){max=length($1)}}END{print max}' $temp.out`
+resdigmax=`awk '{if(length($2)>max&&(tolower($1)!="consensus"&&substr($_,1,2!="  "))){max=length($2)}}END{print max}' $temp.out`
+
+if [ $oldcode -eq 1 ] ; then
+resmax=`awk '{if(length($2)>max&&(tolower($1)!="consensus"&&substr($_,1,2!="  "))){max=length($2)}}END{print max+31}' $temp.out`
+seqmax=`awk '{if(length($3)>max){max=length($3)}}END{print max+36}' $temp.out`
+seqmax1=`expr $seqmax + 1`
+cat $temp.out | cut -b 1-${namemax} > $temp2.out  #Protein name
+cat $temp.out | cut -b 31-${resmax} > $temp3.out  #Protein resid at begin
+cat $temp.out | cut -b 36-${seqmax} > $temp4.out  #protein seq
+cat $temp.out | cut -b ${seqmax1}- > $temp5.out   #protein resid at last
+if [ $front -eq 1 ] ; then
+ paste -d " " $temp2.out $temp3.out $temp4.out > $temp.out   #Name resid_first Seq
+else
+ if [ $front -eq 2 ] ; then
+  paste -d " " $temp2.out $temp3.out $temp4.out $temp5.out > $temp.out   #Name resid_first Seq resid_last
+ else
+  paste -d " " $temp2.out $temp4.out $temp5.out > $temp.out   #Name Seq resid_last
+ fi
+fi
+
+else #oldcode : new code to deal with very long protein name from 2019/8
+ awk 'BEGIN{max='$namemax';resdigmax='$resdigmax';front='$front'}{
+  if(tolower($1)!="consensus"&&substr($_,1,2!="  ")){
+   printf("%s ",$1);for(i=1;i<=(max-length($1));i++){printf(" ")}
+   if(front>=1){printf("%s ",$2);for(i=1;i<=(resdigmax-length($2));i++){printf(" ")}}
+   printf("%s",$3)  #seqs
+   if(front!=1){printf(" %s\n",$4)}else{printf("\n")}  
+   if(NR==1){const=index($_,$3)}  #Consensus starting point: suppose same as first protein. Here may cause bug in future!
+  }else{  #Consensus line
+   printf("Consensus ");for(i=1;i<=(max-9);i++){printf(" ")}
+   if(front>=1){for(i=1;i<=resdigmax;i++){printf(" ")}}
+   printf("%s\n",substr($_,const,999))  #seqs
+  }
+ }' $temp.out > $temp
+ #cat $temp.out ; cat $temp ; exit
+ mv $temp $temp.out 
+fi #oldcode
+
+#cat $temp.out ; echo papapapa
+
+#replace protein name defined in $repfile
+if [ $doreplace -eq 1 ] ; then
+ #cat $temp.out
+ if [ ! -s $repfile ] ; then
+  cp $temp.out $temp
+ else
+ longst=`awk 'BEGIN{max=0}{if(length($1)>max){max=length($1)}}END{print max}' $repfile` #find longest original name
+ awk '
+BEGIN{
+ file="'$repfile'";  n=0 ; max=0;dofirst=0;nfirst=0;longst='$longst'
+ while ((getline line < file) > 0) {
+  n++; nf=split(line,d," "); a[n]=d[1];b[n]=d[2]
+  if(length(d[2])>max){max=length(d[2])}
+ }
+ close(file)
+ if(max<(longst+2)){max=longst+2} #In case replace name is shorter than original one: suppose the longest original name is 18+2: NP_001294868.1 
+}
+{
+ if(NR==1){nfirst=index($_,$2)} #get starting residue number on line
+ x=index($_,$2);left=substr($_,x,999);if(x==0){left=""};u=$1
+ for(i=1;i<=n;i++){
+  if(a[i]==$1){
+   u=b[i];break
+  }
+ }
+ if(NF==0){
+  printf("\n") #empty line for line seperator
+ }else{  
+  if(tolower($1)=="consensus"||substr($_,1,2)=="  "){  #consensus line.
+   printf("Consensus ")
+   for(j=1;j<=(max-9);j++){printf(" ")} #padding spaces
+   printf("%s\n",substr($_,nfirst,999))
+  } else {
+   printf("%s ",u)  
+   for(j=1;j<=(max-length(u));j++){printf(" ")} #padding spaces
+   printf("%s\n",left)
+  }
+ }
+}' $temp.out > $temp
+ #cat $temp.out ; cat $temp
+ fi
+#$temp.out: NP_001655.1     MAAIRKKLVIVGDGACGKTCLLIVFSKDQFPEVYVPTVFENYVADIEVDGKQVELALWDT  60
+./blast_trim -nodisplay $cap -space $space -out $temp.out $temp
+fi
+
+
+#change species name to simple as human mouse
+if [ "$change" == "-change" ] ; then
+ #Or use ./species_change to change species name
+ [ $doless -ne 1 ] && echo "Change species name to simple ones as human, mouse or shorter one as H.sapien based on $speciesfile :"
+ awk 'BEGIN{
+  file="'$speciesfile'";  n=0
+  while ((getline line < file) > 0) {
+   if (substr(line,1,1)!="#"){
+    n++; nf=split(line,d,"\t"); a[n]=d[1];b[n]=tolower(d[2])
+   }
+  }
+  close(file)
+ }{
+ if(tolower($1)=="consensus"){ #For consensus line. Debugged and added on 8/6/2019
+  print $_
+ }else{
+ doit=0
+ z=split($1,x,"_");species=x[1];for(j=2;j<=z;j++){species=sprintf("%s %s",species,x[j])}  #remove _
+ for(i=1;i<=n;i++){
+  if(b[i]==tolower(species)){y=index($_,$2);u=a[i];len=length(u)
+   for(j=1;j<=(y-len-1);j++){u=sprintf("%s ",u)}
+   printf("%s%s  %s\n",u,$2,$3);doit=1;break}
+ }
+ if(doit==0){  #shorter name as H.sapien
+  u=split(species,x," ");sn="";for(j=1;j<u;j++){sn=sprintf("%s%s.",sn,toupper(substr(x[j],1,1)))}
+  species=sprintf("%s%s",sn,x[u])
+  y=index($_,$2);u=species;len=length(u)
+  for(j=1;j<=(y-len-1);j++){u=sprintf("%s ",u)}
+  printf("%s%s  %s\n",u,$2,$3)
+ }
+ }
+}' $temp.out > $temp
+./blast_trim -nodisplay $cap -space $space -out $temp.out $temp
+fi
+
+cat $temp.out
+
+if [ $plot -eq 1 ] ; then
+ [ "$plotout" == "" ] && plotout=$temp.gif
+ ./gnuplot_LisAln -out $plotout $temp.out > $temp6
+fi
+
+[ $doout -eq 1 ] && mv $temp.out $output
+
+if [ $doless -ne 1 ] ; then
+ echo ""
+ echo ""
+ [ "$name" == "NA" ] && name='first protein'
+ echo "=> Seq alignment for [$istart $iend] of $name from seq aln file $input"
+ if [ $doout -eq 1 ] ; then
+  echo "=> Range alned output saved in $output"
+ fi
+ echo " To rearrange output, run ./seq_align_rearrange"
+ echo " To run Clustal seq align, run ./clustal_seq_align"
+fi
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

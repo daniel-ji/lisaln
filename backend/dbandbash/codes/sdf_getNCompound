@@ -1,0 +1,44 @@
+#!/bin/sh 
+
+thisfile="sdf_getNCompound"
+if [ -n "$1" ] ; then
+         infile=$1
+         start=$2
+         end=$3
+         output=$4
+else
+  echo " Readme in /home/holi/database/diversity_workflow.txt" 
+cat << ttt
+  Get a subset of SDF of the N Compounds from a library started from Number Start to Number End 
+   Usage:  $0 InputSDF(full name) Start End Output(sdf, full name)
+    e.g. $0  /home/tripos/hongzhi/database/NCI.sdf  1 99999 NCI_1.sdf
+    (get compounds 1 to 99999)
+ttt
+  exit
+fi
+
+
+echo Get from $start to $end compounds from $infile
+echo Output saved in $output
+#echo "Format: Num|Lines|Contents|"
+#echo "=====================================>"
+
+awk 'BEGIN{new=1;n=0;start='$start';end='$end'
+}
+{
+ if(new==1){n++;new=0;}
+ #if(n==tot||n==t2||n==t3){print n, NR, $_}
+ if(n>=start&&n<=end){print $_}
+ if(substr($1,1,4)=="$$$$"){new=1;if(n>end){exit}}
+}' $infile > $output 
+#echo "=====================================>"
+#echo $num1 $num2 $num3 record in $infile
+#echo "Format: Num|Lines|Contents|"
+
+num=`grep '$$$$' $output | wc -l | awk '{print $1}'`
+
+echo A total of $num cmpds saved in $output
+
+echo "Done!"
+
+exit

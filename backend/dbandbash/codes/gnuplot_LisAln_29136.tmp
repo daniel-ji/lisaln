@@ -1,0 +1,37 @@
+#!gnuplot
+
+#see http://cs.ecs.baylor.edu/~donahoo/tools/gnuplot/3Dex.html
+reset
+set terminal gif enhanced   size 921,615 font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,15' # 'enhanced' can produce sub and superscripts
+set   autoscale                        # scale axes automatically
+set title ""
+set key off   #legand
+#set xtics font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,'  #smaller font 
+#set ytics font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,'  #smaller font 
+set label font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,'  #smaller font
+#set ztics font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,'  #smaller font 
+
+#set xdata time
+#set timefmt "%d/%m/%Y %H:%M:%S"
+#set format x "%H:%M"
+
+#set xlabel offset 1,0 ;  #offset ylabel to be more close to y-axis
+
+
+set xrange [1:0] 
+set yrange [0:4]
+
+#
+
+
+
+unset y2tics; 
+unset border;   #No x-y axis box and tics
+#unset xtics
+#unset ytics
+#set xtics scale 0  #Remove tics, but keep tics label. Still dots left for tics though
+#set ytics scale 0  #Remove tics, but keep tics label. Still dots left for tics though
+set xtics textcolor rgb "#ffffff"  #white color to hide xtics, works
+set ytics textcolor rgb "#ffffff"  #white color to hide xtics, works
+set tics scale 0; #Remove tics, but keep tics label. Still dots left for tics though 
+plot -99999 w lines lt 1 lc 1 

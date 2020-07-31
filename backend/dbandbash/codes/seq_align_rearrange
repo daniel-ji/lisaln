@@ -1,0 +1,543 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+lens=70  #Residues in each line
+removedot=1 #remove common dots in Pfam aligment
+removetit=1 #remove protein title/name started from _
+space=3  #space between protein name and sequence
+remove=''  #remove pattern such as _HUMAN in protein name
+dofasta=0;doss=0;kss=2;docompare=0
+doTM=0;name1="TM2";name2="TM1"
+blockspace=1  #space between block for Clustal file
+clustal=0
+addresn=1  #add res num at end of line 
+addheader=1 #add header for Clustal align as "CLUSTAL multiple sequence alignment"
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -blockspace)blockspace=$2;shift 2;;
+   -debug) debug=1; shift;;
+   -len)lens=$2;shift 2;;
+   -noremovedot)removedot=0;shift;;
+   -keepdot)removedot=0;shift;;
+   -keeptit)removetit=0;shift;;
+   -space)space=$2;shift 2;;
+   -remove)remove="$2";shift 2;;
+   -fasta)dofasta=1; shift;;
+   -ss)doss=1;shift;;
+   -kss)kss=$2;shift 2;;
+   -compare)docompare=1;shift;;
+   -TM)doTM=1;shift;;
+   -name1)name1="$2";shift 2;;
+   -name2)name2="$2";shift 2;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -addresn)addresn=1;shift;;
+   -nonum)addresn=0;shift;;
+   -noaddheader)addheader=0;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+This to re-organize the seqeunce aligment files from:
+  1. Clustral Omega
+  2. Multalin : each block seqs has seq	number in first line and Consensus in last
+  3. Pfam downloaded sequence alignments of a protein family sequences 
+It can also convert seqeunce alignment file into fasta file: as Multalin only take in fasta sequence
+  4. Secondary structure file from ./pdb_secondary
+
+  For Clustral Omega seq alignment file, see JMJD1B/PDBs/jmjc_smart_hs_clustral.txt
+  For Multalin seq alignment file, see JMJD1B/PDBs/jmjc_smart_hs_multalin2.fasta.txt (save text page. It can also download fasta format)
+e.g. each block seqs has seq number in first line and Consensus in last, and space for every 10 residues
+                      101                                                150
+ HAIR_HUMAN/946-1157  .......... .AWHRAQ..K DFLSGLDGEG L.......WS PGSQV.STVW
+   O43593-2/946-1102  .......... .AWHRAQ..K DFLSGLDGEG L.......WS PGSQV.STVW
+           Consensus  .......... .g........ .......... .e.......n .........w
+
+
+  For Pfam: Must download in 'Selex' format: Only one line for each protein (fasta format for align)  JMJD1B/PDBs/PF02373_full_hs.txt
+e.g.
+A0A0C4DFL8_HUMAN/176-292  ........YLYFG..MW..KTT...FA.W......HTE
+KDM3A_HUMAN/1151-1264     ...qdgd----S..DE..LTI...KR.F......IEG.
+
+  For ./pdb_secondary, it is as (two lines, first line is 3 cols for resnames):
+ 4c8d  1380 TSHSWLCDGRLLCLHDP
+            ccssssccccssssccc
+
+  For TMalign from ./TM_align:
+L----N-PSARIMTFYPTMEEFRNFSRYIA
+     . ...:::::::.:::.     :
+-TSHSWLCDGRLLCLHDPSNKN-----NYA  
+
+How to use SMART and Pfam domain database to find all sequences for a domain and do sequence aligment?
+      Ref: nature reviews:genetics 2006. vol7 715
+ Run ./Pfam_domain to get Pfam domain
+ Run ./pdb_seq_align_Pfam to re-order the sequence aligments of a family of proteins from Pfam
+ 1. If do not know domain name/ID, search PDB id in Pfam database: http://pfam.xfam.org/   For example: JMJD1B PDB as 4c8d
+ 2. In return page of 4c8d, click "Domain organisation". Then  click on Jmjc domain
+ 3. In Jmjc domain page (Family: JmjC (PF02373)), shows 305 structures, 6374 sequences in 248 architectures
+ 4 Click on Trees to show phylogenetic tree
+ 5. Click on 305 structures to see all PDBs
+ 6. Click on 248 archtectures to see all domain-chains that contain jmjc-domain
+      For each archtecture, click on "Show all sequences with this architecture" to see human ones
+    Best to view architecture in SAMRT database: http://smart.embl-heidelberg.de
+     Click "Normal" in SMART homepage
+     Search "Domain Selection" for jmjc
+      Then 'Expand all nodes' to search 'homo sapiens' 97 architectures: check all humans
+      In 'Action selection' can download 97 human sequences. Or 'display the domain architecture'
+        Click 'Display proteins'
+      Can download sequences, which is better than Pfam
+ 7. Click on 6374 sequences to download sequence aligment: check 'Full' button and default 'Selex' format for all 6374 seq to download
+     Or: download FASTA format if not too many sequences
+     grep HUMAN PF02373_full.txt > PF02373_full_hs.txt to find 55 human sequences
+      Search each protein name with EMBL-EBI id at http://pfam.xfam.org/
+     ./pdb_seq_align_Pfam PF02373_full_hs.txt
+    NOTE: SMART seqs are better than Pfam!
+
+WANRing: Pfam database does not include full length of jmjc-domain for JMJC1B/KDM3B in PF02373_full_hs.txt. Wrong!
+  Pfam also miss 7 jmjc proteins, while SMART only miss two: JMJD5. SMART database is better!
+ Metal binding HLD1562 is not included as Pfam starts from 1594aa. Only include GAPH1689aa.
+ Both SAMRT database jmjc_smart_hs.fasta.txt and review paper did it right
+ So both Pfam database and Multalin seq aligment are wrong for JMJC1B/KDM3B!
+
+How to align sequence from different species?
+  Recommended:
+   1. Use EBI to search all sequences of a protein name (Search DNA2, then click 'Protein seqences').
+   2. Pick the interested species, such as _HUMAN _MOUSE _BOVIN(cow) _XENTR(frog)
+   3. Download as CSV format with Uniprot ID
+   4. Use ./sequence_download -uniport  to download sequence from Uniport ID : https://www.uniprot.org/uniprot/UniprotID.fasta
+    For DNA2 (5642 seqs): https://www.ebi.ac.uk/ebisearch/search.ebi?db=proteinSequences&query=DNA2
+     Select 9 species as DNA2_HUMAN, DNA2_MOUSE, DNA2_CHICK
+     Download seqs: ./sequence_download -uniprot -head -ncol 2 species.csv
+   5. Use alignment tools to align the downloaded sequences (MultAlin etc.)
+      Best align is T-coffee (need remove empty lines in fasta file. Put human in first record)
+       http://tcoffee.crg.cat/apps/tcoffee/do:regular
+      Best view is MultAlin : it changed the order of species, put best seq as first. Not good to analys
+       http://multalin.toulouse.inra.fr/multalin
+      Manage seq align file by ./seq_align_rearrange
+      Display a range of seq align: ./seq_align_check -fasta -name DNA2_HUMAN -range 215 230 species_fasta.aln.txt
+    Can use my script for Clustal align: ./clustal_seq_align
+
+NOTE: NCBI blastp cannot work on PDBs 4c8d and 2oq6 need structural alignment (pymol -CE). See JMJD1B/
+  In this case, Ref Review paper: nature reviews:genetics 2006. vol7 715
+    Clustal Omega and MultAlin cannot do it as well for whole PDB sequences: http://www.ebi.ac.uk/Tools/msa/clustalo/
+     It can only do shorter seq with jmjc-domain only in PF02373_full_hs.txt.
+     It can generate phylogenetic tree
+    MultAlin cannot do it as well: http://multalin.toulouse.inra.fr/multalin
+       Good part of MultAlin is it will re-arrange proteins by seq identity. So good to filter identical sequences.
+        To totally rule out partially identical seqs, need to check chromosome location of each seq to see if they are same
+    NCBI blastp can do PF02373_full_hs.txt aligment, but it is the worst to do multiple aligments
+  Or: download the aligned domains from PFAM domain database: But the align could be very bad
+
+
+ Usage: $0 [Options] Input
+ Options:
+  -debug : debug model on
+  -out Output : User defined output
+  -fasta : convert seq aln file into fasta file: seqeunce of each protein
+  -ss : convert secondary structure prediction output from ./pdb_secondary
+   -kss Lines : how many lines in output [$kss : for two lines of one SS data: first line is resname 3: 3 lines with two for SS prediction data]
+   -compare : when kss=3, only show comparison for different 2nd SS data: no show if identical
+   XWARNIng: does not work on some PDBs  such as 4nm6.pdb (do not know why? too long?) Now works after debug t=strtonum(t)
+  -TM : convert TMalign seq 
+   -name1 |-name2 PDBName : PDB name to display for first line and last line
+  -len Length : Length of residues in each line for output [$lens]
+   WARNing: Need long -len 1000 for long PDBs that cannot cut by awk
+  -keepdot | -noremovedot : will not remove common dots in Pfam alignment [no recommended!]
+    Common dots in Pfam is because original Pfam aligment for all species, not only human
+  -keeptit : keep original _HUMAN/1151-1264 long name in alignment file
+    Default: will remove proteins from _XXXX. Only keep part before _XXXX for clean shown
+  -remove "PartialName" : remove only PartialName in protein name, such as _HUMAN, but keep others like seq range: /176-292
+  -space Space : space between protein name and sequence [$space]
+  -blockspace LineNum : empty line between data blocks in Clustal file [$blockspace]
+  -nonum | [-addresn] : Not add residue number at end of each line
+  -noaddheader : will not add header for Clustal file as : CLUSTAL multiple sequence alignment
+
+ Example: 
+  $0 -keeptit -remove _HUMAN -space 3  -len 160 PF02373_full_hs.txt   #See JMJD1B/PDBs
+  $0 -space 3  -len 150 jmjc_smart_hs_multalin2.fasta.txt  #multalin seq alignment file
+  $0 -keeptit -keepdot -addresn -space 3 -len 150 both_aln.fasta.txt #EBI Clustral alignement. Keep full name. Run in ARI1/
+  $0 -space 3  -len 150 jmjc_smart_hs_clustral.txt  #Clustral Omega alignment file
+  $0 -fasta PF02373_full_hs.fasta.txt  #Convert seq aln file into fasta file
+  $0 -ss SS_file  #Convert two line SS_file into fasta-like
+  $0 -ss -kss 3 -compare two_SS_file  #Show compare of two SS data
+  $0 -TM -name1 4c8d -name2 2oq6 TMalign_file   #./TM_align file
+
+ NOTE: To get aln across species etc., run ./NCBI_blast
+ NOTE: To download sequences from UniprotID or NCBI: ./sequence_download
+ NOTE: Display a range of seq align and colored image: ./seq_align_check -fasta -name DNA2_HUMAN -range 215 230 species_fasta.aln.txt
+ NOTE: To do Clustal alignment, run ./clustal_seq_align
+
+ttt
+  exit
+fi
+
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".txt"){print substr($1,1,l-1)}else{print $1}}'`
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+#infile=`basename $input ${extension}`
+if [ $doout -ne 1 ] ; then
+ output=$infile'.reorder.txt'
+ [ $dofasta -eq 1 ] && output=$infile'.fasta.txt'
+fi
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/clustal_seq_align $ed/seq_align_check .
+fi
+
+#For TM_align seq file:
+#L----N-PSARIMTFYPTMEEFRNFSRYIA
+#     . ...:::::::.:::.     :
+#-TSHSWLCDGRLLCLHDPSNKN-----NYA  
+if [ $doTM -eq 1 ] ; then
+ awk 'BEGIN{len='$lens';n=0;kss=3;name1="'$name1'";name2="'$name2'"}{
+  n++;a[n]=$_
+  }END{
+   k=sprintf("%d",n/kss)
+   #k=1 #Force to use 3 lines only
+   for(i=1;i<=k;i++){
+    j=kss*(i-1)+1
+    nlen=length(a[j])
+    if(length(a[j+2])<nlen){nlen=length(a[j+2])}  #Use shortest line
+    t=sprintf("%d",nlen/len+1)
+    t=strtonum(t) #Must covert string to num! Otherwise wired resutls
+    for(m=1;m<=t;m++){
+     if(substr(a[j],1+(m-1)*len,1)!=" "&&substr(a[j],1+(m-1)*len,1)!=""){  #stopped at empty space
+      printf("%6s %s\n",name1,substr(a[j],1+(m-1)*len,len))
+      printf("       %s\n",substr(a[j+1],1+(m-1)*len,len))
+      printf("%6s %s\n",name2,substr(a[j+2],1+(m-1)*len,len))
+      printf("\n")
+     }
+    }
+   }
+  }' $input
+ exit
+fi
+
+
+#Secondary struture align: even lines, one for Protein|resid|resname and one for ss
+# 4c8d  1380 TSHSWLCDGRLLCLHDP
+#            ccssssccccssssccc
+#WARNIng: does not work on some PDBs  such as 4nm6.pdb (Xdo not know why? too long?)
+#Now solved: because t=sprintf("%d",n/len+1) is a string, must convert it into number!!!
+if [ $doss -eq 1 ] ; then
+ useold=1 #=1: Xold code cannot handle long string/protein. 
+   #Now both useold=1 or 0 works. Recommend use useold=1
+
+ if [ $useold -ne 1 ] ; then  #can handle long string/protein
+  name=`head -1 $input | awk '{print $1}'` #name and resid in first line
+  resid=`head -1 $input | awk '{print $2}'`
+  head -1 $input | awk '{len=length($NF);for(i=1;i<=len;i++){print substr($NF,i,1)}}' > $temp #scatter last col long string into single letter
+  head -2 $input | tail -1 | awk '{len=length($NF);for(i=1;i<=len;i++){print substr($NF,i,1)}}' > $temp2
+  nlen1=`wc -l $temp | awk '{print $1}'` 
+  nlen2=`wc -l $temp2 | awk '{print $1}'`
+  if [ $kss -eq 3 ] ; then
+   head -3 $input | tail -1 | awk '{len=length($NF);for(i=1;i<=len;i++){print substr($NF,i,1)}}' > $temp3
+   nlen3=`wc -l $temp2 | awk '{print $1}'`
+   [ $nlen1 -ne $nlen3 ] && echo "Fatal warning @$0 : Not same length of string/residues for 3rd line $nlen1 $nlen3 "
+  fi
+  [ $nlen1 -ne $nlen2 ] && echo "Fatal warning @$0 : Not same length of string/residues $nlen1 $nlen2 "
+  awk 'BEGIN{len='$lens';n=0;kss='$kss';docompare='$docompare'; pro="'$name'";st='$resid'
+   file="'$temp2'";  x=0
+   while ((getline line < file) > 0) {
+    x++; nf=split(line,d," "); b[x]=d[1]
+   }
+   close(file)
+   if(kss==3){
+    file="'$temp3'";  y=0
+    while ((getline line < file) > 0) {
+     y++; nf=split(line,d," "); c[y]=d[1]
+    }
+    close(file)
+   }
+  }{
+   n++;a[n]=$1
+  }END{
+   #print n,x,y
+   #k=sprintf("%d",n/kss)
+   k=1 #suppose only kss lines in input
+   #for(i=1;i<=k;i++){
+    tot=sprintf("%d",n/len+1)
+    tot=strtonum(tot) #Must covert string to num! Otherwise wired resutls
+    if((n/len)==(tot-1)){tot=tot-1}
+    #for(m=1;m<=t;m++){    
+    while (mt <= tot){
+     mt++
+     stt=st+(mt-1)*len;rstt=(mt-1)*len;a1="";b1="";c1=""
+     for(z=1;z<=len;z++){
+      zz=rstt+z
+      a1=sprintf("%s%s",a1,a[zz])
+      b1=sprintf("%s%s",b1,b[zz])
+      if(kss==3){c1=sprintf("%s%s",c1,c[zz])}
+     }
+     printf("%5s %5d %s\n",pro,stt,a1)
+     printf("            %s\n",b1)
+     if(kss==3){
+      if(docompare==1){
+       printf("            ")  #12 spaces
+       for(z=1;z<=len;z++){
+        zz=rstt+z
+        if(b[zz]==c[zz]){printf(" ")}else{printf("%s",c[zz])}
+       }
+       printf("\n")
+      } else {
+       printf("            %s\n",c1)
+      }
+     }
+    }
+   #} #i
+  }' $temp
+  rm -f $temp $temp2 $temp3
+ else #Xold code cannot handle long string/protein Works now after t=strtonum(t)
+ cat $input | awk 'BEGIN{len='$lens';n=0;kss='$kss';docompare='$docompare'}{
+  if(NF>0){n++;a[n]=$_}
+  }END{
+   k=sprintf("%d",n/kss)
+   for(i=1;i<=k;i++){
+    j=kss*(i-1)+1
+    split(a[j],b," ")
+    nlen=length(b[3]);st=b[2];pro=b[1]
+    t=sprintf("%d",nlen/len+1)
+    t=strtonum(t) #Must covert string to num! Otherwise wired resutls
+    y=split(a[j+1],bb," ");ss=bb[y] #ss
+    if(kss==3){z=split(a[j+2],cc," ");sss=cc[z]}
+    for(m=1;m<=t;m++){
+     #print m,t
+     stt=st+(m-1)*len;a1=substr(ss,1+(m-1)*len,len)
+     printf("%5s %5d %s\n",pro,stt,substr(b[3],1+(m-1)*len,len))
+     printf("            %s\n",a1)
+     if(kss==3){
+      a2=substr(sss,1+(m-1)*len,len)
+      if(docompare==1){
+       printf("            ")  #12 spaces
+       for(o=1;o<=length(a1);o++){
+        if(substr(a1,o,1)==substr(a2,o,1)){printf(" ")}else{printf("%s",substr(a2,o,1))}
+       }
+       printf("\n")
+      } else {
+       printf("            %s\n",a2)
+      }
+     }
+    }
+   }
+  }'
+ fi #old
+ exit
+fi #doss
+
+#Check the format of seq alignment input file
+inputo=$input
+noempty=`awk 'BEGIN{n=0}{if($_==""||$_==" "||NF==0){n++}}END{print n}' $input`
+if [ $noempty -eq 0 ] ; then  #Pfam seq alignment, no empty line
+ echo "Input $input is Pfam seq alignment like file: no empty line inside"
+else #noempty
+ hasback=`awk 'BEGIN{n=0}{if($1=="//"){n++}}END{print n}' $input`
+ if [ $hasback -gt 0 ] ; then
+  echo "Input $input is multalin seq alignment like file: has // inside. Each block, first line is seq number and removed. Consensus as last line"
+  awk 'BEGIN{s=0;k=0}{
+  if($_==""){k=0}else{k==1}
+  if(s>0){
+   if(s==2&&k==1){
+    qindex=index($_,$2)
+    aaa=substr($_,1,qindex-1) #Include original name space/padding    
+    for(i=2;i<=NF;i++){aaa=sprintf("%s%s",aaa,$i)} #remove space of every 10 seqs
+    print aaa
+    if($1=="Consensus"){printf("\n")}  #Add empty line after Consensus
+   }
+   if(s>0&&NF>0){s=2;k=1}
+  };if($_=="//"){s=1}}' $input > $temp  #remove headers before // and also seqeunce number/Consensus in each block data  
+ else
+  echo "Input $input is CLUSTAL seq alignment like file with emptyline=$blockspace between data blocks. Use -blockspace to change"
+  awk 'BEGIN{s=0}{if(s==1&&NF>0){s=2};if(s==2){print $_};if($_==""){s=1}}' $input > $temp  #remove Clustal header
+ fi
+ #npro=`awk '{if(NF==0){exit};if(NF>0){n++}}END{print n}' $temp`  #This code does not work when there is extra empty line for consenus score 
+ npro=`awk '{b='$blockspace';if(NF==0&&n>0){s=1;n++};if(NF>0&&s==1){n=n-b;exit};if(NF>0){n++}}END{print n}' $temp`
+ #Whether has consenus line
+ hascons=`awk '{b='$blockspace';if(NF==0&&n>0){s=1;n++;a[n]=substr($_,1,5)};
+  if(NF>0&&s==1){n=n-b;exit};if(NF>0){n++;a[n]=substr($_,1,5)}}
+  END{if(a[n]="     "){print 1}else{if(tolower(a[n])=="conse"){print 2}else{print 0}}}' $temp`
+ [ $hascons -eq 0 ] && echo " There are total $npro proteins with no Consensus line"
+ [ $hascons -eq 1 ] && echo " There are total $npro proteins with empty name Consensus line"
+ [ $hascons -eq 2 ] && echo " There are total $npro proteins with named Consensus line"
+ #Merge alignment in one long line for each protein:
+ awk 'BEGIN{s=0;npro='$npro';n=0;hasback='$hasback';bb='$blockspace';np=npro+bb;hascons='$hascons';if(hascons>0){cons=1}
+  }{
+  m++;pp=(m % np) ; if(pp==0){pp=np}
+  if(pp<=npro){n++
+   if(pp<=(npro-cons)) {  #none-conses line
+    qindex=index($_,$2)
+    len=length($2)
+    qqq=substr($_,qindex,len)
+    if(n<=(npro-cons)){name[n]=$1;seq[n]=qqq;fulname[n]=substr($_,1,qindex-1)}
+    if(n>npro){
+     if(name[pp]!=$1){
+      print "Fatal error, not same protein name:",name[pp],$1,n,npro,pp
+     }else{
+      seq[pp]=sprintf("%s%s",seq[pp],qqq)  #Merge other lines. No space added
+     }
+    }
+   } else{ #consen line
+    if(pp==npro){
+     if(n<=npro){
+      fulname[pp]="Consensus";
+      for(i=1;i<=(qindex-1-9);i++){fulname[pp]=sprintf("%s ",fulname[pp])}  #rename cons line as Consensus
+      if(qindex<10){fulname[pp]=substr(fulname[pp],1,qindex-1)}
+     }      
+     qqq=substr($_,qindex,len)
+     seq[pp]=sprintf("%s%s",seq[pp],qqq)
+    }
+   }
+  }
+ }END{for(i=1;i<=npro;i++){printf("%s  %s\n",fulname[i],seq[i])}}' $temp > $temp2
+ input=$temp2
+ nfatal=`grep 'Fatal' $input | wc -l | awk '{print $1}'`
+ if [ $nfatal -gt 0 ] ; then
+  echo "Fatal error happens to convert seq file:"
+  grep 'Fatal' $input
+  rm $temp $temp2
+  exit
+ fi
+ clustal=1
+fi #noempty
+
+if [ $dofasta -eq 1 ] ; then
+ awk '{
+  if($1!="Consensus"){aaa=""
+   printf(">%s\n",$1)
+   k=index($_,$2)
+   bbb=substr($_,k,length($_))
+   for(i=1;i<=length(bbb);i++){
+    m=i+k-1;cha=substr($_,m,1)
+    if(cha!=" "&&cha!="."&&cha!="-"){aaa=sprintf("%s%s",aaa,cha)}
+   }
+   print aaa
+   print ""
+  }
+ }' $input > $output
+ echo "Convert seq aln file of $inputo into fasta format as $output"
+ rm -f $temp $temp2 ; exit
+fi
+
+awk -v remove="$remove" 'BEGIN{mr=0;ml=0;len='$lens';rd='$removedot';rt='$removetit';space='$space';msp=1000;
+ clustal='$clustal';npro='$npro';hascons='$hascons';addresn='$addresn'}
+{ n++;name[n]=$1;seq[n]=$2; nspac[n]=index($_,$2)-length($1)-1;resnum[n]=0
+  row=int(length($2)/len)+1;if(row>mr){mr=row};if(ml<length($2)){ml=length($2)}
+  if(clustal==1&&hascons>0){  #deal with Clustal Consensus line
+   if(n<npro){start2=index($_,$2);le2=length($2)
+   }else{ #for last Consensus line
+    name[n]=substr($_,1,start2-2);nspac[n]=1
+    seq[n]=substr($_,start2,le2)
+    row=int(le2/len)+1;if(row>mr){mr=row};if(ml<le2){ml=le2}
+   }
+  }
+  if(remove!=""){ #remove partial of name
+   rrr=index(name[n],remove)
+   if(rrr>0){
+    ft=substr(name[n],1,rrr-1)
+    af=substr(name[n],rrr+length(remove),length(name[n]))
+    name[n]=sprintf("%s%s",ft,af)
+   }
+  }
+  if(rt==1){ #remove name after _
+   ntt=index($1,"_")
+   if(ntt>0){
+    ol=length(name[n])
+    name[n]=substr(name[n],1,ntt-1)
+    nol=length(name[n])
+    nspac[n]=nspac[n]+ol-nol
+   }
+  }
+  if(nspac[n]<msp){msp=nspac[n]}  
+  #for(i=1;i<=nspac;i++){spac[n]=sprintf("%s ",spac[n])}
+}
+ END{
+
+ #determine mini space between name and seq
+ for(j=1;j<=n;j++){
+  nspac[j]=nspac[j]-msp+space
+  for(i=1;i<=nspac[j];i++){spac[j]=sprintf("%s ",spac[j])}
+ }
+
+ if (rd==1){  #remove common dots
+  for(i=1;i<=ml;i++){
+   nd=0
+   for(j=1;j<=n;j++){
+    aaa=substr(seq[j],i,1)
+    if(aaa=="."||aaa==""){nd++}
+   }
+   rem[i]=0
+   if(nd==n){
+    for(j=1;j<=n;j++){
+     front=substr(seq[j],1,i-1)
+     late=substr(seq[j],i+1,ml)
+     seq[j]=sprintf("%s%s",front,late)
+    }
+    i=i-1;ml=ml-1
+   }
+  }
+  mr=int(ml/len)+1
+ }
+
+ for(i=1;i<=mr;i++){  #for each protein
+  for(j=1;j<=n;j++){  #for each block
+   k=(i-1)*len+1
+   aa=substr(seq[j],k,len)
+   if(addresn==1){  #add resid number at end of each line
+    if(!(clustal==1&&hascons>0&&j==n)){
+     for(p=1;p<=length(aa);p++){
+      if(substr(aa,p,1)!="-"){resnum[j]++}
+     }
+    } 
+   }
+   if(resnum[j]==0){resn=""}else{resn=resnum[j]}
+   printf("%s%s%s  %s\n",name[j],spac[j],aa,resn)   
+  }
+  printf("\n")
+ }
+}' $input > $output
+
+if [ $addheader -eq 1 ] && [ $clustal -eq 1 ] ; then
+ echo "CLUSTAL multiple sequence alignment" > $temp
+ echo "" >> $temp
+ cat $output >> $temp
+ mv $temp $output
+fi
+
+echo "Sequence alignment file $inputo is re-organized and saved in $output"
+
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit

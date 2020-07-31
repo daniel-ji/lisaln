@@ -1,0 +1,1199 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+filebase='./'  #where newly downloaded file saves
+uniweb='ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.dat.gz'  #Link for newest version of Uniprot data
+unifile=${filebase}'uniprot_sprot_202001.dat'  #Full record of Uniprot data downloaded 2020/1. Will auto-check newest version
+humanxls=${filebase}'human_uniprot.xls'  #Human protein names matching table extracted from unifile
+chemblurl='https://www.ebi.ac.uk/chembl/target/inspect/'  #ChEMBL to search known inhibitors
+ oldchemblurl='https://www.ebi.ac.uk/chembl/old/target/inspect/'  #ChEMBL to search known inhibitors in old version before 2019/5
+uniproturl='https://www.uniprot.org/uniprot/' #Uniprot
+repositoryurl='https://swissmodel.expasy.org/repository/uniprot/'  #Swiss-Model repository for homology
+modelurl='https://www.proteinmodelportal.org/query/uniprot/' #The Protein Model Portal: has models from SWISSMODEL and MODBASE
+refsequrl='https://www.ncbi.nlm.nih.gov/protein/'  #NCBI seq for Blastp to find homologies
+geneidurl='https://www.ncbi.nlm.nih.gov/gene/'  #NCBI GeneID
+genecardsurl='https://www.genecards.org/cgi-bin/carddisp.pl?gene=' #GeneCards, use GeneName
+orthoDBurl='https://www.orthodb.org/?level=&species=&query=' #OrthoDB, use OrthoDB id
+ensembltree='https://uswest.ensembl.org/Homo_sapiens/Gene/Compara_Tree?g=' #Ensembl ID to link to GeneTree
+pubmedurl='https://www.ncbi.nlm.nih.gov/pubmed/?term=' #NCBI PubMed. Use PubMed ID
+phylomeDBurl='https://www.phylomedb.org/?q=search_tree&seqid=' #phylomeDB for phylogenetic tree and alned seqs. Take Uniprot
+pfamurl='http://pfam.xfam.org/protein/' #Pfam database for domains, Take Uniprot
+pfamidurl='http://pfam.xfam.org/family/' #Pfam database for domains, Take pfam ID
+memeurl='https://www.meme-suite.org/tools/meme'  #MEME website to discover novel, ungapped motifs for input seq
+cddurl='https://www.ncbi.nlm.nih.gov/Class/Structure/pssm/pssm_viewer.cgi?mode=Position&cd=' #NCBI CDD (conserved domains)
+reactomeurl='https://reactome.org/content/detail/' #Pathway from Reactome. Take Reactome ID
+KEGGurl='https://www.genome.jp/dbget-bin/www_bget?' #Pathway from KEGG. Take KEGG ID
+SMARTurl2='http://smart.embl-heidelberg.de/smart/show_motifs.pl?ID='  #SMART domain picture (very nice), use ID as FEN1_HUMAN 
+SMARTurl='http://smart.embl-heidelberg.de/smart/do_annotation.pl?BLAST=DUMMY&DOMAIN=' #SMART motif or domain seq align
+InterProdurl='https://www.ebi.ac.uk/interpro/entry/' #InterPro for protein domains
+Bgeeurl='https://bgee.org/?page=gene&gene_id='  #Bgee for gene expression level in organs
+ExpressionAtlasurl='https://www.ebi.ac.uk/gxa/genes/'  #ExpressionAtlas for expression level in organs
+mRNAexpressurl='http://biogps.org/#goto=genereport&id=' #BioGPS for RNA expression , not included in Uniprot data, but from my own search
+ProteinExpreeurl='https://www.proteinatlas.org/'  #The Human Protein Atlas for protein/RNA expression level in organs. Not in Uniprot
+cBioPortalurl='http://www.cbioportal.org/' #Cancer patient mutations in cBioPortal
+drugbankurl='https://www.drugbank.ca/drugs/'  #DrugBank for associate approved/experimental drugs
+HGNCurl='https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/'  #See if gene is HGNC approved
+GEPIAurl='http://gepia.cancer-pku.cn/detail.php?gene=' #2017 Cancer gene expression, survival plot. Very good!
+GEPIAAPIurl='http://gepia.cancer-pku.cn/detail.php?gene=' 
+ #GEPIA API to show survival plot, correlation, stage plot, see http://gepia.cancer-pku.cn/api.html
+DriveDataurl='https://oncologynibr.shinyapps.io/drive/'
+ #Drive Data Portal: https://www.sciencedirect.com/science/article/pii/S0092867417308127?via%3Dihub : 398 cancer cell line sensitivities to 7837 genes
+ #Download full data from Mendeley : https://data.mendeley.com/datasets/y3ds55n88r/1
+CCLEurl='https://portals.broadinstitute.org/ccle/page?gene='
+ #CCLE protal to show mRNA expression level, DNA copy number and mutations of 7837 genes for 398 cancer cell lines
+COSMICurl='https://cancer.sanger.ac.uk/cosmic/gene/analysis?ln='
+ #Cosmic mutation data
+
+thisfile=$0
+doout=0
+debug=0
+isuni=1
+isname=0
+isany=0
+species="human";dospecies=0
+itype=0 #=0: either of Name/UniprotID  =1:uniprotID  =2:Protein name in ID row =3:ProteinName in GeneName (GN row) species 
+        #=4: PDBid =5: Name in DE row, can be long name/shortname =6: GO id =7 GeneID
+nout=1 #=0: output all match records
+dofasta=1;outfasta='NA'
+dofunction=0;allGO=0
+doless=0
+dourl=1
+showpdb=1
+pdblength=50 #long PDBs w/ resid >=$pdblength to exclude short peptide
+addmatch=1
+dosum=1
+withgo=1;dotitle=1
+dof2=0;func2="";dof3=0;func3="";dof9=0 #for HGNC approved gene
+doKEGG=1
+getPDB=0
+chembl=1 #=1, for chembl inhibitor and PDBs
+nomoretry=0
+doEM=0;minilen=50;doonly="any"
+dofast=0
+showfullname=0
+noiso=0
+aln=1 #LisAln align
+aln2=0 #LisAln align for fast version
+download=0
+homo=1 #get homology PDBs
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -nohomo)homo=0;shift;;
+   -download)download=1;shift;;
+   -nochembl)chembl=0;shift;;
+   -aln)aln=1;aln2=1;shift;;
+   -noaln)aln=0;aln2=0;shift;;
+   -noiso)noiso=1;shift;;
+   -fullname)showfullname=1;shift;;
+   -fast)dofast=1;shift;;
+   -pure)nomoretry=1;withgo=0;doKEGG=0;addmatch=0;doless=1;chembl=0;dofasta=0;getPDB=0;homo=0;shift;;
+   -minilen)minilen=$2;shift 2;;
+   -EM)doEM=1;shift;;
+   -onlyA)doonly="A";shift;;
+   -only)doonly=$2;shift 2;;
+   -nomoretry)nomoretry=1;shift;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -notuni)isuni=0;shift;;
+   -id)itype=2;shift;;
+   -gene)itype=3;shift;;
+   -pdb)itype=4;nout=0;aln=0;shift;;
+   -name)itype=5;shift;;
+   -species)dospecies=1;species="$2";aln=0;shift 2;;
+   -GO)itype=6;nout=0;aln=0;shift;;
+   -go)itype=6;nout=0;aln=0;shift;;
+   -function)itype=6;dofunction=1;nout=0;aln=0;shift;;
+   -f2)itype=6;dofunction=1;dof2=1;func2="$2";nout=0;aln=0;shift 2;;
+   -f3)itype=6;dofunction=1;dof3=1;func3="$2";nout=0;aln=0;shift 2;;
+   -geneID)itype=7;shift;;
+   -HGNC)dof9=1;shift;;
+   -allGO)allGO=1;shift;;
+   -any)isany=1;shift;;
+   -nout)nout=$2;shift 2;;
+   -all)nout=0;shift;;
+   -fasta)dofasta=1;shift;;
+   -outfasta)outfasta=$2;dofasta=1;shift 2;;
+   -more)doless=0;shift;;
+   -less)doless=1;shift;;
+   -nourl)dourl=0;shift;;
+   -noshowpdb)showpdb=0;shift;;
+   -pdblength)pdblength=$2;shift;;
+   -addmatch)addmatch=1;shift;;
+   -noaddmatch)addmatch=0;shift;;
+   -nosum)dosum=0;shift;;
+   -withgo)withgo=1;shift;;
+   -nogo)withgo=0;shift;;
+   -title)dotitle=1;shift;;
+   -notitle)dotitle=0;shift;;
+   -noKEGG)doKEGG=0;shift;;
+   -getPDB)getPDB=1;aln=0;shift;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Get information (GO term, different names and IDs) from UniprotID : from data downloaded from Uniprot website as uniprot_sprot.dat
+  Can also find all proteins with function as nuclease activity
+  Can also find all proteins in species named as FEN1
+  Also links to gene/RNA/Protein expression level in tissues
+  Can also download newest Uniprot data when -download from ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.dat.gz 
+ My extra info that not in Uniprot: 
+  ChEMBL inhibitors of the protein (from ./chembl)
+  homology PDBs from NCBI blastp of isoform 1 for a Uniprot ID (from ./NCBI_blast)
+  KEGG pathway details.
+  The Human Protein Atlas for protein/RNA expression level in organs.
+  Swiss-Model repository
+  Count isoforms 
+ Started on 2019/1
+
+It includes:
+Different names
+GO terms
+PDBs and chain, resid-range
+PubMed
+Organism
+Pathway: Reactome and KEGG
+Gene/RNA/Protein expression in tissues
+IDs: many 
+ ChEMBL : check known inhibitors for a protein at $chemblurl
+ Ensembl; ENST00000305885
+ GeneID; 2237
+ EMBL, CCDS, NCBI_TaxID 
+ RefSeq(NP_004102.1), UniGene, CDD, SMART, InterPro, Pfam, SUPFAM, PROSITE, HAMAP, PANTHER, ProteinModelPortal
+ Drugbank (for P21554)
+ GeneTree : ENSGT00940000155807
+
+Download all Uniprot for Swiss-Prot data at: https://www.uniprot.org/downloads
+ Reviewed (Swiss-Prot) | Download txt  (ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.dat.gz)
+ uniprot_sprot_201901.dat at 2019/1
+Or auto-download by: $0 -download 1
+Last download as uniprot_sprot_201908.dat at 2019/8
+
+GO enrichment analysis: http://geneontology.org/
+  One of the main uses of the GO is to perform enrichment analysis on gene sets. 
+  For example, given a set of genes that are up-regulated under certain conditions, an enrichment analysis will find which GO terms 
+  are over-represented (or under-represented) using annotations for that gene set
+
+To find all human proteins:
+./UniProt_get -noaddmatch -noaln -less -fullname -species human all
+=> 20431/20116 Proteins/Genes saved in human_uniprot.xls (20413 from uniprot_sprot_201901.dat in human_uniprot201901.xls)
+ #WARNing: TP53 has two Uniprot IDs (P04637 and Q9NZD0), but linked to same uniprot website P04637. However, human_uniprot.xls uses Q9NZD0 as Uniprot ID
+ #WARNing: two protein names NACAM_HUMAN and NACA_HUMAN with different uniprotID both associate to same Gene name NACA in human_uniprot.xls
+ Number of unique genes: awk '{if(NR>0){if(!a[$3]){a[$3]=$3;n++}}}END{print n}' human_uniprot.xls
+TO find all human genes: Need remove duplicate HGNC proteins in human_uniprot.xls (not done this)
+ e.g. METTL2A METTL2B are from same HGNC:378 
+To cluster all human proteins/genes: in Rosen/, saved in database/:
+./protein_cluster -species human all
+awk '{split($_,a,"\t");printf("%s\t%s\n",a[1],a[2])}' human_GO_clu1_0.xls
+2227    metal ion binding
+1533    sequence-specific DNA binding RNA polymerase II transcription factor activity
+1436    DNA binding
+1425    ATP binding
+1331    RNA binding
+1098    identical protein binding
+824     protein homodimerization activity
+818     zinc ion binding
+698     G-protein coupled receptor activity
+681     calcium ion binding
+634     sequence-specific DNA binding transcription factor activity
+478     protein heterodimerization activity
+443     protein kinase binding
+434     RNA polymerase II core promoter proximal region sequence-specific DNA binding
+433     RNA polymerase II transcription regulatory region sequence-specific DNA binding transcription factor activity involved in positive regulation of transcription
+424     olfactory receptor activity
+415     sequence-specific DNA binding
+381     chromatin binding
+368     GTP binding
+365     receptor binding
+356     protein serine/threonine kinase activity
+346     enzyme binding
+331     transcription factor binding
+295     GTPase activity
+290     cadherin binding
+277     ubiquitin protein ligase binding
+273     transcription coactivator activity
+259     ubiquitin-protein ligase activity
+258     GTPase activator activity
+258     actin binding
+256     RNA polymerase II transcription regulatory region sequence-specific DNA binding transcription factor activity involved in negative regulation of transcription
+254     RNA polymerase II regulatory region sequence-specific DNA binding
+247     serine-type endopeptidase activity
+237     protein domain specific binding
+233     transcription corepressor activity
+
+To find all human kinases: #add space to distingish from robikinase
+A good kinase summary and structural/sequence alignment paper is: https://www.nature.com/articles/s41598-019-56499-4
+iTOL can plot unrooted phylogenetic tree of kinase or others: https://itol.embl.de/
+Uniprot kinase names for human, mouse etc: https://www.uniprot.org/docs/pkinfam
+To distiguish PDBs of active and inactive DFG states of kinase: http://dunbrack.fccc.edu/kinasetool/  saved as dfgcluster.pl
+ PDBs for kinase with active/inactive assigned listed in https://www.pnas.org/content/suppl/2019/03/13/1814279116.DCSupplemental
+ (https://www.pnas.org/content/116/14/6818)
+    #For human kinase, as in Homokinase, it should check 3 together and all gene name approved by HGNC 
+     #(https://www.hindawi.com/journals/isrn/2013/417634/). protein phosphorylation is in GO P: biological process, so need -allGO
+     #there should be about 498 human kinase genes
+ ./UniProt_get -less -species human -function " kinase activity"
+x=> 1670 Proteins saved in kinase_uniprot.xls
+=> 712 Proteins saved in kinase_uniprot.xls
+./UniProt_get -less -species human -allGO -function -f2 "ATP binding" -f3 "protein phosphorylation" " kinase activity" 
+After debug this script:
+=> 326 Proteins saved in kinase_ATP_uniprot.xls
+X=> 1162 Proteins saved in kinase_ATP_uniprot.xls
+XThis is wrong assign:
+X# 179 CELR3_HUMAN Q9NYQ7 @: DR   GO; GO:0006469; P:negative regulation of protein kinase activity; ISS:UniProtKB.
+          DR   GO; GO:0005524; F:ATP binding; IEA:UniProtKB-KW.
+          DR   GO; GO:0001932; P:regulation of protein phosphorylation; IEA:Ensembl.
+./UniProt_get -HGNC -less -species human -allGO -function -f2 "ATP binding" -f3 "protein phosphorylation" " kinase activity"
+ Only for HGNC approved human genes. Same results when no -HGNC
+=> 326 Proteins saved in kinase_ATP_HGNC_uniprot.xls
+xStill need refine script and + HGNC approved human genes
+
+./UniProt_get  -less -species human -function  "RNA binding"
+=> 1576 Proteins saved in RNA_uniprot.xls
+No METTL7A which only has: methyltransferase activity
+To find all possible RNA-reader etc.
+./UniProt_get -less -function "methylated histone binding"   (Use GO term of TDRD3 from Uniprot, not ./GO_annotation)
+Do NOT run ./UniProt_get -less -function "methylated histone residue binding" (GO term from ./GO_annotation)
+=> 65 Proteins saved in methylated_uniprot.xls
+To find all METTL proteins:
+./UniProt_get -less -function "methyltransferase activity"
+=> 209 Proteins saved in methyltransferase_uniprot.xls
+Many METTLs, including METTL7A
+
+Domains database: https://en.wikipedia.org/wiki/Protein_domain
+Structural domain databases
+    Conserved Domains at the National Center for Biotechnology website
+    3Dee
+    CATH
+    DALI
+    Definition and assignment of structural domains in proteins at the Wayback Machine (archived 2006-09-11)
+    PFAM clan browser
+Sequence domain databases
+    InterPro
+    Pfam at the Library of Congress Web Archives (archived 2011-05-06)
+    PROSITE
+    ProDom
+    SMART
+    NCBI Conserved Domain Database
+    SUPERFAMILY Library of HMMs representing superfamilies and database of (superfamily and family) annotations for all completely sequenced organisms
+
+ Usage: $0 [Options] Input(UniprotID|Name|GeneName)
+  When Input is protein name, will serach all kinds of names in DE or GN row. Otherwise, use -id to search name in ID row
+  When Input=all, find for all proteins
+ Options:
+  -debug : debug model on
+  -out Output : User defined output
+  -more|[-less] : more screen dump
+  -nourl : will not show URL to Uniprot Web in output file.
+  -noshowpdb : will not show PDBs in display
+  -nomoretry : will NOT try to search as -gene or -id when failed searching
+  -pure : fastest call. -nomoretry -nogo -noKEGG  etc. For any new modification, must disable the new function in -pure
+
+  -nout Num : how many matched uniprot records display? default: only output 1 record that first matched
+  -all : show all the matched records. Default -all for -pdb -GO -function 
+  -pdb : input is PDBid (or PDB w/ chain)
+  [-name] : input is protein name (full or short, in DE row or gene name in GE, e.g. Cannabinoid receptor 1; CB1) : human as species default
+  -id : input is protein name in Uniprot ID row, such as FEN_HUMAN, or Fen1
+  -gene : input is gene name (usually same as protein name) in GN row, and human as default
+  -geneID : input is geneID
+  -GO|-go : input is GO id such as 0016020, or GO function such as nuclease
+  -nogo|[-withgo] : will not display GO terms in screendump
+  -function : input is protein function (such as: nuclease activity), and return proteins that have nuclease activity key word (see Nuclease/) 
+    in GO function terms F:, also incld: exonuclease activity. Check/search: GO_annotation.txt
+    But it returns 656 human proteins for nuclease, much more than 131 nucleases when advanced search GeneCard as function: nuclease
+   -f2 "Function2" : Output will have both function and Function2 together
+   -f3 "Function3" : Output will have all function, Function2 and Function3 together
+   -allGO : Not only in GO function F:, but also include P: biological process and C: cellular component
+   WARNing: ./GO_annotation and Uniprot Data may show different function names for TDRD3: 
+     methylated histone residue binding (GO) vs. methylated histone binding (Uniprot)
+   So the function name should use Uniprot (NOT ./GO_annotation): methylated histone binding
+  -HGNC : only output HGNC approved human gene. For kinase search to narrow down kinase protein number
+   Actually, maybe all Uniprot data for human are HGNC approved. So maybe useless
+  -species "SpeciesName": Default is human and  will search as FEN1_HUMAN in ID row. Can be scientific species as well
+    -species any : return first Uniprot record for any species for protein name, especially for RecB not in human
+  -any : match in any place for input and return the first Uniprot record
+  -fullname : will show full name of protein in output
+  -fasta : also extract fasta of all selected proteins (for canonical/first isoform in protein only) and save them as one fasta file
+  -outfasta FastaOutputName : output file name for fasta
+    Another way to download seq: ./sequence_download
+  -pdblength pdblength : Counts long PDBs w/ resid >=pdblength to exclude short peptide [$pdblength]
+  -noaddmatch|[-addmatch] : will not append match info to output, especially for -function
+  -nosum : will not screen dump summary of protein: such as ID/Goterm/RefSeq
+  -noKEGG : will not show detail of KEGG pathways
+  -notitle|[-title] : will not screen dump title of literatures in PubMed: In TYW5, it clearly shows as jmjc protein as in JMJD1B/
+  -getPDB : download all the PDBs related to last of input protein from the download Uniprot data file, but exclude EM PDBs by default
+   -minilen MinimumPDBLength : minimum protein PDB length to download to avoid peptide downloading [$minilen]
+   -only Chain : Only download the protein is in defined chain: for ./pymol_all to align chain A and display 
+   -onlyA : Only download the protein is in chain A: for ./pymol_all to align chain A and display
+   -EM : also include EM PDBs (which could be very huge and cannot display by pymol as too many chains)
+     Pymol can display mmCIF format of EM PDBs
+  -fast : use $humanxls to find human protein IDs (such as ENSGxxxx) info and fasta quickly.
+   -noiso : will remove isoform parts and precusor which cannot be search in this script for protein full name
+  -noaln | [-aln] : will not check LisAln alignment for seqs across species (orthologues) and homology proteins (paralogues)
+  -nochembl : will not find ChEMBL inhibitors
+  -nohomo : will NOT check homology PDBs from NCBI blastp of isoform 1 for a Uniprot ID
+
+ Example:
+  $0 -download 1  #Auto-downloaded the newest version of Uniprot 
+  $0  -fast P39748   #For uniprotID of human FEN1.  
+    WARNing: Odfactory receptor OR4C15 has two Uniprot entries (Q8NGM1 and A0A2C9F2M4) with different seqs. Mutation website used A0A2C9F2M4. See ~/OR4C15
+  $0 "Flap structure-specific endonuclease 1"   #For human FEN1 as full name in DE row or gene name
+  $0 "hFEN-1"  #For human FEN1 in shortname
+  $0 -all fen1  #For named FEN1 in DE row from all species
+  $0 -id fen1     #For human protein name FEN1 in ID row: FEN1_HUMAN
+  $0 -gene fen1   #For GeneName in GN col: name=FEN1
+  $0 -geneID 11651 #For mouse AKT1 with NCBI GeneID as 11651
+  $0 -fasta -fast CB1   #also save the first isoforms of CB1 (5 isoforms w/ NCBI NP_ refseq records, 3 isoforms in Uniprot website). Use fast version
+  $0 -fast -noiso "at-rich interactive domain-containing protein 1a"  #find all IDs(ENSGxxx), shortName and full name for a protein in fast version
+      #remove isoform parts and precusor which cannot be search in this script for full name
+  $0 -species "Yellowfever mosquito" FEN1 #For other species Yellowfever mosquito of fen1
+  $0 -species any RecB   #As RecB is not in human, return first Uniprot record for any species
+  $0 -all AddA #Show all the species for protein AddA
+  $0 -pdb 1ul1x #PDBid w/ chain for chain X of 1UL1 (FEN1 only)
+  $0 -fasta -pdb 1UL1    #For PDBid show all the uniprot records that in this PDB: both FEN1 and PCNA. Also download two fastas into one file
+  $0 -GO 0016020 #For all proteins that has GOid GO:0016020
+  $0 -getPDB -minilen 60 -only A SIRT1  #Also download all SIRT1 PDBs for miniLength>=60aa and only when SIRT1 in chain A (for ./pymol_all to align and display)
+  $0 -less -noaddmatch -species human all #Find all human genes/proteins use "all" as input name
+  $0 -less -species human -function "nuclease activity"  #"helicase activity"  "demethylase activity" (demethylation)
+     #For all human proteins that has 'nuclease activity' and F: (function) key word in GO terms (incld: endonuclease activity) See Nuclease/
+     #it returns 656 human proteins for nuclease, much more than 131 nucleases when advanced search GeneCard as function: nuclease
+     # NOTE: FTO is included for demethylase, but jmjc protein TYW5 is not found as oxidoreductase activity. See JMJD1B/
+     #All functions can check/search GO_annotation.txt
+  $0 -HGNC -less -species human -allGO -function -f2 "ATP binding" -f3 "protein phosphorylation" " kinase activity"
+     #For human kinase, as in Homokinase, it should check 3 together and all gene name approved by HGNC 
+     #(https://www.hindawi.com/journals/isrn/2013/417634/). protein phosphorylation is in GO P: biological process, so need -allGO
+     #there should be about 498 human kinase genes. Only find 326 kinases here
+     #add space to distingish from robikinase
+  $0 -out nuclease_helicase_uniprot.xls -species human -f2 "helicase activity" "nuclease activity"
+     #For all human proteins that have both helicase and nuclease in GO:Function terms
+
+ NOTE: One gene may corresponse to multiple proteins: Uniprot is gene-related (one gene to one Uniprot). 
+    So will have isoforms. So have to use GeneID for GeneTree etc.
+ NOTE: ICGC data quality may not as good as CBioportal, see icgc_top1500_201910c.csv for mutation rate compare and ./cluster_Pickmutation -length in ~/Rosen
+ NOTE: two protein names NACAM_HUMAN and NACA_HUMAN with different uniprotID both associate to same Gene name NACA in human_uniprot.xls
+ NOTE: TP53 has two Uniprot IDs (P04637 and Q9NZD0), but linked to same uniprot website P04637
+ NOTE: Protein name from human_uniprot.xls is TITIN (from TITIN_HUMAN) for gene TTN (largest protein and highest mutation rate): 17619   TITIN_HUMAN     TTN
+ NOTE: Protein name is P53 for gene TP53 (largest mutation rate for cencer protein.TTN is not cancer protein): 12398   P53_HUMAN       TP53    Q9NZD0
+       longer protein has higher mutation rate? Run ./cluster_Pickmutation -length
+       Many OR (olfactory receptors) shows as driver in lung cancer. TP53 mutation rate=98.4%
+       Many outliers in myeloid cancer: FLT3 ranked #1 in cancer-related. Not TP53(#7,10.5%). OR13H1(3.8 0.5 308) OR11H12(3.8 0.5 326) as lower rank
+
+ NOTE: To search/cluster function of a list proteins, run ./protein_cluster -filter "kinase activity"
+ NOTE: To download current Uniprot page for specific Uniprot: ./UniProt_getProperty  UniprotID . But this script can run offline
+ NOTE: To download PDBs related to Uniprot or human protein name: ./pdb_download UniprotID or $0 -getPDB  (gives different PDBs!)
+ XWARNing: $0 -getPDB missed PDB 2psq 3cly for FGFR1. Also missed in Uniprot website for P11362. Found from NCBI blastp in FGFR1/ 
+ NOTE: For super fast of convert human protein GeneID/Name etc., run ./IDs_gene_uniprot_convert -nopdb
+ NOTE: To find CID/Vendor/Patent/Analogs/AnalogVendors/IC50(Activity)/PDBs of a compound, run ./PubChem_convert
+ NOTE: To find mutation rate vs. protein length and predict cancer driver/passenger genes, run ./cluster_Pickmutation
+ NOTE: To find ChEMBL inhibitors or PDBs for any protein or download/analyze chembl database, run ./chembl
+
+ NOTE: My AAD (All-Around Docking), DSP (Drugable Site Prediction), STP/SOP (Structure-based Target/Offtarget Prediction), SAG(Side-chain Auto-Grow) 
+ NOTE: LiVS (ligand virtual screening pipeline): 
+ NOTE: LibaPipe (Library Analysis Pipeline): ./library_sdf_report
+ NOTE: LisAln (LIberal Sequence ALigNment): ./NCBI_blast -LisAln
+ NOTE: Lian (Legion Interfaces Analysis): ./namd_analysis 
+ NOTE: LiPav (Ligand information of Patent/Analog/Vendor/PDB): ./PubChem_convert 
+ NOTE: My sRMSD to cluster protein structures: ././protein_cluster
+ NOTE: My UDscore (Universal diversity score) to determine Library diversity: ./diversity_DScore
+ NOTE: My normalized mutation-rate to predict cancer driver/passenger genes: ./cluster_Pickmutation -length -cancer -col 3 human_uniprot.xls 
+
+ NOTE: For SARS virus, it is hard to search from Uniprot. Use NCBI blastp instead. See SARS/
+  This is because SARS Uniprot P0C6X7 is a long polyprotein, which can degrade to tens of nsp proteins. Read detail of each nsp proteins in Uniprot
+ WARNing: Uniprot database does not include all NCBI geneID, e.g. mouse Akt1 (https://pubchem.ncbi.nlm.nih.gov/gene/11651). See ./PubChem_convert
+ WARNing: ./GO_annotation and Uniprot Data may show different function names for TDRD3: 
+   methylated histone residue binding (GO) vs. methylated histone binding (Uniprot)
+ WARNing: Odfactory receptor OR4C15 has two Uniprot entries (Q8NGM1 and A0A2C9F2M4) with different seqs. Mutation website used A0A2C9F2M4. See ~/OR4C15
+
+ NOTE: $ProteinExpreeurl for human organ protein expression says ACE2 has no expression in lung, but literature says high expression. So proteinAtlas may not reliable
+ 
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+#infile=`basename $input ${extension}`
+prefi=$infile
+if [ $doout -ne 1 ] ; then
+ output=$infile'_uniprot.xls'
+ if [ "$input" == "all" ] ; then
+  output=$species'_uniprot.xls'
+  aln=0
+ fi
+ if [ $dof2 -eq 1 ] ; then
+  infile2=`echo $func2 | awk '{print $1}'`
+  output=$infile'_'$infile2'_uniprot.xls'
+  prefi=$infile'_'$infile2
+ fi
+ if [ $dof9 -eq 1 ] ; then
+  output=$prefi'_HGNC_uniprot.xls'
+  prefi=$infile'_HGNC'
+ fi  
+fi
+outfix=`echo $output | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+[ "$outfasta" == "NA" ] && outfasta=$outfix'.fasta.txt'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/chembl $ed/pdb_download $ed/KEGG_pathway $ed/GO_annotation $ed/pymol_all $ed/NCBI_blast .
+ cp -f $ed/Pfam_domain $ed/sequence_download $ed/NCBI_blast_PDBs .
+fi
+
+leng=`echo $input | awk '{print length($1)}'`
+[ $leng -eq 6 ] && isuni=1
+
+#Auto-check and use newest version of Uniprot data
+unifile=`ls -lrst ${filebase}uniprot_sprot*.dat | tail -1 | awk '{print $NF}'`
+[ $doless -eq 0 ] && echo "The Uniprot data used is $unifile. To download the newest version, run: $0 -download 1"
+
+#Auto-download newest version of data
+if [ $download -eq 1 ] ; then
+ cd $filebase
+ echo "Will download the newest version of Uniprot data (550M in .gz)from $uniweb ,check as: tail -f ${filebase}$temp2"
+ wget $uniweb -t 3 -O $temp.gz >& $temp2   #-t 1  Only try once when failed
+ gunzip $temp.gz
+ dat=`date +%Y%m`  #date as 202001
+ new='uniprot_sprot_'$dat'.dat'
+ mv $temp $new
+ echo "=>Downloaded newest version of Uniprot data from $uniweb saved as $new"
+ er=`grep "ERROR" $temp2 | wc -l | awk '{print $1}'`
+ [ $er -gt 0 ] && echo "WARNing: Failed to download Uniprot newest data. Check https://www.uniprot.org/downloads or download later"
+ echo "=> Generate human_uniprot.xls file which is needed later:"
+ $0 -noaddmatch -noaln -less -fullname -species human all > $temp
+ cp human_uniprot.xls $filebase
+ rm -f $temp*
+ exit
+fi
+
+
+#ID   001R_FRG3G              Reviewed;         256 AA.
+#AC   Q6GZX4;
+#DT   28-JUN-2011, integrated into UniProtKB/Swiss-Prot.
+#DT   19-JUL-2004, sequence version 1.
+#DT   16-JAN-2019, entry version 35.
+#//
+
+###################### Fast version: search human protein IDs in very fast version from $humanxls
+#Rank    ID      Gene    UniprotID       Refseq  ENSG    HGNC    Length  Isoforms        PDBs    LongPDBs        Names   UniprotURL	FullName
+#1       1433B_HUMAN     YWHAB   P31946  NP_003395.1     ENSG00000166913 12849   246     2       11      11      1433B_HUMAN|KCIP-1      https://www.uniprot.org
+if [ $dofast -eq 1 ] ; then
+ echo "Fast version: find IDs, shortname, fullname or fasta for human protein in fast version from $humanxls"
+ echo "=> Matched human proteins for $input :"
+ #remove isoform or precusor in full name that cannot be searched
+ if [ $noiso -eq 1 ] ; then
+  input=`echo $input | awk '{name=tolower($_);u=index(name," isoform ")
+   if(u>1){name=substr(name,1,u-1)}  #remove isoform X1
+   u=index(name," precursor")
+   if(u>1){name=substr(name,1,u-1)}  #remove precursor from full name
+   print name}'` 
+ fi
+ #trim input when it is full name with prefix/postfix spaces:
+ input=`echo $input | awk '{printf("%s",$1);for(i=2;i<=NF;i++){printf(" %s",$i)}}'`
+ head -1 $humanxls
+ grep -i "$input"  $humanxls | awk -v input="$input" 'BEGIN{input=tolower(input);found=0}{
+  did=0;n=split($_,x,"\t")
+  split(x[2],a,"_") #1433B_HUMAN
+  if(input==tolower(a[1])){did=1}
+  if(did==0&&input==tolower(x[3])){did=1} #YWHAB
+  if(did==0&&input==tolower(x[4])){did=1} #P31946
+  if(did==0&&input==tolower(x[5])){did=1} #NP_003395.1
+  if(did==0&&input==tolower(x[6])){did=1} #ENSG00000166913
+  if(did==0&&input==tolower(x[n])){did=1} #Full name
+  if(did==0&&index(tolower(x[12]),input)>0){
+   m=split(tolower(x[12]),b,"|")
+   for(i=1;i<=m;i++){if(b[i]==input){did=1;break}}
+  } #Short name
+  if(did==1){found++
+   print $_
+  }
+ }END{if(found==0){print "No Uniprot info found in fast version for", input}}' | tee $temp.out
+ if [ $dofasta -eq 1 ] ; then
+  ./sequence_download -uniprot -out $outfasta -col 4 $temp.out > $temp
+  echo " Download $nfound proteins fasta saved as $outfasta"
+ fi
+ if [ $aln2 -eq 1 ] ; then
+  ./NCBI_blast -LisAln "$input"
+ fi
+ rm -f $temp*
+ exit
+fi
+
+#Fast version 2: when input is a list file. Search them together to speed up
+if [ -s "$input" ] ; then
+ echo "Search for a list of proteins with GeneID in $input . Not done"
+ echo "Now can use ./uniprot_getFile for some improvement"
+fi
+
+
+
+if [ "$input" == "all" ] ; then
+ itype=-1;nout=0
+fi
+
+######################## First: extract full record from datafile
+# For Uniprot ID
+screndump=$temp2.dump   #screen dump, for first round
+if [ $isany -ne 1 ] ; then
+awk -v name="$input" -v func2="$func2" -v func3="$func3" -v species="$species" 'BEGIN{
+ itype='$itype';nout='$nout';species=tolower(species)
+ name=tolower(name); leng=length(name); matchspecies=0
+ func2=tolower(func2);dof2='$dof2';found2=0;found=0
+ func3=tolower(func3);dof3='$dof3';found3=0;allGO='$allGO';dof9='$dof9';found9=0
+ HGNCid="NA"
+ outfile="'$screndump'"
+ printf("") > outfile
+}{
+
+if($1=="ID"){s=0;ID=$2}  #record started w/ ID
+s++
+a[s]=$_
+
+#matched for protein name in ID row #ID FEN1_HUMAN Reviewed;         256 AA.
+if(itype==2&&$1=="ID"){
+ m=split(name,y,"_")
+ if(m==1){  #No species in input
+  n=split($2,x,"_") #remove _Species
+  if(tolower(x[1])==name){found=1;mat=$_}
+ }else{ #species already in input
+  if(tolower($2)==name){found=1;mat=$_;onecheck=1}
+ } 
+}
+
+#check species: OS   Homo sapiens (Human).
+#Also deal w/: OS Aedes aegypti (Yellowfever mosquito) (Culex aegypti).
+if($1=="OS"){
+ matchspecies=0 
+ if(species!="any"){
+  k=split($_,x,"(")
+  for(i=2;i<=k;i++){  #If more than 1 simple names
+   simp=tolower(substr(x[i],1,length(x[i])-2))
+   if(simp==species){matchspecies=1;matchpart=simp}
+  }
+  #simp=tolower(substr(x[k],1,length(x[k])-2)) #take out last simple species: human
+  #if(simp==species){matchspecies=1;matchpart=simp}
+  m=split(tolower(x[1]),y," ")
+  scip=y[2];for(i=3;i<=m;i++){scip=sprintf("%s %s",scip,y[i])} #scientific species: homo sapiens
+  if(scip==species){matchspecies=1;matchpart=scip}
+ }else{matchspecies=1;matchpart=$_} 
+ OS=$_
+ if(itype==-1&&matchspecies==1){found=1}
+}
+
+#matched for GeneName in GN row : GN   Name=FEN1 {ECO:0000255|HAMAP-Rule:MF_03140}; Synonyms=RAD2;
+#GN   OrderedLocusNames=CV_3190;
+if (itype==3||itype==5||itype==0){
+ if($1=="GN"){
+  for(i=2;i<=NF;i++){
+   m=split(tolower($i),x,"=")  #check =
+   if(m>1){
+    lle=length(x[2])
+    if(substr(x[2],lle,1)==";"){x[2]=substr(x[2],1,lle-1)} #remove last ;
+    #if(x[2]==name&&(x[1]=="name"||x[1]=="synonyms")){found=1;mat=$_}  #for Name=FEN1 or Synonyms=RAD2
+    if(x[2]==name&&x[1]=="name"){found=1;mat=$_}
+   }
+  }
+ }
+}
+
+#match GeneID
+#DR   GeneID; 2237; -.
+if (itype==7&&$2=="GeneID;"&&$1=="DR"){
+ genID=substr($3,1,length($3)-1)
+ if(genID==name){found=1;mat=$_}
+}
+
+#match name in DE row
+#DE   RecName: Full=Flap endonuclease 1 {ECO:0000255|HAMAP-Rule:MF_03140};    #recommended names
+#DE            Short=FEN-1 {ECO:0000255|HAMAP-Rule:MF_03140};
+#DE   AltName: Full=DNase IV;
+#DE   AltName: Full=Flap structure-specific endonuclease 1 {ECO:0000255|HAMAP-Rule:MF_03140};
+#DE   AltName: Full=Maturation factor 1;
+#DE            Short=hFEN-1;
+if ($1=="DE"&&(itype==5||itype==0)){
+ m=split($_,x,"=")
+ if(m>1){
+  le=length(x[1])
+  tn=substr(x[1],le-4,5)
+  if(tn==" Full"||tn=="Short"){
+   split(x[2],y,"{") #remove {} part
+   lle=length(y[1])
+   if(substr(y[1],lle,1)==";"){y[1]=substr(y[1],1, lle-1)} #remove last ;
+   k=split(y[1],z," ")
+   mname=z[1];for(j=2;j<=k;j++){mname=sprintf("%s %s",mname,z[j])} #remove extra spaces
+   if(tolower(mname)==name){found=1;mat=$_}
+  }
+ }
+}
+
+#matched for UniprotID : AC   Q178M1;
+if($1=="AC"){
+ uniprt=substr($2,1,6)  #AC   Q6GZX4;
+ if ((itype==0&&leng==6)||itype==1){
+  if(tolower(uniprt)==name){found=1;mat=$_;onecheck=1}
+ }
+}
+
+#matched for pdb : DR   PDB; 1UL1; X-ray; 2.90 A; X/Y/Z=2-380.
+if (itype==4){
+ if($1=="DR"&&$2=="PDB;"){
+  pdb=tolower(substr($3,1,4)) 
+  if(index(name,pdb)>0){
+   if(leng==5){  #w/ chain
+    namelast=substr(name,5,1)
+    split(tolower($NF),x,"=")
+    m=split(x[1],z,"/")
+    for(j=1;j<=m;j++){
+     if(z[j]==namelast){found=1;mat=$_;onecheck=1}
+    }
+   }else{ #no chain
+    if(pdb==name){found=1;mat=$_;onecheck=1}
+   }
+  }
+ }
+}
+
+#Match for GO term
+#DR   GO; GO:0016020; C:membrane; HDA:UniProtKB.
+#DR   GO; GO:0005739; C:mitochondrion; IDA:UniProtKB.
+#DR   GO; GO:0000784; C:nuclear chromosome, telomeric region; HDA:BHF-UCL.
+if (itype==6&&$2=="GO;"&&$1=="DR"){
+ if(dofunction==0&&leng==7){  #Go id: must be 7 numbers!
+  goid=tolower(substr($3,4,7))
+  if(goid==name){found=1;mat=$_}
+ }else{ #Function: Go term has F: for function as GO:0016888; F:endodeoxyribonuclease activity
+  ab=tolower($_)
+  if((allGO==1||(allGO==0&&substr($4,1,2)=="F:"))&&(index(ab,name)>0||(dof2==1&&index(ab,func2))||(dof3==1&&index(ab,func3)))){
+   if(dof2==0){ #Only require match 1 function
+    found=1;mat=$_
+   }else{ #Need match 2 function
+    dofnd=0
+    if(index(ab,name)>0&&found==0){found=1;dofnd=1}
+    if(index(ab,func2)>0&&found2==0){found2=1;dofnd=1}
+    if(index(ab,func3)>0&&found3==0){found3=1;dofnd=1}
+    if(dofnd==1){if(mat==""){mat=$_}else{mat=sprintf("%s\n          %s",mat,$_)}}
+   }
+  }
+ } 
+}
+
+#Match: check if HGNC approved gene
+#DR   HGNC; HGNC:11758; TFG.
+if(dof9==1){
+ if($1=="DR"&&$2=="HGNC;"){found9=1;
+  split($3,ox,":");HGNCid=substr(ox[2],1,length(ox[2])-1)
+  if(mat==""){mat=$_}else{mat=sprintf("%s\n          %s",mat,$_)}}
+}
+
+#End of one record
+if($1=="//"&&found==1&&(dof2==0||found2==1)&&(dof3==0||found3==1)&&(dof9==0||found9==1)&&(matchspecies==1||onecheck==1)){
+ for(i=1;i<=s;i++){print a[i]}
+ ncount++
+ if(found==1){print "#",ncount,ID,uniprt,"@:",mat >> outfile}
+ #if(matchspecies==1){print "  Matched species:",simp,";(",scip,")" >> outfile}
+ if(ncount==nout){exit} 
+ #found=0;matchspecies=0;matchpart="NA";mat="";found2=0;found3=0;found9=0
+ #onecheck=0 #only check found, not matchspecies
+}
+if($1=="//"){  #This was debugged part
+ found=0;matchspecies=0;matchpart="NA";mat="";found2=0;found3=0;found9=0
+ onecheck=0 #only check found, not matchspecies
+ HGNCid="NA"
+}
+}END{
+ if(ncount==0){print "=> Error! No match found for ",name >> outfile}
+}' $unifile > $temp.out
+
+
+else
+
+awk '{
+if($1=="ID"){s=0}
+s++
+a[s]=$_
+if(index(tolower($_),tolower("'$input'"))>0){found=1}
+if($1=="//"&&found==1){
+for(i=1;i<=s;i++){
+ print a[i]
+}
+exit 
+}
+}' $unifile > $temp.out
+
+
+fi #[ $isuni -eq 1 ] && [ $leng -eq 6 ]
+
+#[ $doless -eq 0 ] && cat $temp.out
+[ $doless -eq 0 ] && cat $screndump
+
+nerr=`grep 'Error' $screndump | wc -l | awk '{print $1}'`
+if [ $nerr -gt 0 ] ; then
+ nerr2=$nerr
+ grep 'Error' $screndump
+ if [ $nomoretry -eq 0 ] ; then
+  echo "Now try it as UniprotName: "
+  $0 -id -nomoretry $oldline | tee $temp
+  nerr2=`grep 'Error' $temp | wc -l | awk '{print $1}'`
+  if [ $nerr2 -gt 0 ] ; then 
+   echo "Now try it as GeneName:"
+   $0 -gene -nomoretry $oldline | tee $temp
+   nerr2=`grep 'Error' $temp | wc -l | awk '{print $1}'`
+  fi
+ else
+  echo "Google the protein and modify your search and try again"
+ fi
+ rm -f $temp* ; exit
+fi
+
+
+##################################################################
+######################## 2nd: generate user friendly output
+##################################################################
+
+nrec=`awk '{if($1=="#"){n++}}END{print n}' $screndump`
+shownum=2  #Only show top $shownum full Uniprot records
+if  [ $doless -eq 0 ] ; then
+ echo "=> Top $shownum/$nrec full Uniprot records:"   #will show full Uniprot records here
+ awk '{print $_; if($1=="//"){n++};if(n>'$shownum'){exit}}' $temp.out
+fi
+other=''
+[ $dourl -eq 1 ] && other="UniprotURL"
+[ $showfullname -eq 1 ] && other=$other"\tFullName"
+format="Rank\tID\tGene\tUniprotID\tRefseq\tENSG\tHGNC\tLength\tIsoforms\tPDBs\tLongPDBs\tNames\t$other"
+#Isoforms: counts of refseq with NP_ (not XP_)
+echo -e $format
+echo -e $format > $output
+awk -v name="$input" -v species="$species" 'BEGIN{
+ itype='$itype';nout='$nout';species=tolower(species)
+ name=tolower(name); leng=length(name); matchspecies=0; HGNCid="NA"
+ out="'$output'";dourl='$dourl';dofasta='$dofasta';pdblength='$pdblength'
+ dosum='$dosum';refseqall="";refseqshow=0;goidall="";goidshow=0;dofullname=0;doEnsembl=0;shortname=""
+ withgo='$withgo';ngo=0;doshortname=0;npubmed=0;npdb=0;npdblong=0;nrefseqall=0;nshortname=0;ndrugbank=0
+ dotitle='$dotitle';npfamd=0;nreactome=0;nKEGG=0;nSMART=0;CDD="";nInterPro=0;Bgee="";ExpressionAtlas=""
+ showfullname='$showfullname'
+ if(dofasta==1){
+  outfasta="'$outfasta'"
+  printf("") > outfasta
+ }
+}{
+
+#record started w/ ID Name_Species: ID   PCNA_HUMAN              Reviewed; 261 AA.
+if($1=="ID"){s=0;ID=$2;nres=$4;if(dosum==1){print $_}}
+#UniprotID: #AC   Q6GZX4;
+if($1=="AC"){uniprt=substr($2,1,6);
+ if(dosum==1){
+  printf("Uniprot: %s%s\n","'$uniproturl'",uniprt)
+  printf(" Protein Model Portal: %s%s\n","'$modelurl'",uniprt)
+  printf(" Swiss-Model Repository: %s%s\n","'$repositoryurl'",uniprt)
+}}
+#GeneName GN   Name=FEN1 {ECO:0000255|HAMAP-Rule:MF_03140}; Synonyms=RAD2;  #GN   Name=IGF2BP1; Synonyms=CRDBP, VICKZ1, ZBP1;
+if($1=="GN"){gm=split($2,x,"=");
+ le=length(x[2]);if(substr(x[2],le,1)==";"){x[2]=substr(x[2],1,le-1)};
+ gene=x[2]
+ genefull=gene
+ if(index($_,"Synonyms")>0){gn=split(x[gm],y," ");for(i=1;i<=gn;i++){genefull=sprintf("%s|%s",genefull,substr(y[i],1,length(y[i])-1))}}
+ if(doshortname==1&&$1!="DE"){
+  print "Full name (recommended): ",fullname
+  printf("ShortName(GeneName): %s|(%s)\n",shortname,genefull)
+  doshortname=0
+ } 
+ if(dosum==1){
+  printf("GeneName at GeneCards: %s%s\n","'$genecardsurl'",gene)
+ } 
+}
+
+if(dosum==1){
+ if($1=="OS"){print "Species: ",substr($_,6,length($_)-6)}
+ #DR   HGNC; HGNC:11758; TFG.
+ if($1=="DR"&&$2=="HGNC;"){printf("HGNC approved gene: %s%s\n","'$HGNCurl'",substr($3,1,length($3)-1))
+    split($3,ox,":");HGNCid=substr(ox[2],1,length(ox[2])-1) 
+ }
+ #DR   ChEMBL; CHEMBL5027; -.
+ if($1=="DR"&&$2=="ChEMBL;"){printf("ChEMBL: %s%s\n","'$chemblurl'",substr($3,1,length($3)-1))}
+ #DR   GeneID; 2237; -.
+ if($1=="DR"&&$2=="GeneID;"){EntrezID=substr($3,1,length($3)-1);printf("GeneID/EntrezID NCBI: %s%s\n","'$geneidurl'",EntrezID)}
+ #DR   OrthoDB; 1094524at2759; -.
+ if($1=="DR"&&$2=="OrthoDB;"){printf("OrthoDB: %s%s\n","'$orthoDBurl'",substr($3,1,length($3)-1))}
+ #DR   Ensembl; ENST00000305885; ENSP00000305480; ENSG00000168496. [P39748-1]
+ #Can count Ensembl lines for number of isomers as well as in PCNA 
+ if($1=="DR"&&$2=="Ensembl;"){
+  ENSG=substr($5,1,length($3)-1)  
+  if(doEnsembl==0){printf("Ensembl ID for GeneTree: %s%s\n","'$ensembltree'",ENSG)}
+  doEnsembl++
+ }
+ #DR   PhylomeDB; Q9H790; -.
+ if($1=="DR"&&$2=="PhylomeDB;"){printf("Phylogenetic Tree (PhylomeDB): %s%s\n","'$phylomeDBurl'",substr($3,1,length($3)-1))}
+ #DR   Pfam; PF00867; XPG_I; 1.
+ if($1=="DR"&&$2=="Pfam;"){
+  npfamd++;
+  if(npfamd==1){pfamd=substr($4,1,length($4)-1)}else{pfamd=sprintf("%s %s",pfamd,substr($4,1,length($4)-1))}
+ }
+ #DR   DrugBank; DB06080; ABT-869
+ if($1=="DR"&&$2=="DrugBank;"){
+  ndrugbank++
+  if(ndrugbank==1){
+   drugbankid=substr($3,1,length($3)-1)
+   drugbankname=substr($4,1,length($4)-1)
+  }else{
+   drugbankid=sprintf("%s %s",drugbankid,substr($3,1,length($3)-1))
+   drugbankname=sprintf("%s %s",drugbankname, substr($4,1,length($4)-1))
+  }
+ }
+ #RX   PubMed=19608861; DOI=10.1126/science.1175371;
+ if($1=="RX"&&substr($2,1,6)=="PubMed"){
+  pubmed=sprintf("%s %s",pubmed,substr($2,8,length($2)-8));npubmed++
+  if(npubmed==1){pubmedtitle=sprintf(" %s:",substr($2,8,length($2)-8))
+   }else{pubmedtitle=sprintf("%s\n %s:",pubmedtitle,substr($2,8,length($2)-8))}
+ }
+ #RT   "The status, quality, and expansion of the NIH full-length cDNA
+ #RT   project: the Mammalian Gene Collection (MGC)."; 
+ #RL   Nucleic Acids Res. 39:1576-1585(2011).
+ if(dotitle==1&&$1=="RT"){pubmedtitle=sprintf("%s %s",pubmedtitle,substr($_,6,200))}
+ if(dotitle==1&&$1=="RL"){#add jurnal name and year
+  for(i=2;i<NF;i++){pubmedtitle=sprintf("%s %s",pubmedtitle,$i)}  #add jurnal name
+  pubmedtitle=sprintf("%s%s",pubmedtitle,substr($NF,length($NF)-6,6)) #add year as (2011)
+ }
+ #DE   RecName: Full=Flap endonuclease 1 {ECO:0000255|HAMAP-Rule:MF_03140};    #recommended names
+ #DE            Short=FEN-1 {ECO:0000255|HAMAP-Rule:MF_03140};
+ #Include ID and GeneName in shortName
+ if ($1=="DE"){  #All short Name and one recommended full name
+ m=split($_,x,"=")
+ if(m>1){
+  le=length(x[1])
+  tn=substr(x[1],le-4,5)
+  if(tn=="Short"||tn==" Full"){
+   split(x[2],y,"{") #remove {} part
+   lle=length(y[1])
+   if(substr(y[1],lle,1)==";"){y[1]=substr(y[1],1, lle-1)} #remove last ;
+   k=split(y[1],z," ")
+   mname=z[1];for(j=2;j<=k;j++){mname=sprintf("%s %s",mname,z[j])} #remove extra spaces   
+  }
+  if(tn=="Short"){
+   nshortname++;
+   if(nshortname==1){shortname=sprintf("%s|%s",ID,mname)}else{
+    shortname=sprintf("%s|%s",shortname,mname)}
+   doshortname=1
+  }
+  if(dofullname==0&&tn==" Full"){fullname=mname;dofullname=1}
+ }
+ } 
+ #if(doshortname==1&&$1!="DE"){  #Now printed together with GeneName
+ # print "Full name (recommended): ",fullname
+ # print "Short name (GeneName): ",shortname
+ # doshortname=0
+ #}
+ #DR   Reactome; R-HSA-110362; POLB-Dependent Long Patch Base Excision Repair.  Reactome pathway
+ if($1=="DR"&&$2=="Reactome;"){#Reactome pathway
+  nreactome++
+  if(nreactome==1){
+   reactome=substr($3,1,length($3)-1)
+   reactomed=sprintf(" #%d: %s",nreactome,$4);for(i=5;i<=NF;i++){reactomed=sprintf("%s %s",reactomed,$i)}
+  }else{
+   reactome=sprintf("%s %s",reactome,substr($3,1,length($3)-1))
+   reactomed2=sprintf(" #%d: %s",nreactome,$4);for(i=5;i<=NF;i++){reactomed2=sprintf("%s %s",reactomed2,$i)}
+   reactomed=sprintf("%s\n%s",reactomed,reactomed2)
+  }
+ }
+ #DR   InterPro; IPR036279; 5-3_exonuclease_C_sf.
+ if($1=="DR"&&$2=="InterPro;"){#InterPro domains
+  nInterPro++
+  if(nInterPro==1){
+   InterPro=substr($3,1,length($3)-1)
+   InterProd=sprintf(" #%d: %s",nInterPro,$4);for(i=5;i<=NF;i++){InterProd=sprintf("%s %s",InterProd,$i)}
+  }else{
+   InterPro=sprintf("%s %s",InterPro,substr($3,1,length($3)-1))
+   reactomed2=sprintf(" #%d: %s",nInterPro,$4);for(i=5;i<=NF;i++){reactomed2=sprintf("%s %s",reactomed2,$i)}
+   InterProd=sprintf("%s\n%s",InterProd,reactomed2)
+  }
+ } 
+ #DR   SMART; SM00279; HhH2; 1.
+ if($1=="DR"&&$2=="SMART;"){#SMART domain
+  nSMART++
+  if(nSMART==1){
+   SMART=substr($4,1,length($4)-1)
+  }else{
+   SMART=sprintf("%s %s",SMART,substr($4,1,length($4)-1))
+  }
+ }
+ #DR   KEGG; hsa:2237; -.  KEGG pathway
+ if($1=="DR"&&$2=="KEGG;"){#KEGG pathway
+  nKEGG++
+  if(nKEGG==1){KEGG=substr($3,1,length($3)-1)}else{KEGG=sprintf("%s %s",KEGG,substr($3,1,length($3)-1))}
+ }
+ #DR   Bgee; ENSG00000168496; Expressed in 219 organ(s), highest expression level in amniotic fluid. Gene expression in organs
+ if($1=="DR"&&$2=="Bgee;"){Bgee=substr($3,1,length($3)-1);Bgeed=sprintf("  %s",$4);for(i=5;i<=NF;i++){Bgeed=sprintf("%s %s",Bgeed,$i)}}
+ #DR   ExpressionAtlas; P39748; baseline and differential.
+ if($1=="DR"&&$2=="ExpressionAtlas;"){ExpressionAtlas=substr($3,1,length($3)-1);
+  ExpressionAtlasd=sprintf("  %s",$4);for(i=5;i<=NF;i++){ExpressionAtlasd=sprintf("%s %s",ExpressionAtlasd,$i)}
+ } 
+ #DR   CDD; cd09867; PIN_FEN1; 1.
+ if($1=="DR"&&$2=="CDD;"){CDD=substr($3,1,length($3)-1)}
+ #GO terms
+ if(withgo==1){
+  if ($2=="GO;"&&$1=="DR"){
+   goidall=sprintf("%s %s",goidall,substr($3,4,7))
+   ngo++
+  }
+ }
+}
+
+#First Refseq of NCBI: DR   RefSeq; NP_004102.1; NM_004111.5. [P39748-1   Many refseq for CB1 
+if($1=="DR"&&$2=="RefSeq;"){ 
+ if(refseqdone==0){
+  refseq=substr($3,1,length($3)-1);refseqdone=1
+  if(dosum==1){printf("NCBI Refseq for Blastp: %s%s\n","'$refsequrl'",refseq)}
+ } #only count first
+ if(substr($3,1,3)=="NP_"||substr($3,1,3)=="XP_"){
+  refseqall=sprintf("%s %s",refseqall,substr($3,1,length($3)-1)) #Only display NP_ and XP_, not NM_
+  nrefseqall++
+  if(substr($3,1,3)=="NP_"){nrefseq++} #Isomers: counts of refseq with NP_ (not XP_) : Use CB1 Q5UB37 as example. The other way is to count Ensembl lines
+ }
+}
+if(refseqshow==0&&refseqall!=""&&!($1=="DR"&&$2=="RefSeq;")){
+ if(nrefseqall>1){printf(" All NCBI protein refseq (%s isoforms):%s\n",nrefseqall,refseqall)}
+ refseqshow=1
+}
+
+
+#PDBs : DR   PDB; 1UL1; X-ray; 2.90 A; X/Y/Z=2-380.  #5TGZ; X-ray; 2.80 A; A=99-306, A=332-414.
+if($1=="DR"&&$2=="PDB;"){
+ s++;npdb++
+ m=split($_,y,"=") #count resnum
+ resnumb=0
+ for(i=2;i<=m;i++){
+  split(y[i],z,"-")
+  split(z[2],u," ")
+  resnumb=resnumb+strtonum(substr(u[1],1,length(u[1])-1))-z[1]+1
+ }
+ n=split($_,x,";")
+ a[s]="  PDB:"
+ for(i=2;i<=n;i++){a[s]=sprintf("%s\t%s",a[s],x[i])}
+ a[s]=sprintf("%s\t%saa",a[s],resnumb)
+ if(resnumb<pdblength){a[s]=sprintf("%s[Peptide]",a[s])}else{npdblong++}
+}
+
+#extract fasta at end of record and save: only show canonical/first isoform
+#SQ   SEQUENCE   261 AA;  28769 MW;  E6F08E7EDBC48B00 CRC64;
+#     MFEARLVQGS ILKKVLEALK DLINEACWDI SSSGVNLQSM DSSHVSLVQL TLRSEGFDTY
+#//
+if(dofasta==1){
+ if($1=="//"){sseq=0;print sq >> outfasta}
+ if(sseq==1){nse++;for(i=1;i<=NF;i++){sq=sprintf("%s%s",sq,$i)};sq=sprintf("%s\n",sq)}
+ if($1=="SQ"){sseq=1;sq=sprintf(">%s %s %s\n",ID,uniprt,$3)} 
+}
+
+#End of one record
+if($1=="//"){
+ ncount++
+ other=""
+ #Show Gene/RNA/Protein expression in organs/tissues/cancer celllines
+ printf("Drive Data Portal for 398 cancer celllines sensitivity of %s : %s\n",gene,"'$DriveDataurl'")
+ printf("ExpressLevel/DNAcopynum on 398 cancer cell lines (CCLE Portal) %s%s\n","'$CCLEurl'",gene)
+ if(Bgee!=""){printf("Gene Expression level in organs in Bgee (GeneCards also show): %s%s\n","'$Bgeeurl'",Bgee);print Bgeed}
+ if(ExpressionAtlas!=""){
+  printf("Gene Expression level in organs from ExpressionAtlas: %s%s\n","'$ExpressionAtlasurl'",ENSG)
+  #print ExpressionAtlasd
+ }
+ printf("mRNA expression in organs in BioGPS: %s%s\n","'$mRNAexpressurl'",EntrezID)
+ printf("RNA/Protein expression in tissue in the Human Protein Atlas: %s%s\n","'$ProteinExpreeurl'",ENSG)
+ printf("Cancer Gene Expression level, Survival plot etc at GEPIA: %s%s\n","'$GEPIAurl'",gene)
+ printf("  Survival plot overall at GEPIA: %s%s&tag=survival\n","'$GEPIAAPIurl'",gene)
+ printf("  Correlation to EGFR plot at GEPIA: %s%s&tag=correlation\n","'$GEPIAAPIurl'",gene)
+ printf("  Stages (pathological) vs expression : %s%s&tag=stagegplot\n","'$GEPIAAPIurl'",gene)
+ printf("  Boxplot of gene expression for 4 cancers: %s%s&tag=boxplot\n","'$GEPIAAPIurl'",gene)
+ printf("cBioPortal for cancer patient mutations check: %s for %s\n","'$cBioPortalurl'",gene)
+ printf("Cosmic for cancer mutations: %s%s\n","'$COSMICurl'",gene)
+ if(ndrugbank>0){
+  printf("Drugbank w/ %s drugs: %s%s\n",ndrugbank,"'$drugbankurl'",drugbankid)
+  printf(" Drug approved/experimental names %d as: %s\n",ndrugbank,drugbankname)
+ }
+ #show domains or motif:
+ printf("Domain picture in SMART: %s%s\n","'$SMARTurl2'",ID) 
+ if(nSMART>0){printf(" Domains/Motif in SMART %s: %s%s\n",nSMART,"'$SMARTurl'",SMART)}
+ if(CDD!=""){printf("Domains in NCBI CDD : %s%s\n","'$cddurl'",CDD)}
+ printf("Domains overall in Pfam: %s%s\n","'$pfamurl'",uniprt)
+ if(npfamd>0){printf(" Domains in Pfam %s: %s%s\n",npfamd,"'$pfamidurl'",pfamd)}
+ if(nInterPro>0){printf("Domains in InterPro %s: %s%s\n",nInterPro,"'$InterProdurl'",InterPro);print InterProd}
+ #show KEGG or Reactome pathway
+ if(nKEGG>0){printf("KEGG Pathway check: %s%s\n","'$KEGGurl'",KEGG)}
+ if(nreactome>0){printf("Reactome Pathway %d: %s%s\n",nreactome,"'$reactomeurl'",reactome);print reactomed} 
+ #show GO terms
+ if(goidshow==0&&goidall!=""){printf("GO terms %s:%s\n",ngo,goidall);goidshow=1}
+ #show PubMed:
+ if(pubmed!=""){
+  printf("PubMed %d: %s%s\n",npubmed,"'$pubmedurl'", substr(pubmed,2,800))
+  if(dotitle==1){print pubmedtitle}
+ }
+ if(dourl==1){other=sprintf("%s%s","'$uniproturl'",uniprt)}
+ if(showfullname==1){other=sprintf("%s\t%s",other,fullname)}
+ printf("%s\t%s\t%s\t%s\t%s\t%saa\t%s(%s)Isoforms\t%s PDBs\t%s LongPDBs\n",ncount,ID,gene,uniprt,refseq,nres,nrefseq,doEnsembl,npdb,npdblong)
+ printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",ncount,ID,gene,uniprt,refseq,ENSG,HGNCid,nres,nrefseq,npdb,npdblong,shortname,other) >> out
+ if('$showpdb'==1){for(i=1;i<=s;i++){print a[i]}}
+ npdb=0;npdblong=0;refseqdone=0;nrefseq=0;refseqall="";refseqshow=0;npubmed=0;nrefseqall=0;npfamd=0;nreactome=0
+ goidall="";goidshow=0;ngo=0;dofullname=0;doEnsembl=0;pubmed="";shortname="";doshortname=0;nshortname=0;nKEGG=0
+ nSMART=0;CDD="";nInterPro=0;Bgee="";ExpressionAtlas="";ndrugbank=0;HGNCid="NA"
+}
+}END{
+}' $temp.out | tee $temp2.out
+
+#show KEGG pathway from KEGG website: KEGG Pathway check: https://www.genome.jp/dbget-bin/www_bget?hsa:2237
+if [ $doKEGG -eq 1 ] ; then  
+  KEGGid=`grep 'KEGG Pathway check:' $temp2.out | tail -1 | awk '{n=split($NF,a,"?");print a[n]}'`
+ if [ "$KEGGid" != "" ] ; then
+  ./KEGG_pathway -less $KEGGid
+ else
+  echo "No KEGG pathway data"
+ fi
+fi
+
+#GO anotations
+#GO terms 32: 0016020 0005739 0000784 0005730 0005654 0005634 0032991 0008409 0017108 0003684 0003677 0003690 0008309 0004519 0004527 0048256 0000287 0030145 0004523 0006309 0006284 0006281 0006260 0043137 0006302 0000724 0007613
+#WARNing: ./GO_annotation and Uniprot Data may show different function names for TDRD3: 
+#  methylated histone residue binding vs. methylated histone binding 
+ngo=`grep 'GO terms' $temp2.out | head -1 | awk '{print substr($3,1,length($3)-1)}'`
+if [ "$ngo" != "" ] ; then
+ if [ $allGO -ne 1 ] ; then
+  echo "=> GO annotations of $ngo terms that has molecular function (F) as:"
+  fff='-f'
+ else
+  echo "=> GO annotations of $ngo terms as:"
+  fff=''
+ fi
+ grep 'GO terms' $temp2.out | head -1 | awk '{for(i=4;i<=NF;i++){print $i}}' > $temp.go 
+ ./GO_annotation -less $fff $temp.go
+ #echo "WARNing: ./GO_annotation and Uniprot Data may show different function names for TDRD3: methylated histone residue binding vs. methylated histone binding" 
+fi
+
+#LisAln:
+if [ $aln -eq 1 ] ; then
+ ./NCBI_blast -less -LisAln "$input"
+ echo " To show specific seq range, run: ./NCBI_blast -LisAln -range 100 150 \"$input\""
+fi
+
+#add match info to output
+if [ $addmatch -eq 1 ] ; then
+ echo " " >> $output
+ echo "=> Matched info:" >> $output
+ cat $screndump >> $output 
+fi
+
+samu=`head -2 $output | tail -1 | awk '{print $4}'`  #First Uniprot ID
+samrefseq=`head -2 $output | tail -1 | awk '{print $5}'` #First protein refseq
+if [ $doout -eq 1 ] || [ $nrec -gt 1 ] ; then
+ echo "==> $nrec Proteins saved in $output"
+fi
+
+#To find ChEMBL inhibitors and PDBs:
+if [ $chembl -ne 0 ] ; then
+ echo "==> Find ChEMBL inhibitors and PDBs for Uniprot $samu :"
+ ./chembl -less -uni $samu
+fi
+
+#download all PDBs (options: EM, protein length, protein chain) from the downloaded Uniprot data (not current website)
+#  PDB:   4LOF    X-ray   2.00 A  A=94-312.      219aa
+if [ $getPDB -eq 1 ] ; then
+ if [ $doEM -eq 1 ] ; then
+  grep 'PDB:' $temp2.out | awk '{if($1=="PDB:"){k=index($NF,"aa");len=strtonum(substr($NF,1,k-1));only="'$doonly'";   
+   if((len>='$minilen')&&(only=="any"||index($(NF-1),only)>0)){print $2}}}' > $temp.pd
+  moret='with EM'
+ else
+  grep 'PDB:' $temp2.out | awk '{if($1=="PDB:"&&$3!="EM"){k=index($NF,"aa");len=strtonum(substr($NF,1,k-1));only="'$doonly'";
+   if((len>='$minilen')&&(only=="any"||index($(NF-1),only)>0)){print $2}}}' > $temp.pd
+  moret='w/o EM'
+ fi
+ npdb=`wc -l $temp.pd | awk '{print $1}'`
+ echo "==> Download $npdb proteins from downloaded Uniprot data ($moret. Protein length>${minilen}a.a. and it is in chain $doonly:"
+ if [ $npdb -gt 0 ] ; then  
+  mv $temp.pd ${infile}_PDBs.txt  #Only PDB id: 4FYQ
+  ./pdb_download -f -less -noProperty ${infile}_PDBs.txt
+  #echo " => To view for X-ray inhibitors (use -nodetail for PPI proteins): ./pymol_all -sel \"chain A\" '????.pdb' "
+  echo " => To download all (or representive) PDBs listed in current Uniprot website: ./pdb_download -uni -all $samu" 
+  #echo " => To find all PDBs of homology proteins, run: ./NCBI_blast_PDBs -pc 90 -score 200 -less $outfasta"
+  #display PDBs: PDB:	 4FYQ	 X-ray	 1.90 A	 A=66-967.	902aa
+  grep 'PDB:' $temp2.out | awk '{printf("%s.pdb\t%s\n",tolower($2),$5)}' > $temp.pdblist
+  allPDBs=`grep 'PDB:' $temp2.out | awk '{printf("%s.pdb ",tolower($2))}'`
+  #./pymol_all -nocheck -file2 $temp.pdblist -noheader -ccol 2 -pcol 1 "$allPDBs" > $temp
+  ./pymol_all -nocheck -file2 $temp.pdblist -noheader -ccol 2 -pcol 1 inside > $temp
+ fi
+fi
+
+#Find homology PDBs
+if [ $homo -eq 1 ] ; then
+ echo "==> Check homology PDBs of isoform 1 ($outfasta) to explore more complex structures etc.:"
+ ./NCBI_blast_PDBs -less -nodownload $outfasta | tee $temp2
+ homolist=`grep 'saved in' $temp2 | tail -1 | awk '{print $NF}'`
+ head -5 $homolist
+ echo "=> To download homology PDBs (seq id>90%, similar score>200) in NCBI balstp: ./NCBI_blast_PDBs -pc 90 -score 200 $outfasta"
+ echo "   Also check swiss-prot homology model at: ${repositoryurl}$samu"
+fi
+
+# To find protein info at UniProt: $uniproturl$samu
+# To Blastp in NCBI: $refsequrl$samrefseq
+# To find homology model at Swiss-Model Repository: $repositoryurl$samu
+# To find homology model at Protein Model Portal: $modelurl$samu
+if [ $doless -eq 0 ] ; then
+[ $dofasta -eq 1 ] && echo " Fasta for canonical/first isoform of $nrec proteins are saved in $outfasta"
+echo "
+ To find conserved motifs in MEME from sequence: $memeurl
+  Or in SMART click on 'Alignment consensus sequence'
+ To download all PDBs listed in downloaded data: $0 -getPDB $input
+ To download all or representive PDBs listed in current Uniprot website: ./pdb_download -uni -all $samu
+ To download updated represented PDBs (-all for All PDBs): ./pdb_download -all -less $samu   or  ./pymol_all $samu
+ To find and download homology PDBs (seq id>90%, similar score>200) in NCBI balstp: ./NCBI_blast_PDBs -pc 90 -score 200 -less $outfasta
+    Also check swiss-prot homology models at: ${repositoryurl}$sam
+ To aln sequences by Clustal and get phylogenetic, protein similarity: ./clustal_seq_align UniprotID1 ID2 ID3..
+ To find protein structural similarity: ./pymol_rmsd_many ./TM_align
+ To find crytal/overlap/conserved water: ./pymol_alignment_water '????.pdb'
+ To find protein pathway cluster: ./pathway_cluster
+ To cluster domain/function/pathway/sequence/structure or find all kinase for a list of proteins, run ./protein_cluster
+ To get align across species (Orthologues) and paralogues, run my LisAln: ./NCBI_blast -LisAln -range 200 270 XPNPEP3
+ To get domains from EMBL Pfam, run ./Pfam_domain $samu
+ To find ChEMBL inhibitors and PDBs: ./chembl -uni -less $samu
+ To find info of a GO term, run ./GO_annotation
+ To Convert ChEMBL inhibitors for a protein into .sdf, image and clustering, run ./pdb_sdf_smi_mae_mol2_convert -ChEMBL
+ To find common ChEMBL inhibitors from two proteins, run ./lists_compare -chembl -out o.xls IC50.xls IC502.xls
+ To find mutation rate vs. protein length and predict cancer driver/passenger genes, run ./cluster_Pickmutation
+
+ Isoforms are counted by Refseq records as NP_ (not include XP_). Also in bracket count Ensembl lines for number of isomers as well as in PCNA
+ The full Uniprot data was downloaded at 2019/8 : $unifile
+ WARNing: Odfactory receptor OR4C15 has two Uniprot entries (Q8NGM1 and A0A2C9F2M4) with different seqs. Mutation website used A0A2C9F2M4. See ~/OR4C15
+" | tee -a $output
+fi
+
+if [ $doout -eq 0 ] && [ $nrec -le 1 ] ; then
+ rm $output
+fi
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

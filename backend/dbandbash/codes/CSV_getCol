@@ -1,0 +1,463 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+ncol=0
+col1=1
+col2=2
+col3=3
+col4=4
+col5=5
+col6=6
+col7=7
+col8=8
+doout=0
+byname=0 #=1: Use the name in header file to define col  =0: use col number to define col to extract
+underscore=0
+digit=0 #=0: keep original output digitals
+comma=1
+old=0  #=1: use old code, no roubst though
+doempty=0;empty='-'
+
+thisfile=$0
+
+oldline=$*   #all argvs
+echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -empty)doempty=1;shift;;
+   -sign)doempty=1;empty="$2";shift 2;;
+   -old)old=1;shift;;
+   -new)old=0;shift;;
+   -comma)comma=1;shift;;
+   -quote)comma=0;shift;;
+   -out) out=$2;doout=1; shift 2;;
+   -col1) col1="$2"; [ $ncol -lt 1 ] && ncol=1;shift 2;;
+   -col2) col2="$2"; [ $ncol -lt 2 ] && ncol=2;shift 2;;
+   -col3) col3="$2"; [ $ncol -lt 3 ] && ncol=3;shift 2;;
+   -col4) col4="$2"; [ $ncol -lt 4 ] && ncol=4;shift 2;;
+   -col5) col5="$2"; [ $ncol -lt 5 ] && ncol=5;shift 2;;
+   -col6) col6="$2"; [ $ncol -lt 6 ] && ncol=6;shift 2;;
+   -col7) col7="$2"; [ $ncol -lt 7 ] && ncol=7;shift 2;;
+   -col8) col8="$2"; [ $ncol -lt 8 ] && ncol=8;shift 2;;
+   -ncol)ncol=$2;shift 2;;
+   -byname) byname=1;shift;;
+   -underscore)underscore=1;shift;;
+   -digit)digit=$2;shift 2;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+ done
+fi
+
+if [ -n "$1" ] ; then
+ input=$1
+ [ -n "$2" ] && output=$2
+else
+cat << ttt
+ Get cols of .csv or .CSV  or .tsv file to regular xls file by removing "",
+  Can also Convert whole csv format into Excel format xls by -ncol all or -ncol 0 option
+ 
+ Works case after 2019/5: 
+  1. with "" quoted: "xxxxx", : xxxx can be anything, even with , " inside. Will remove first/last " to output as  xxxx\t
+      So: "x,x"x,x"xx", : output as x,x"x,x"xx\t  
+  2. pure comma: xxxxx, : xxxx can be anything, but not has , inside. Output as xxxx\t
+      So: xx,xx, : output as xx\txx\t
+          xx",xx, : output as xx"\txx\t
+          xx"xx "xx, : output as xx"xx "xx\t
+
+How to read Excel, Word Doc and ppt?
+1. Can install xls2csv catdoc catppt
+ http://search.cpan.org/~ken/xls2csv-1.07/script/xls2csv
+ https://wagner.pp.ru/~vitus/software/catdoc/
+2. Can use python, perl to do it
+There is xls2csv in ssh holi@apollo-acc.coh.org  Can run it there!
+usage: xls2csv -x spreadsheet.xls [-w worksheet] [-n worksheet number] [-b charset] [-c csvfile.csv] [-a charset] [-qshvWf]
+-x  : filename of the source spreadsheet
+-b  : the character set the source spreadsheet is in (before)
+-c  : the filename to save the generated csv file as
+-a  : the character set the csv file should be converted to (after)
+-q  : quiet mode
+-s  : print a list of supported character sets
+-h  : this help message
+-v  : get version information
+-W  : list worksheets in the spreadsheet specified by -x
+-w  : specify the worksheet name to convert (defaults to the first worksheet)
+-n  : specify the worksheet number to convert (you cannot use this option with -w)
+-f  : force the worsheet to be fully parsed. This disables the feature that skips rows when the first cell is blank
+Use -W to find all sheets 
+
+
+ Usage: [Options] $0 InputCSV(extension can be any)
+ Options:
+  x-quote|[-comma] : convert based on quote ". Sometime generate wrong result when there are , and " mixing
+  x  default: convert comma , into \t. Will get wrong result when , inside one pair of ""
+   As debugged in 2019/5: now the script should deal with any cases
+  -out Output : User defined output name. Default: Input.xls
+  -byname : Use the name in header file to define col. Default is to use col number to define col to extract
+  -col1 ColNum1|ColName1: ColNum1|ColName1 to extract for first output col. Default $col1
+  -col2 ColNum2|ColName2: ColNum2|ColName2 to extract for first output col. Default $col2
+  -col3 ColNum3|ColName3: ColNum3|ColName3 to extract for first output col. Default $col3
+  -col4 ColNum4|ColName4: ColNum4|ColName4 to extract for first output col. Default $col4
+  -col5 ColNum5|ColName5: ColNum5|ColName5 to extract for first output col. Default $col5
+  -col6 ColNum6|ColName6: ColNum6|ColName6 to extract for first output col. Default $col6
+  -col7 ColNum5|ColName7: ColNum5|ColName5 to extract for first output col. Default $col7
+  -col8 ColNum6|ColName8: ColNum6|ColName6 to extract for first output col. Default $col8
+    NOTE: Must use -byname option to turn on ColName input
+    NOTE: ColName is extracted from first line of input csv file
+  -ncol Col : How many cols to output. Default: $ncol
+    -ncol all|0 : convert the whole csv file into xls format output
+  -underscore : Use underscore _ to replace space in output for original col. e.g. "PDB id" -> PDB_id
+    NOTE: -underscore only works for whole csv file conversion and use -quote
+  -digit Digitals[1-6] : number of digitals/decimals to keep for all the value with period . inside [default=0: keep original value]
+    e.g. -digit 2 will only keep two decimals for all the value with period . inside such as 3.897
+  -old|[-new] : use old code before 2019/5, which works for special cases. New code should be roubost
+  -empty : empty space record will be replaced by emptySign [$empty]
+  -sign emptySign : empty space record will be replaced by emptySign [$empty]
+
+ Example: All can tested in ARH/ 
+   $0 a.csv #Now this script should deal with any case as debugged in 2019/5. Tested in ARH/
+   $0 -digit 2 a.csv
+     #Convert whole a.csv format into Excel format a.xls. Only keep two digitals for the values with with period .. Such as 2.3145 will be as 2.13
+   $0 -underscore a.csv
+     #Use underscore _ to replace space in output for original col. e.g. "PDB id" -> PDB_id . Use -quote
+   $0 -empty a.csv   #Replace empty record as -
+   $0 -sign "Not Found" a.csv   #Replace empty record as "Not Found"
+   $0 -col1 4 -col2 3 a.csv
+     #Merge two cols 2 and 4 into xls file
+   $0 -old -byname -col1 "PDB ID" -col2 "Scop Domain" h4798.csv
+     #Use old code: Merge two cols headed as "PDB ID" and "Scop Domain" in h4798.csv   Output: h4798.xls
+
+ NOTE: to parse parameter with space inside, use awk -v name="'$para'" {print name}!
+ NOTE: Empty record will be named as "-" in output
+ NOTE: do 2ndary sort by ./list_sort2nd
+ xNOTE: This script may not deal with records w/ , inside pair of quotation marks "". See ~/Library  Debugged on 2019/5
+ 
+ttt
+  exit
+fi
+
+iscsv=`echo $input | awk '{l=length($1)-3;a=tolower(substr($1,l,4));if(a==".csv"||a==".tsv"){print 1}else{print 0}}'`
+isqik=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".CSV"){print 1}else{print 0}}'`
+infile=`echo $input | awk '{l=length($1)-3;a=tolower(substr($1,l,4));if(a==".csv"){print substr($1,1,l-1)}else{print $1}}'`
+if [ ! -s $input ] ; then
+ [ $iscsv -eq 0 ] && input=$infile.csv
+ [ ! -s $input ] && input=$infile.tsv
+fi
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5';temp6=$temp'6';  temp7=$temp'7';temp8=$temp'8'
+
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+isScaleMP=0  #=1: runs on ScaleMP machine, need special code for Schrodinger
+if [ -d "/flower_data/" ] ; then
+ isScaleMP=1; ed='/flower_data/hongzhili/database/pipeline_script/' #Admin defined directory with scripts
+fi
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp $ed/back  .
+fi
+
+[ $doout -ne 1 ] && out=$infile.xls
+
+if [ ! -s $input ] ; then
+ echo "Fatal error @ $0 $oldline : No input $input exists" 1>&2
+ exit
+fi
+
+#First Convert whole a.csv format into Excel format a.xls: should work in any cases
+ #remove ^M at end of each line
+ awk -v RS="\r" -v ORS="" {print} $input > $temp2 
+ echo "Convert csv $input into xls $out"
+
+ #This should be the code that can deal with any case: Test in ARH1/ as: ./CSV_getCol csv.csv
+ #Works case: "xxxxx", : xxxx can be anything, even with , " inside. Will remove first/last " to output as  xxxx\t
+ #            xxxxx, : xxxx can be anything, but not has , inside. Output as xxxx\t
+ #convert , into \t first, but only , with " ", in front
+ awk -v em="$empty" 'BEGIN{doem='$doempty'}{ 
+  n=split($_,a,",")  #split based on ,
+  pre=0;pres="" #=1; pre-record has " in first place
+  for(i=1;i<=n;i++){
+   did=0
+   idx=index(a[i],"\"");ll=length(a[i])
+   #pure comma, may have " not at beginning output it: xx"xx"xx, output as xx"xx"xx\t
+   if(did==0&&idx!=1&&pre==0){x=a[i];if(doem==1&&x==""){x=em};printf("%s\t",x);pre=0;did=1}
+   #comma before "; done with pair "" with , inside
+   if(did==0&&idx==ll&&pre>0){x=substr(a[i],1,ll-1);if(doem==1&&x==""){x=em};
+    printf("%s,%s\t",pres,x);pre=0;did=1} 
+   #comma before "; but no pair "", output it as one record including last ":  xxxx", output as xxxx"\t
+   if(did==0&&idx==ll&&pre==0){x=a[i];if(doem==1&&x==""){x=em};
+    printf("%s\t",x);pre=0;did=1} 
+   #"xxxx", " as first and last, output xxxx : "xx""x"xx", output as xx""x"xx\t
+   if(did==0&&idx==1&&substr(a[i],ll,1)=="\""&&pre==0){x=substr(a[i],2,ll-2);if(doem==1&&x==""){x=em};
+    printf("%s\t",x);pre=0;did=1}  
+   #meet ", ending, then output
+   if(did==0&&substr(a[i],ll,1)=="\""&&pre>0){x=substr(a[i],1,ll-1);if(doem==1&&x==""){x=em};
+    printf("%s,%s\t",pres,x);pre=0;did=1}   
+
+   #first is ", but last is not ", start record it:
+   if(did==0&&idx==1&&substr(a[i],ll,1)!="\""&&pre==0){pre=1;pres=substr(a[i],2,ll-1);did=1} 
+   if(did==0&&substr(a[i],ll,1)!="\""&&pre>0){pre++;pres=sprintf("%s,%s",pres,a[i]);did=1}  #record whole if last is not "
+
+   #If none of above: output it or record it?
+   #if(did==0){if(pre==0){pre=1;pres=a[i]}else{pre++;pres=sprintf("%s,%s",pres,a[i])}}  #record it
+   if(did==0){printf("SPECIAL-CASE: %s\t",a[i])}  #output it
+
+   #reset pres   
+   if(pre==0){pres=""}
+  }
+  #At last, if pre=1, print out left over in pres
+  if(pre>0){printf("%s"),pres}
+  printf("\n")
+ }' $temp2 > $out
+ #tail -1 $temp2 ; tail -1 $out ; exit  #Test in ARH1/ as: ./CSV_getCol csv.csv
+ #remove ^M at end of each line
+ awk -v RS="\r" -v ORS="" {print} $out > $temp
+ mv $temp $out
+
+ if [ $underscore -eq 1 ] ; then
+  echo "Use underscore _ to replace space in output for original col. e.g. PDB id -> PDB_id"  
+  awk '{n=split($_,a,"\t");
+   for(i=1;i<=n;i++){
+    m=split(a[i],b," ");kk=b[1];
+    for(j=2;j<=m;j++){kk=sprintf("%s_%s",kk,b[j])}
+    printf("%s\t",kk)
+   }
+   printf("\n")}' $out > $temp
+  mv $temp $out
+  #tail -1 $out ; exit  #Test in ARH1/ as: ./CSV_getCol -underscore csv.csv
+ fi
+
+ diddig=0
+ if [ $digit -gt 0 ] ; then
+  awk -F "\t" '{d='$digit';for(i=1;i<=NF;i++){
+   if(index($i,".")>0&&!($i ~/[a-z]|[A-Z]/)){ #is this a number?
+    did=0
+    if(d==1&&int($i)!=$i){printf("%3.1f\t",$i);did=1}
+    if(d==2&&int($i)!=$i){printf("%3.2f\t",$i);did=1}
+    if(d==3&&int($i)!=$i){printf("%4.3f\t",$i);did=1}
+    if(d==4&&int($i)!=$i){printf("%5.4f\t",$i);did=1}
+    if(d==5&&int($i)!=$i){printf("%6.5f\t",$i);did=1}
+    if(d==6&&int($i)!=$i){printf("%7.6f\t",$i);did=1}
+    if(did==0){printf("%s\t",$i)}
+   }else{printf("%s\t",$i)}
+  };printf("\n")}' $out > $temp2
+  mv $temp2 $out
+  echo "Only last $digit digitals were kept"
+  diddig=1
+ fi
+
+#Just output convert out
+if [ $ncol == '0' ] || [ $ncol == 'all' ] ; then
+ head -5 $out
+ rm -f $temp* ; exit
+fi
+
+old=0  #=1: use old code, no roubst though
+#-col1 Name cases:
+if [ $byname -eq 1 ] ; then
+if [ $old -eq 0 ] ; then  #New code not work yet
+ [ $ncol -ge 1 ] && col1=`head -1 $out | awk -F "\t" -v c="$col1" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ [ $ncol -ge 2 ] && col2=`head -1 $out | awk -F "\t" -v c="$col2" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ [ $ncol -ge 3 ] && col3=`head -1 $out | awk -F "\t" -v c="$col3" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ [ $ncol -ge 4 ] && col4=`head -1 $out | awk -F "\t" -v c="$col4" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ [ $ncol -ge 5 ] && col5=`head -1 $out | awk -F "\t" -v c="$col5" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ [ $ncol -ge 6 ] && col6=`head -1 $out | awk -F "\t" -v c="$col6" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ [ $ncol -ge 7 ] && col7=`head -1 $out | awk -F "\t" -v c="$col7" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ [ $ncol -ge 8 ] && col8=`head -1 $out | awk -F "\t" -v c="$col8" '{for(i=1;i<=NF;i++){if($i==c){print i;exit}}}'`
+ #head -1 $out; echo $col1 hahah $col2 $col3 ; exit
+else #Old code
+#Use awk -v to pass $col1 which may have space inside
+# Add "" if there is no "" in header line here: especially for .csv from PDB report
+line=`head -1 $input | awk '{n=split($_,a,",");for(i=1;i<=n;i++){b=substr(a[i],1,1);s=a[i];if(b!="\""){s=sprintf("\"%s\"",a[i])};if(i<n){printf("%s,",s)}else{printf("%s",s)}}}'` 
+#echo $line 
+ [ $ncol -ge 1 ] && col1=`echo $line     | awk -v c="$col1" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+ [ $ncol -ge 2 ] && col2=`echo $line     | awk -v c="$col2" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+ [ $ncol -ge 3 ] && col3=`echo $line     | awk -v c="$col3" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+ [ $ncol -ge 4 ] && col4=`echo $line     | awk -v c="$col4" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+ [ $ncol -ge 5 ] && col5=`echo $line     | awk -v c="$col5" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+ [ $ncol -ge 6 ] && col6=`echo $line     | awk -v c="$col6" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+ [ $ncol -ge 7 ] && col7=`echo $line     | awk -v c="$col7" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+ [ $ncol -ge 8 ] && col8=`echo $line     | awk -v c="$col8" '{if ($0~/"/) {n=split($0,a,"\",\"")} else {n=split($0,a,",")};for(i=1;i<=n;i++){sub(/"/,"",a[i]); if(a[i]==c){print i;exit}}}'`
+fi #old
+fi #byname -eq 1
+
+
+#Standard code to parse .csv file
+#sub(/"/,"",a[c]) : remove the leading " in .csv
+#gsub(/"/,"",a[c]) : remove all " in .csv
+if [ $isqik -eq 0 ] ; then
+ if [ $old -eq 0 ] ; then
+ [ $ncol -ge 1 ] && awk -F "\t" '{c='$col1';print $c}' $out > $temp
+ [ $ncol -ge 2 ] && awk -F "\t" '{c='$col2';print $c}' $out > $temp2
+ [ $ncol -ge 3 ] && awk -F "\t" '{c='$col3';print $c}' $out > $temp3
+ [ $ncol -ge 4 ] && awk -F "\t" '{c='$col4';print $c}' $out > $temp4
+ [ $ncol -ge 5 ] && awk -F "\t" '{c='$col5';print $c}' $out > $temp5
+ [ $ncol -ge 6 ] && awk -F "\t" '{c='$col6';print $c}' $out > $temp6
+ [ $ncol -ge 7 ] && awk -F "\t" '{c='$col7';print $c}' $out > $temp7
+ [ $ncol -ge 8 ] && awk -F "\t" '{c='$col8';print $c}' $out > $temp8
+ else #old code
+ [ $ncol -ge 1 ] && cat $input | awk '{c='$col1';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp
+ [ $ncol -ge 2 ] && cat $input | awk '{c='$col2';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp2
+ [ $ncol -ge 3 ] && cat $input | awk '{c='$col3';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp3
+ [ $ncol -ge 4 ] && cat $input | awk '{c='$col4';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp4
+ [ $ncol -ge 5 ] && cat $input | awk '{c='$col5';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp5
+ [ $ncol -ge 6 ] && cat $input | awk '{c='$col6';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp6
+ [ $ncol -ge 7 ] && cat $input | awk '{c='$col7';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp7
+ [ $ncol -ge 8 ] && cat $input | awk '{c='$col8';if ($0~/"/) {split($0,a,"\",\"")} else {split($0,a,",")};sub(/"/,"",a[c]);print a[c]}' > $temp8
+ fi #old
+else #Modified code to work for qikprop.CVS to deal with " " in first record. Keep this old code
+ [ $ncol -ge 1 ] && cat $input | awk '{c='$col1';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp
+ [ $ncol -ge 2 ] && cat $input | awk '{c='$col2';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp2
+ [ $ncol -ge 3 ] && cat $input | awk '{c='$col3';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp3
+ [ $ncol -ge 4 ] && cat $input | awk '{c='$col4';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp4
+ [ $ncol -ge 5 ] && cat $input | awk '{c='$col5';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp5
+ [ $ncol -ge 6 ] && cat $input | awk '{c='$col6';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp6
+ [ $ncol -ge 7 ] && cat $input | awk '{c='$col7';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp7
+ [ $ncol -ge 8 ] && cat $input | awk '{c='$col8';split($0,a,",");gsub(/"/,"",a[c]);print a[c]}' > $temp8
+fi
+
+cp $temp $out
+
+if [ $ncol -gt 1 ] ; then
+awk '
+BEGIN{
+ file="'$temp'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  a[nr]=line
+  if(a[nr]==""){a[nr]="-"}
+ }
+ close(file)
+fi
+}{b=$_;if(b==""){b="-"};printf("%s\t%s\n",a[NR],b)}' $temp2 > $out
+cp $out $temp
+fi
+
+if [ $ncol -gt 2 ] ; then
+awk '
+BEGIN{
+ file="'$temp'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  a[nr]=line
+  if(a[nr]==""){a[nr]="-"}
+ }
+ close(file)
+fi
+}{b=$_;if(b==""){b="-"};printf("%s\t%s\n",a[NR],b)}' $temp3 > $out
+cp $out $temp
+fi
+
+if [ $ncol -gt 3 ] ; then
+awk '
+BEGIN{
+ file="'$temp'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  a[nr]=line
+  if(a[nr]==""){a[nr]="-"}
+ }
+ close(file)
+fi
+}{b=$_;if(b==""){b="-"};printf("%s\t%s\n",a[NR],b)}' $temp4 > $out
+cp $out $temp
+fi
+
+if [ $ncol -gt 4 ] ; then
+awk '
+BEGIN{
+ file="'$temp'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  a[nr]=line
+  if(a[nr]==""){a[nr]="-"}
+ }
+ close(file)
+fi
+}{b=$_;if(b==""){b="-"};printf("%s\t%s\n",a[NR],b)}' $temp5 > $out
+cp $out $temp
+fi
+
+if [ $ncol -gt 5 ] ; then
+awk '
+BEGIN{
+ file="'$temp'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  a[nr]=line
+  if(a[nr]==""){a[nr]="-"}
+ }
+ close(file)
+fi
+}{b=$_;if(b==""){b="-"};printf("%s\t%s\n",a[NR],b)}' $temp6 > $out
+cp $out $temp
+fi
+
+if [ $ncol -gt 6 ] ; then
+awk '
+BEGIN{
+ file="'$temp'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  a[nr]=line
+  if(a[nr]==""){a[nr]="-"}
+ }
+ close(file)
+fi
+}{b=$_;if(b==""){b="-"};printf("%s\t%s\n",a[NR],b)}' $temp7 > $out
+cp $out $temp
+fi
+
+if [ $ncol -gt 7 ] ; then
+awk '
+BEGIN{
+ file="'$temp'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  a[nr]=line
+  if(a[nr]==""){a[nr]="-"}
+ }
+ close(file)
+fi
+}{b=$_;if(b==""){b="-"};printf("%s\t%s\n",a[NR],b)}' $temp8 > $out
+cp $out $temp
+fi
+
+#Keep this for old code when isqik=1
+echo "Output saved in $out for $ncol col of $col1 $col2 $col3 $col4 $col5 :"
+if [ $digit -gt 0 ] ; then
+ awk '{d='$digit';for(i=1;i<=NF;i++){
+   if(index($i,".")>0){
+    did=0
+    if(d==1&&int($i)!=$i){printf("%3.1f\t",$i);did=1}
+    if(d==2&&int($i)!=$i){printf("%3.2f\t",$i);did=1}
+    if(d==3&&int($i)!=$i){printf("%4.3f\t",$i);did=1}
+    if(d==4&&int($i)!=$i){printf("%5.4f\t",$i);did=1}
+    if(d==5&&int($i)!=$i){printf("%6.5f\t",$i);did=1}
+    if(d==6&&int($i)!=$i){printf("%7.6f\t",$i);did=1}
+    if(did==0){printf("%s\t",$i)}
+   }else{printf("%s\t",$i)}
+  };printf("\n")}' $out > $temp2
+ mv $temp2 $out
+ echo "Only last $digit digitals were kept"
+fi
+head -2 $out
+
+rm -f $temp $temp2 $temp3 $temp4 $temp5 $temp6 $temp7 $temp8; exit
+

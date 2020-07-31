@@ -1,0 +1,1148 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+download=0
+toplong=10  #top PDBs that has longest identical residues
+force=0;fforce=''
+map=1
+clustercut=1  #rmsd cutoff to pick cluster
+divercut=1  #rmsd cutoff to pick diverse subset
+pcut=0.3  #ApperanceRatio cutoff for common residues. 
+rcut=0 #ApperanceRatio cutoff for common pairs in target protein. All common pairs appeared will display
+rcut2=0.05 #ApperanceRatio cutoff for common pairs in target  protein partners. 
+mcut=0  #appearance-ratio cutoff for continue motifs
+mcut2=0  #appearance-ratio cutoff for discontinue motifs
+forceblast=0
+listsize=500 #Maximum blastp list number. One list may have many PDBs with the same identical residues and length
+pc=40   #sequence identity percentage 0-100 integer. NCBI default 99
+score=30  #NCBI alignment score cutoff
+minialign=30   #Minimum length of aligned residues
+motif=0
+pairwise=0;alignout='';doalignout=0
+blastonly=0;nodownload=0
+o3=0;o3d='-o1'
+gap=10;dogap=0  #maximum gap for motif as NNXXXNXN. At least gap=3 in include helix-turn residues to coordinates (2.6 residues)
+type='-type -notype2'
+gi=0
+ncol=1
+new=0  #Use 0 please! =1: new code. Almost Identical to old code=0, but display less info when Query motif
+cpu=12
+downloadonly=0
+rmsdcut=5
+ligexcld='GOL EDO' #Exclude those ligands when check ligands
+less=0
+
+oldline=$*   #all argvs
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -less)less=1;shift;;
+   -nodownload)nodownload=1;shift;;
+   -cpu)cpu=$2;shift 2;;
+   -clustercut)clustercut=$2;shift 2;;
+   -divercut)divercut=$2;shift 2;;
+   -cut)divercut=$2;clustercut=$2;shift 2;;
+   -nodownload)download=0;shift;;
+   -download)download=1;shift;;
+   -force)force=1;forceblast=1;fforce=$1;shift;;
+   -noforce)force=0;forceblast=0;fforce=$1;shift;;
+   -debug) debug=1; shift;;
+   -nomap) map=0;shift;;
+   -out) outputpre="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c';./template -i "$d" will give i='a b c' instead i='a'
+   -pcut)pcut=$2;shift 2;;
+   -rcut)rcut=$2;shift 2;;
+   -rcut2)rcut2=$2;shift 2;;
+   -mcut)mcut=$2;shift 2;;
+   -mcut2)mcut2=$2;shift 2;;
+   -type)type=$type' '$1;shift;;
+   -notype)type=$type' '$1;shift;;
+   -type2)type=$type' '$1;shift;;
+   -notype2)type=$type' '$1;shift;;
+   -rmsdcut)rmsdcut=$2;shift 2;;
+
+   -forceblast)forceblast=1;shift;;
+   -listsize)listsize=$2;shift 2;;
+   -pc)pc=$2;shift 2;;
+   -score)score=$2;shift 2;;
+   -ma)minialign=$2;shift 2;;
+   -motif)motif=$2;shift 2;;
+   -pairwise)pairwise=$2;shift 2;;
+   -alignout)doalignout=1;alignout=$2;shift 2;;
+   -blastonly)blastonly=1;shift;;
+   -o3)o3=1;o3d=$1;shift;;
+   -o1)o3=0;o3d=$1;shift;;
+   -gap)gap=$2;dogap=1;shift 2;;
+   -gi)gi=1;shift;;
+   -ncol)ncol=$2;shift 2;;
+   -new)new=1;shift;;
+   -downloadonly)downloadonly=1;divercut=0;shift;;
+   -ligexcld)ligexcld=$ligexcld' '"$2";shift;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Blastp of sequence fasta file or Download/Analyze PDBs from NCBI Blast saved as NCBI_Blast_Output.txt or run:
+   perl ./remote_blast_client.pl -pc 40 -score 80 -listsize 500 -o test -d pdb -b blastp -i PCNA.fasta
+   MUST install BioPerl for ./remote_blast_client.pl
+   This code may not work now from 2017
+ Or use ./NCBI_blast (./web_blast.pl) downloaded from NCBI REST: 
+   https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=DeveloperInfo
+ e.g. ./NCBI_blast -db nr protein.fasta
+      ./web_blast.pl blastp pdb protein.fasta.txt
+      ./web_blast.pl rpsblast cdd protein.fasta.txt
+      ./web_blast.pl megablast nt dna1.fasta dna2.fasta   
+ Can also do protein-protein interaction PPI analysis
+
+ NOTE: need install perl modules to run NCBI blastp in script ./web_blast.pl 
+       URI::Escape LWP::UserAgent HTTP::Request::Common qw(POST)
+ NOTE: To align sequences from EBI Clustral, run ./clustalo_lwp.pl
+
+How to find sequences/GIs of a domain in CCD or Pfam?
+ 1. NCBI blast sequence on Conserved Domain CCD: http://www.ncbi.nlm.nih.gov/Structure/cdd/wrpsb.cgi
+ 2. Click on the Pfam number interested domain
+ 3. Select 'Row Display' as 'All XXX rows'. Click 'Reformat'
+ 4. copy/paste the WHOLE sequences with GIs and saved in a file Nuclease_CCD.gi (may need start/end resid to cut output fasta)
+ 5. Download PDBs and analyze contact motifs, Run ./NCBI_blast_PDBs -gi -pc 90 Nuclease_CCD.gi
+
+How to align several sequences by using NCBI blastp?
+   NCBI Blastp website (http://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome) 
+ | check 'Align two or more sequences' | Enter Query Sequence (Single Sequence) | Enter Subject Sequences (can be multiple sequence)
+ Or use EBI Clustal : ./clustal_seq_align
+
+How to use EBI PDBeMotif to search motif for metal/ligand/DNA binding? (which is partially replacement of this script. But this code can deal with interested PDBs)
+1. http://www.ebi.ac.uk/pdbe-site/pdbemotif/ 
+2. Click "Motif Binding" to search ExE motif binding partners (protein/ligand/metal) against whole PDB
+   search for sequence pattern –distribute against ligands, secondary structures, 3D motifs
+3. Click "Molecule Binding" to search ligand/DNA binding partners: 4 Fe-S ligand code is SF4
+   | Search against: ProSite Patterns
+   Ligand 3-letter code, metal site geometry – looking for covalent, H-bonds, Van der Waals, planar interactions – 
+   distribution against amino acids, nucleic acids, ligands, Prosite motifs etc.
+4. "Pair bonds" to interactions statistics between a pair of residues (Ligand-aminoacid, ligand-ligand, ligand-nucleic acid etc.)
+5. PDB Header Search – PDB ID, Experiment Type, author name ….
+6. Search – combine different sources of data generate your query
+7. Upload your own PDB file for analysis
+8. Search Sequence: Search | Click on left: Secondary Structure Sequence
+Cite: Golovin A, Henrick K: MSDmotif: exploring protein sites and motifs. BMC Bioinformatics 2008, 9:312
+Tutorial: http://www.ebi.ac.uk/pdbe/#m=2&h=0&e=0&r=0&l=0&a=0&w=0 
+
+NOTE: NCBI blastp is Xnot a good alignment tools. So it will miss some improtant homologies, See ~/ARI1
+  Use other alignment tools such as Clustral, T-coffee to align and build longer model!
+  Use SWISS-Model repository (https://swissmodel.expasy.org/repository/uniprot/O14497) to find more homology models!!!
+   The other way is to change balstp parameters, especially drop Drop 'Word Size' from default 6 to 3, can find more low id seqs!
+   WARNing: alignment from low seq iden may not be reliable and have many choices. See ~/ARI1 R2153
+   Amazing! Repository gives model of Exo5 at 20% seq id to AddB, which is impossible to build from NCBI blastp (which aln to kinase). See ~/Exo5
+  Bad part: Repository randomly predicted none-aln part and generate error model for this region. See TET1/
+  WARNing: remember to check SWISS-MODEL repository as well as PubChem may miss short peptide as in FANCJ/ for D1138 
+   or wrong aln to kinase for nuclease as in Exo5/
+  
+SMART database: Motifs for domainsi and protein domain annotation : http://smart.embl-heidelberg.de/browse.shtml
+ Find Ubiquitin Binding Associate motif: Search UBA | View
+ Find domains in sequence DNA2-1.fasta.txt
+ perl sequence_search_SMART.pl --input DNA2-1.fasta.txt --output Out --includePfam --includeSchnipsel --includeDISEMBL --includeSignalP --includeRepeats
+
+How to download NCBI blasp output:
+  Blast on seqeunce agaist PDB at NCBI | "Sequences producing significant alignments:" | Select "All" | Download | Text
+   http://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome
+ NCBI_Blast_Output.txt format:  
+
+#Old NCBI version:
+See ubiquitin/NCBI_blast.txt
+>pdb|3NOB|A Chain A, Structure Of K11-Linked Di-Ubiquitin
+ pdb|3NOB|B Chain B, Structure Of K11-Linked Di-Ubiquitin
+Length=78
+
+ Score =   154 bits (389),  Expect = 1e-49, Method: Compositional matrix adjust.
+ Identities = 76/76 (100%), Positives = 76/76 (100%), Gaps = 0/76 (0%)
+ 
+Query  1   MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYN  60
+           MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYN  
+Sbjct  3   MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYN  62
+....
+
+#New NCBI version at 1/13/2017: See DHODH/PDBs/NCBI_blast.txt
+....
+Sequences producing significant alignments:                       (Bits)  Value
+
+3U2O_A  Chain A, Dihydroorotate Dehydrogenase (Dhodh) Crystal ...  791     0.0
+5K9C_A  Chain A, Crystal Structure Of Human Dihydroorotate Deh...  735     0.0
+...
+ALIGNMENTS
+>3U2O_A Chain A, Dihydroorotate Dehydrogenase (Dhodh) Crystal Structure
+In Complex With Small Molecule Inhibitor
+Length=395
+
+ Score = 791 bits (2043),  Expect = 0.0, Method: Compositional matrix adjust.
+ Identities = 395/395 (100%), Positives = 395/395 (100%), Gaps = 0/395 (0%)
+
+Query  1    MAWRHLKKRAQDAVIILGGGGLLFASYLMATGDERFYAEHLMPTLQGLLDPESAHRLAVR  60
+            MAWRHLKKRAQDAVIILGGGGLLFASYLMATGDERFYAEHLMPTLQGLLDPESAHRLAVR
+....
+>5K9C_A Chain A, Crystal Structure Of Human Dihydroorotate Dehydrogenase
+With Ml390
+ 5K9D_A Chain A, Crystal Structure Of Human Dihydroorotate Dehydrogenase
+At 1.7 A Resolution
+Length=368
+
+ Score = 735 bits (1898),  Expect = 0.0, Method: Compositional matrix adjust.
+ Identities = 367/367 (100%), Positives = 367/367 (100%), Gaps = 0/367 (0%)
+
+Query  29   MATGDERFYAEHLMPTLQGLLDPESAHRLAVRFTSLGLLPRARFQDSDMLEVRVLGHKFR  88
+
+How to find literature or commercial available known inhibitors for a protein?
+Run my ./chembl
+Best in EBI ChEMBL (and +PubChem BioAssay data) : https://www.ebi.ac.uk/chembl/
+ Or find the ChEMBL link in Uniprot of a protein: Chemistry databases | ChEMBL
+ Type ProteinName | Click "Target" as KCNK9 or Uniprot ID | Click 'ChEMBL ID' | CHEMBL2321614 (w/ 126 cmpds)
+  | Click "Download" icon under Pie-image and select "Display all records" or in Pie-image, click both links: "1 inhibitor" and "144 IC50"
+  | To download 144 cmpds with IC50 : Click 'Please select...' | Download tab-delimited file | Sorted by 'Standard Value for IC50'
+ There is SMILES string inside to get structures. Then: $0 ChEMBL_inhibitor.xls
+WARNing: Need download both IC50 and Ki data, then merge them to get best results. See p38/ for p38g vs CDK9
+WARNing: there are duplicate inhibitor (but could be isomer) with diff IC50s as CHEMBL2324344 in KCNK9/KCNK9_inhibitors_ChEMBL.xls
+  Duplicate ChEMBL should from different chiral center!
+GOL1 known inhibitors:
+ https://www.ebi.ac.uk/chembl/target/inspect/CHEMBL2424
+ To generate the images and cluster, run ./sdf2images ChEMBL_inhibitor.xls  ./pdb_sdf_smi_mae_mol2_convert -ChEMBL ChEMBL_inhibitors.xls
+NOTE: ChEMBL has good summary of literature inhibitors for a protein. Even PubChem borrows it.
+ But PubChem also has HTS tested results or bioassay results w/ AID xxxxx with IC50 value or Bscore etc.
+ For example, for KCNK9 inhibitor, if you search KCNK9 in NCBI and select records in bioAssay,
+  Or seach in Database "PubChem BioAssay" for "KCNK9 human" Then Click on "BioAssay Download" can download all 47 bioassays
+ AID 488922 HTS tested 305,679 cmpds with 3,799 (~1%) are active.
+ It also has AID 652211 w/ IC50 that partial are new from ChEMBL
+
+
+About Protein-Protein Interaction (PPI) Pocket:
+ANCHOR: a web server and database for analysis of protein¿protein interaction binding pockets for drug discover
+  Use energy/SASA to define contact residues. But can only work on one protein-protein PDB
+  http://nar.oxfordjournals.org/content/38/suppl_2/W407.full
+ Later work PocketQuery (also hot region analyzed):
+  http://pocketquery.csb.pitt.edu/
+
+ Usage: $0 [Options] Fasta|NCBI_Blast_Output.txt|GI|giList
+  NCBI_Blast_Output.txt : NCBI blast output see above or ubiquitin/NCBI_blast.txt
+  Or fasta sequence file with 1 or many sequences
+  Or NCBI GI number w/ -gi
+  Or List file with GI numbers w/ -gi
+
+ Options:
+  -less : less display
+  -debug : debug model on
+  -new : Use new code to calculate PPI contact info
+  -out OutputPrefix : User defined output prefix
+  -gi : Input is GI number of gi List file
+   -ncol ColNumber : col number to find gi in GI ListFile. [$ncol]
+  -download : force to download of PDBs even if exists
+  -force | -noforce  : force to recal outputs. Otherwise, use existing ones
+  -nomap : No RMSD_Pymol map of PDBs to save time
+  -clustercut Cutoff : rmsd cutoff to pick out PDB clusters [$clustercut]
+  -divercut Cutoff : rmsd cutoff to pick out PDB diverse subset [$divercut]
+   -cut Cutoff : both cutoffs together 
+  -pcut Cutoff : Appearance ratio cutoff for PPI common residue [$pcut]
+  -rcut Cutoff : Appearance ratio cutoff for PPI residue pairs for rows [$rcut]
+   -rcut2 Cutoff : Appearance ratio cutoff for PPI residue pairs for cols in each row [$rcut2]
+  -mcut ApperanceRatioCutoff : appearance ratio cutoff for continue motif [$mcut]
+   -mcut2 ApperanceRatioCutoff : appearance ratio cutoff for discontinue motif [$mcut2]
+  -type | -notype : Output (first block) is common residue type (R) instead of specific residue (R280)
+  -type2 | -notype2 : Multiple (except first) output is not common residue type (R). Default:  is common residue type (R)
+  -forceblast : force to re-blast a fasta sequence to NCBI even if output already there
+  -blastonly : Only do NCBI blast of a sequence and download PDBs, will not analyze PDBs
+  -nodownload : will NOT download PDBs
+  -ligexcld "LigandName1 LigName2 ..." : exclude those PDB ligand names when analyze ligands from downloaded PDBs
+  -motif Motif : Query the datail PPI of a motif based on pre-calculated output7. But input is as old
+  -pairwise PDBID : Query/Calculate detail of pairwise sequence alignement of PDBID to target sequence from output0. PDBID may include chain: 1ul1A. input is seqeunce fasta file
+   -alignout AlignOutput : Output for pair sequence aligment
+  -listsize BlastListSize : Maximum blastp list/cluster number. [$listsize]
+     NOTE: One list/cluster may have many PDBs with the same identical residues and length.
+  -ma MiniAlign : Minimum of alignment sequence length for blastp [$minialign]
+  -score ScoreCutoff : cutoff of NCBI aligment Score. Excellent/Red >200, good/pink: 80-200, OK/green: 50-80, bad/blue 40-50, worse/black <40
+     -score 80 recommended. But we set default as [$score] here 
+  -pc IdentityPercentage : sequence identity percentage cutoff. 0-100 integer for aligned sequence. NCBI default:40 [$pc]
+    To get identical blastp as from NCBI website, use -pc 40
+   -o3 : Output is 3-char resname instead of 1-char resname. Good for ligand, metal that is not protein residues
+   [-o1] : Output is 1-char resname for neat display. Good for pure protein. But may show error display for none protein residues as metal/ligand/unstandard residue 
+  -cpu CPUs : CPUs to be used for multiple-CPUs [$cpu]
+  -gap Motif_maximum_gaps : maximum gaps allow for motif [$gap] e.g. RKxxxYTxN.
+  -rmsdcut Cutoff : Pymol RMSD cutoff to show residue-pair RMSD in output10. [$rmsdcut]
+  -downloadonly : Only download PDBs against input fasta and generate PyMol plot for aligned PDBs. For general works of arbitary fasta.
+
+ Example: 
+    $0 -pc 90 -score 200 Protein.fasta.txt
+      #Use ./NCBI_blast (./web_blast.pl) to get NCBI blastp results from sequence
+      #Get PDBs with sequence identity > 90%, alignment score >=200
+    $0 NCBI_blast.txt 
+       #Input is blastp output directly from NCBI website
+    $0 -pc 90 -score 200 NCBI_blast.txt
+       #Only download PDBs with 90% sequence identity and NCBI alignment score >=200
+    $0 -pcut 0.3 -rcut 0.1 -rcut2 0.05  -mcut 0 -mcut2 0 NCBI_blast.txt 
+      #Display PPI common residues with apperance ratio > 30%; resd-resd pair apprearance ratio > 10% (rows) and > 5% in each col 
+    $0 -forceblast A.fasta.txt
+      #Input is sequence fasta file and force to re-blast the sequence for update
+    $0 -motif AxxQ PCNA.fasta
+      #Query detail protein-protein interaction of contact motif AxxQ based on pre-calculated PCNA.fasta_PPI_contact.txt
+    $0 -pairwise 1ul1A PCNA.fasta
+      #Get pairwise sequence alignement of chain A 1UL1 to target sequence. Input is seqeunce fasta file
+    $0 -gap 3 -notype -notype2 PDBList
+      #re-display contact motif with gap=3 and different type views
+    $0 -divercut 0 PCNA.fasta
+      #Align all downloaded PDBs/homologies and saved in $output6 with -divercut 0
+    $0 -pc 40 -score 0 -ma 0 -listsize 500 ubiqintin.fasta
+      # To mimic NCBI website results, use -pc 40. See ubiquitin/readme
+    $0 -gi -ncol 2 -pc 90 -ma 30 Nuclease_CCD.gi
+      #Input is a list of GIs with GIs in col 2, aligned sequence identity cutoff=90% and minimum aligned sequence length=30 with GIs in col2. See ~/Sae2/readme 
+    $0 -pc 30 -o3 -gap 4 -cpu 16  PCNA.fasta.txt
+      #Get more homology PDBs with aligned sequence identity cutoff at 30% insterad of default 90%. Output is 3-char resname instead of 1-char. Motif gap allowed<=4
+    $0 -downloadonly A.fasta
+      #Only download all PDBs against A.fasta and generate PyMol plot for aligned PDBs. For general works of arbitary fasta.
+
+   NOTE: ANCHOR or PocketQuery website may analyze PPI Pocket of a single PDB
+   NOTE: For Blast, adjust -pc when too many/less PDBs
+   NOTE: This script can blastp fasta sequence to NCBI to get PDBs
+   NOTE: Check http://www.ncbi.nlm.nih.gov/BLAST/Doc/node5.html to modify ./remote_blast_client.pl for more functions
+     http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ#urlapi  for more NCBI balst
+   NOTE: Use $0 -pc 40 -score 0 elistsize 500 FastaFile to mimic NCBI website results 
+   NOTE: after run this, explore more PPI motifs by: $0 -motif XXXX $output7
+   NOTE: To locate a sequence pattern in sequence, run: See ~/Sae2/readme
+    ./sequence_search -nosum -refname Metal -refname2 DNA -fasta "Ctip.fasta.txt DNA2-1.fasta.txt" -PPI PDB.list-metal_PPI_contact.txt -PPI2 PDB.list-DNA_PPI_contact.txt PDB.list-DNA_PPI_contact_PDB.fasta.txt [DEHC]x[DEHC] [NR]xxR [NR]xxxR
+   NOTE: To analyze metal-protein or ligand-protein or DNA-protein interaction PPI analysis, run ./protein-target-interaction -metal/-DNA/-ligand
+   WARNing: PDB (NCBI) fasta sequence can be totally different to PDB residue numbering! There could be missing N-term, mutations and missing region
+         cause the mis-match PDB resid to fasta. See http://sebastianraschka.com/Articles/misleading-fasta-on-pdb.html
+         Real sequence numbering should be fasta either from PDB or NCBI (identical). Use ClustalW2 to compare PDB-convert-fasta to download fasta
+   NOTE: How to use SMART and Pfam domain database to find all sequences for a domain and do sequence aligment?
+      See ./seq_align_rearrange  Ref: nature reviews:genetics 2006. vol7 715
+ NOTE: To download fasta seq from NCBI Refseq# : ./sequence_download -gi -o o.fasta NP_006006.3,XP_009292406.1
+ NOTE: To download PDBs from Uniprot: ./UniProt_get -getPDB or ./pdb_download
+ NOTE: To find GO annotations of a protein : ./GO_annotation
+ NOTE: To run Clustal multiple seq alignments : ./clustal_seq_align seqs.fasta.txt
+ XNOTE: ./UniProt_get -getPDB missed PDB 2psq for FGFR1. Also missed in Uniprot website for P11362. Found from NCBI blastp in FGFR1/. 
+ NOTE: Can also run ./domain_cluster to get Pfam/SMART/InterPro domains
+ NOTE: To cluster proteins by Pathway/Function/Domain/Seqidentity/Structure, run ./protein_cluster
+ NOTE: To find CHEMBL inhibitors and PDBs for any protein or analyze chembl database, run ./chembl
+
+   NOTE: To extract ligands from downloaded PDBs: See DHODH/readme AR/readme
+     ./pdb_getligand -pc 95 -score 150 -ncbi NCBI_blast.txt -range 20 100 -exclude "FMN ATP AGP SO4 FMT ORO ACT GOL EDO" "????.pdb"  
+    XWARNing: NCBI blastp may miss proteins! Uniport could be more completed. See KCNK9/ missed KCNK4 4I9W in NCBI
+    Now can use PDB website to search protein names to download both PDBs and ligand sdf file
+  NOTE: To find known inhibitor of a protein, search ChEMBL+PubChem BioAssay, then ./pdb_sdf_smi_mae_mol2_convert -ChEMBL ChEMBL_inhibitors.xls 
+  WARNing: NCBI gives Wrong seq aln for M254 in ACTL6A against 4EFH in ACTL6A/. Do not trust it easily. Check strcuture instead!
+
+ NOTE: this code is same as called by ./NCBI_blast -getPDB 
+
+ttt
+  exit
+fi
+
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".txt"){print substr($1,1,l-1)}else{print $1}}'`
+if [ $doout -ne 1 ] ; then
+ outputpreo=`basename $infile`
+ outputpre=$outputpreo'_'$pc'_'$minialign
+fi
+gifasta=$outputpre'_gi.fasta.txt'
+output0=$outputpreo'_'$pc'_NCBI_blast.txt'
+output=$outputpre'_entries.xls'
+output2=$outputpre'_uni.xls'
+output8=$outputpre'_uni.fasta.txt'
+output9=$outputpre'_uni_PDB.fasta.txt'
+output4=$outputpre'_prop.xls'
+properlist=$outputpre'_prop'  #DO NOT change/modify this name
+output3=$outputpre'_rmsdmap.xls'
+output5=$outputpre'_mclu.xls'
+output6=$outputpre'_div.pdb'
+output10=$outputpre'_div_pairRMSD.xls'
+output7=$outputpre'_PPI_contact.txt'
+output_SMART=$outputpre'_SMART.txt'
+
+temp=$$'.tmp' #Use short tmp name as ./pymol_rmsd cannot take long input name
+temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/symbol.txt $ed/NCBI_blast_getAlignment $ed/pdb_download $ed/char_compare $ed/pymol_rmsd .
+ cp -f $ed/sdf_contactmap $ed/pdb_getProperty $ed/pdb_getChainResn $ed/gnuplot_dendogram $ed/pdb_check $ed/do_gnuplot .
+ cp -f $ed/vmd_pdb_contacts_common $ed/vmd_pdb_contacts $ed/remote_blast_client.pl $ed/pdb_returnChain .
+ cp -f $ed/NCBI_blast_getAlignment $ed/protein-target-interaction $ed/sequence_search $ed/sequence_download .
+ cp -f $ed/fasta_fromPDB $ed/sequence_search_SMART.pl $ed/list_mergeTwo $ed/pdb_aminoacid_3char1.list .
+ cp -f $ed/pdb_secondary $ed/pdb_getligand $ed/web_blast.pl $ed/pymol_all $ed/lig_interaction_plot .
+ cp -f $ed/pymol_alignment_water $ed/pdb_sdf_smi_mae_mol2_convert $ed/NCBI_blast .
+fi
+
+R='\033[31m';G='\033[32m';Y='\033[33m';B='\033[34m';M='\033[35m';C='\033[36m'; N='\033[m'  #Color text of RBG Yellow Magenta Cyan Normal for echo -e 
+HR='\033[41m';HG='\033[42m';HY='\033[43m';HB='\033[44m';HM='\033[45m';HC='\033[46m';  #High-light Color text of RBG Yellow Magenta Cyan for echo -e
+A=`awk '{print $1}' symbol.txt | head -1`;PM=`awk '{print $2}' symbol.txt | head -1`;BL=`awk '{print $11}' symbol.txt | head -1` #Symbol for Amstrong and +/- for cat/echo
+LE=`awk '{print $3}' symbol.txt | head -1`;GE=`awk '{print $4}' symbol.txt | head -1`;NE=`awk '{print $8}' symbol.txt | head -1` #Symbol for <= ; >= ;!=
+#echo -e "$R ColorText $A $N"
+
+#Query pairwise sequence alignment
+if [ "$pairwise" != "0" ] ; then
+ if [ ! -s $output0 ] ; then
+  $0 -blastonly $input  #>$temp
+ else
+  echo " Use existing NCBI Blastp output $output0"
+ fi
+ echo "==> Query detail pairwise sequence alignment of $pairwise to target sequence $input:" > $alignout
+ [ $doalignout -ne 1 ] && alignout=$temp
+ pdb=`echo $pairwise | awk '{print toupper(substr($1,1,4))}'`
+ ch=`echo $pairwise | awk '{print substr($1,5,1)}'`
+ [ "$ch" == "" ] && ch='+'
+ awk 'BEGIN{pdb="'$pdb'";ch="'$ch'";s=0}{
+hh=substr($_,1,5)
+if(hh==">pdb|"||hh==" pdb|"){
+ p=substr($_,6,4);c=substr($_,11,1)
+ if(p==pdb&&(ch=="+"||ch==c)){
+  s=1
+ }
+}
+if(s>0){ 
+ s++
+ if(s>2&&hh==">pdb|"){s=0}
+ if(s==2){print $_}
+ if(s>0&&($1=="Query"||$1=="Sbjct"||$1=="Score"||$1=="Identities"||substr($1,1,7)=="Length="||NF==0)){print $_}
+}
+}' $output0 | tee -a $alignout
+ [ $doalignout -eq 1 ] && echo " Pairwise sequence alignment saved in $alignout"
+ rm -f $temp
+ exit
+fi
+
+#Query a motif
+if [ "$motif" != "0" ] ; then
+echo "Query detail PPI motif $motif at $output7 : TargetProtein(Motif-X), then Partner(motif2-X)"
+awk 'BEGIN{m="'$motif'";s=0}{if(substr($1,1,6)=="======"){exit}
+ if(s==1&&NF==0){s=0}
+ if(s==1&&substr($1,2,4)=="otif"){l=length($_);a=substr($_,11,l-10);if(index(a,m)>0){mm++;printf("%d\t%s\t%s\n",mm,pdb,$_)}}
+ if(s==0&&NF>0){s=1;pdb=$2} 
+}' $output7 > $temp
+echo "===>Motifs from Target Protein (Motif-X) - Partner Protein"
+grep 'Motif-' $temp
+echo "===>Motifs from Partner Protein (motif2-X) - Target Protein"
+grep 'motif2-' $temp
+echo "===> PDB info:"
+awk 'BEGIN{m="'$motif'";s=0}{if(substr($1,1,6)=="======"){exit}
+ if(s==1&&NF==0){s=0}
+ if(s==1&&substr($1,2,4)=="otif"){l=length($_);a=substr($_,11,l-10);if(index(a,m)>0){mm++;printf("%d %s\n",mm,pdb)}}
+ if(s==0&&NF>0){s=1;pdb=$_}
+}' $output7
+rm -f $temp; exit
+fi
+
+#change motif gap
+if [ $dogap -eq 1 ] && [ -s $output7 ] ; then
+awk '{if(substr($1,1,6)=="======"){exit}else{print $_}}' $output7 > $temp2
+echo " Residues in Partner PDBs and target protein/ligand/metal/DNA as $type with motif gap<=$gap for summation:"
+./vmd_pdb_contacts_common -gap $gap $o3d $type -gnu -shortmotif -mult -dupmotif -pcut $pcut -rcut $rcut -rcut2 $rcut2 -mcut $mcut -mcut2 $mcut2 -out $temp4 -displayout $temp5 -distop 10 $output7 > $temp3
+echo "=======================Summary $output7 : -gap $gap -pcut $pcut -rcut $rcut -rcut2 $rcut2 :" >> $temp2
+cat $temp5
+cat $temp4 >> $temp2
+mv $temp2 $output7
+echo "===> PPI residue-residue Contact info with type=$type motif gap=$gap saved in $output7"
+rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit
+fi
+
+if [ $gi -eq 1 ] ; then
+ ./sequence_download -gi -ncol $ncol -out $gifasta $input  > $temp6
+ echo "=> Fasta sequence of GI $input is saved as $gifasta"
+ input=$gifasta
+fi
+
+isNCBI=`grep '>pdb' $input | wc -l | awk '{print $1}'`  #old NCBI output with >pdb keyword
+isnew=0
+if [ $isNCBI -eq 0 ] ; then   #New NCBI version w/ "Sequences producing significant alignments:"
+ isNCBI=`grep 'Sequences producing significant alignments:' $input | wc -l | awk '{print $1}'`
+ [ $isNCBI -gt 0 ] && isnew=1
+fi
+
+format=`echo -e "Num\tPDB\tChain\tLength\tIdentity\tPercentage\tTitle"`
+
+#############################################################################################################################
+#call NCBI blastp 
+if [ $isNCBI -eq 0 ] ; then
+ if [ $less -eq 0 ] ; then
+  echo "WARNing: If the following command does NOT work, try to download balstp results from NCI directly: "
+  echo "  Blast on seqeunce at NCBI | Sequences producing significant alignments: | Select All | Download | Text"
+  echo "  Save downloaded as NCBI_blast.txt, Then: $0 NCBI_blast.txt"
+  echo " "
+  echo "To find domains, run the follwoing but seems not working anymore:"
+  echo perl sequence_search_SMART.pl --input $input --output $output_SMART --includePfam --includeSchnipsel --includeDISEMBL --includeSignalP --includeRepeats
+ fi
+ isnew=1
+
+ #Domain seems not working anymore:
+ #perl sequence_search_SMART.pl --input $input --output $output_SMART --includePfam --includeSchnipsel --includeDISEMBL --includeSignalP --includeRepeats > $temp
+ #nsmart=`grep NUMBER_OF_FEATURES_FOUND $output_SMART | awk '{split($1,a,"=");print a[2]}'`
+ #echo "=> $nsmart Domains/Records from SMART database is saved in $output_SMART"
+
+ if [ ! -s $output0 ] || [ $forceblast -eq 1 ] ; then
+ if [ $less -eq 0 ] ; then
+ echo " "
+ echo "$input is fasta sequence. Now run NCBI Blastp at pdb Database saved to $output0"
+ echo ./web_blast.pl blastp pdb $input
+ fi
+ ./web_blast.pl blastp pdb $input > $output0
+
+ # The following ./remote_blast_client.pl  may not work. Use above NCBI ./web_blast.pl instead
+ #echo "  Aligned sequence identity cutoff = $pc%   Wait to access NCBI...tail -f $output" #Cannot take $minialign here by -p here
+ #echo perl ./remote_blast_client.pl -o $temp -d pdb -b blastp -i $input -pc $pc -listsize $listsize
+ #perl ./remote_blast_client.pl -o $temp -d pdb -b blastp -i $input -pc $pc -listsize $listsize > $output0
+ #The following code only works when alignment_view = 'Tabular' for tabular output from balstp. See ./remote_blast_client.pl
+ #nfound=`grep 'hits found' $output0 | head -1 | awk '{print $2}'`
+ #if [ $nfound == "" ] ; then
+ # echo "Fatal error: No hits found when run: perl ./remote_blast_client.pl -o i -d pdb -b blastp -i $input" 1>&2
+ # echo " Manually Use NCBI Blastp Website to double check."
+ # exit
+ #else
+ # echo " NCBI found $nfound PDB clusters to save in $output"
+ #echo -e "$format" > $output
+ #awk '{if(s>=1&&s<=ns){
+ # len=$11;qs=$8;qe=$9;ss=$10;se=$11;ilen=$5;idenp=$3;idenlen=int(ilen*idenp/100)
+ # k=split($2,a,";");
+ # for(i=1;i<=k;i++){
+ #  n++;split(a[i],b,"|")
+ #  title=sprintf("%s|%s",b[1],b[2])
+ #  ppdb=b[4];pch=b[5]
+ # printf("%d\t%s\t%s\t%d\t%d/%d\t%3.2f%\t%s|Aligned(Query:%d,%d-Subject:%d,%d)\n",n,ppdb,pch,len,idenlen,ilen,idenp,title,qs,qe,ss,se)
+ # }
+ # s++
+ #}
+ #if($1=="#"&&$3=="hits"&&$4=="found"){s=1;ns=$2;n=0}}' $temp2 >> $output
+ #i
+ else #[ ! -s $output ] || [ $forceblast -eq 1 ]
+  echo "WARNing: use exisitng NCBI balstp output with pairwise alignments and aligned sequence identity=$pc% $output0. Otherwise: -forceblast"
+ fi #[ ! -s $output ] || [ $forceblast -eq 1 ]
+ input=$output0 
+else #isNCBI
+ echo "Input $input is downloaded from NCBI Blast Web-site"
+ output0=$input
+fi #isNCBI
+
+if [ $isnew -eq 0 ] ; then
+ ngroups=`awk '{hh=substr($_,1,5);if(hh==">pdb|"){n++}}END{print n}' $input`
+ nrecords=`awk '{hh=substr($_,1,5);if(hh==">pdb|"||hh==" pdb|"){n++}}END{print n}' $input`
+else
+ ngroups=`awk '{hh=substr($_,1,1);if(hh==">"){n++}}END{print n}' $input`
+ nrecords=`awk '{hh=substr($_,1,1);if(s==1&&(hh!=" "||NF<1)){s=0};if(hh==">"){s=1};if(s==1){n++}}END{print n}' $input`
+fi
+echo "=> NCBI blastp output $output0 : $ngroups PDB groups (same seq aln) with $nrecords PDB chains"
+
+#####################################################################
+# Get PDB entries: Num\tPDB\tChain\tLength\tIdentity\tPercentage\tTitle
+echo -e $format > $output
+
+####### for old NCBI output, w/ >pdb keyword
+if [ $isnew -eq 0 ] ; then  #old NCBI output, w/ >pdb keyword
+awk 'BEGIN{ma='$minialign'}{
+hh=substr($_,1,5)
+if(did>0){
+ lll=substr($1,1,7)
+ if(lll=="Length="){l=length($1);len=substr($1,8,l-7)}
+ if($1=="Identities"&&$2=="="){iden=$3;l=length($4);perc=substr($4,2,l-3);alignlen=split($3,alen,"/")
+  if(alen[2]>=ma){  #only output aligned seqence length >= minialign
+   for(i=1;i<=n;i++){
+    printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n",nt[i],ppdb[i],pchain[i],len,iden,perc,ptit[i])
+   }
+  }
+  did=0;n=0
+ }
+ if(pre==1&&(NF==0||lll=="Length=")){pre=0}
+ if(pre==1&&hh!=" pdb|"){ptit[n]=sprintf("%s %s",ptit[n],$_)}
+}
+if(hh==">pdb|"||hh==" pdb|"){
+ n++;ntt++;nt[n]=ntt
+ ppdb[n]=substr($_,6,4)
+ pchain[n]=substr($_,11,1)
+ ptit[n]=substr($_,13,80);
+ did=1;pre=1
+}
+}' $input >> $output
+echo "WARNing: $input is old NCBI output format. How come?"
+
+####### for New NCBI output
+else  #New NCBI output: Num\tPDB\tChain\tLength\tIdentity\tPercentage\tTitle
+awk 'BEGIN{ma='$minialign';doit=0;emp=0;n=0}{
+ if(doit==1){
+  if(emp==1&&NF>0){ #3U2O_A  Chain A, Dihydroorotate Dehydrogenase (Dhodh) Crystal ...  791     0.0
+   pdball=$1
+   chain=substr($3,1,1)
+   shorttitle=substr($_,17,49)  #col17-col65 is title
+   print pdball,chain,shorttitle
+  }
+  if(NF==0){emp++;if(emp==2){exit}}
+ }
+ if($1=="Sequences"&&$2=="producing"&&$3=="significant"&&$4=="alignments:"){doit=1}  #Sequences producing significant alignments:
+}' $input > $temp  #3U2O_A A Dihydroorotate
+npps=`wc -l $temp | awk '{print $1}'`
+echo " $npps PDB samples found. Each PDB sample may have multiple PDBs"
+
+awk 'BEGIN{  #Num\tPDB\tChain\tLength\tIdentity\tPercentage\tTitle
+ file="'$temp'";  n=0; ma='$minialign'; pc='$pc';m=0;mo=0;sco='$score'
+ while ((getline line < file) > 0) {
+  n++; nf=split(line,d," "); a[n]=d[1];b[n]=d[2];c[n]=d[3];for(i=4;i<=nf;i++){c[n]=sprintf("%s %s",c[n],d[i])}  #3U2O_A A Dihydroorotate
+ }
+ close(file)
+}{
+ hh=substr($1,1,1)
+ if(hh==">"){ #>3U2O_A Chain A, Dihydroorotate Dehydrogenase (Dhodh) Crystal S
+  tt=substr($1,2,6)  #>3U2O_A
+  did=0
+  for(i=1;i<=n;i++){
+   if(tt==a[i]){
+    m++;chain[m]=b[i];title[m]=c[i];ppdb[m]=substr(a[i],1,4);mo=m
+    did=i;break    
+   }
+  }
+  if(did==0){print "Error! Not found sequence for ",$_}
+ }
+ #WARNing: Each PDB sample may have multiple PDBs! Such as:
+ #>1D3G_A Chain A, Human Dihydroorotate Dehydrogenase Complexed With Brequinar
+ #Analog   #WARNing, this line is not for PDB!
+ #1D3H_A Chain A, Human Dihydroorotate Dehydrogenase Complexed With Antiproliferative
+ if(did>0&&length($1)==6&&substr($1,5,1)=="_"){ #new PDB in this sample: 5K9D_A Chain A, Crystal S
+  m++; chain[m]=substr($3,1,1); title[m]=$4; ppdb[m]=substr($1,1,4)
+ }
+ if(did>0&&substr($1,1,7)=="Length="){leng=substr($1,8,8)}  #Length=395
+ if(did>0&&$1=="Score"&&$2=="="){sc=$3}  #Score = 581 bits (1497),  Expect = 0.0, Method: Composition-based stats
+ if(did>0&&$1=="Identities") { #Identities = 395/395 (100%), Positives = 395/395 (100%), Gaps = 0/395 (0%)
+  split($3,x,"/");iden[did]=x[1]
+  ll=length($4)
+  for(j=mo;j<=m;j++){
+   perc[j]=substr($4,2,ll-4)
+   iden[j]=x[1]
+   len[j]=leng
+   score[j]=sc
+  } 
+ }
+}END{
+ for (i=1;i<=m;i++){
+  if(strtonum(iden[i])>=ma&&strtonum(perc[i])>=pc&&score[i]>=sco){ #Num\tPDB\tChain\tLength\tIdentity\tPercentage\tTitle
+   printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n",i,tolower(ppdb[i]),chain[i],len[i],iden[i],perc[i],title[i])   #Use lower case for PDB id
+  }
+ }
+}' $input >> $output
+fi
+
+nentry=`wc -l $output | awk '{print $1-1}'`
+echo "=> $nentry total PDB entries with aligned seq length >= ${minialign}a.a. and aligned seq identity >= $pc% align score >=$score saved in $output"
+#cat $output
+if [ $nentry -le 0 ] ; then
+ echo "Fatal error @$0 $oldline : No PDB found at sequence identity cutoff ${pc}% and minimum aligned sequence length=$minialign. Try smaller -ma or -pc option!!!" 1>&2
+ echo "  Check: vi $output0"
+ head -5 $temp
+ rm $temp*
+ exit
+fi
+
+#Merge entries that has identitical PDB name: Format  AllChains\tNumber\tPDB\tChain\tLength\tIdentity\tPercentage\tTitle
+awk '{if(NR>1){ if(!a[$2]){a[$2]=$2;b[$2]=$_;chain[$2]=$3}else{chain[$2]=sprintf("%s%s",chain[$2],$3)}}}END{for(x in a){printf("%s\t%s\n",chain[x],b[x])}}' $output | sort -n -k 2 > $temp
+npdb=`wc -l $temp | awk '{print $1}'`
+echo " $npdb unique PDBs are found with identity >= $pc % and align score >= $score saved in $output"  
+
+if [ $nodownload -eq 1 ] ; then
+ echo " To download all homology PDBs: $0 $input"
+ rm -f $temp* ; exit
+fi
+
+[ $blastonly -eq 1 ] && rm $output2
+
+#####################################################################
+#Dowload all PDBs from PDB website:
+if [ $force -eq 1 ] || [ ! -s $output2 ] ; then
+echo "Download $npdb PDBs from PDB website:"
+#format2=`echo -e "UniqueNum\tPDB\tChainCovered\tChainNoCovered\tLength\tIdentity\tAligned\tPercentage\tTitle"`
+format2=`echo -e "UniqueNum\tPDB\tChainCovered\tChainNoCovered\tLength\tIdentity\tAligned\tPercentage"`
+echo "Rank | PDB | Identity | Length | Resolution | year | ProteinChains | OtherChains | Polymer | Title"
+echo -e $format2 > $output2
+echo -n > $temp2
+for (( i=1; i<=$npdb; i++ )) ; do
+ line=`head -$i $temp | tail -1`  #ABC 31 1A8M A 157 44 99 Tumor
+ ppdbname=`echo $line | awk '{print $3}'`
+ ppdb=`echo $line | awk '{printf("%s.pdb",tolower($3))}'`  #PDB name *.pdb
+ pchains=`echo $line | awk '{print $1}'`
+ npchains=`echo $chains | wc -w | awk '{print $1}'`
+ others=`echo $line | awk '{split($6,a,"/");printf("%s\t%s\t%s\t%s\n",$5,a[1],a[2],$7)}'`
+ othersdisplay=`echo $line | awk '{split($6,a,"/");printf("%s %s %s %s\n",$5,a[1],a[2],$7)}'`
+ identity=`echo $line | awk '{print $7}'`
+ alnlength=`echo $line | awk '{print $5}'`
+ tits=`echo $line | awk '{for(i=8;i<=NF;i++){t=sprintf("%s %s",t,$i)}}END{print t}'`
+ if [ $download -eq 1 ] || [ ! -s $ppdb ] ; then
+  ./pdb_download -full $ppdbname > $temp6
+  grep -i error $temp6
+  polymer=`grep 'WARNing: THis Is' $temp6 | tail -1 | awk '{print $4}'`  #WARNing for polymers!
+ fi
+ if [ "$polymer" == "" ] ; then
+  ploymer="-"
+ fi
+ if [ ! -s $ppdb ] ; then
+  echo "#$i: Fatal error! No $ppdb found"
+ fi
+ #Find chains inside PDB:
+ chains=`grep 'CHAIN:' $ppdb | grep COMPND | awk '{for(i=4;i<=NF;i++){chain=sprintf("%s%s",chain,substr($i,1,1))}}END{print chain}'`
+ if [ "$chains" == "" ] ; then
+  chains=`./pdb_returnChain $ppdb`
+ fi
+ #Get chains in PDB not included Blast:
+ echains=`./char_compare "$chains" "$pchains"`
+ echains2=$echains
+ nechains=`echo $echains | wc -w | awk '{print $1}'`
+ if [ $nechains -eq 0 ] ; then
+  echains="SingleProtein"  
+  echains2="-"
+  pchains=$chains  #In case blastp got extra fake chains
+ fi
+ #Multiple titles are all counted
+ pdbtitle=`grep 'TITLE' $ppdb | awk '{if($1=="TITLE"){n=split(tolower(substr($_,11,70)),a," ");
+  for(i=1;i<=n;i++){
+    if(a[i]!="crystal"){  #delete crystal
+     if(a[i]=="structure"){a[i]="struc"}
+     if(a[i]=="complex"){a[i]="cplx"}
+     if(a[i]=="complexed"){a[i]="cplx"}
+     if(a[i]=="inhibitor"){a[i]="inhbt"}
+     if(a[i]=="with"){a[i]="w/"} 
+     printf("%s ",a[i])
+  }}}}'`
+ resolution=`grep 'RESOLUTION' $ppdb | awk '{if(NF==5){print $_}}' | head -1 | awk '{print $4}'` #REMARK   2 RESOLUTION.    1.80 ANGSTROMS.
+ [ "$resolution" == "" ] && resolution="NMR"
+  #HEADER    LYMPHOKINE SYS                          29-OCT-97   4TSV
+ year=`grep 'HEADER' $ppdb | head -1 | awk '{s=NF-1;n=split($s,a,"-");if(a[3]>50){printf("19%s",a[3])}else{printf("20%s",a[3])}}'`
+  specie=`grep 'ORGANISM_COMMON:' $ppdb | head -1 | awk '{for(i=2;i<=NF;i++){if(k==1){
+    if(s==0){s=1;t=$i}else{t=sprintf("%s_%s",t,$i)}};
+    if($i=="ORGANISM_COMMON:"){k=1}};l=length(t);split(tolower(substr(t,1,l-1)),d,",");print d[1]}'`  #remove XXX,YYY
+  [ "$specie" == "" ] && specie=`grep 'ORGANISM_SCIENTIFIC:' $ppdb | head -1 | awk '{for(i=2;i<=NF;i++){if(k==1){
+    if(s==0){s=1;t=$i}else{t=sprintf("%s_%s",t,$i)}};
+    if($i=="ORGANISM_SCIENTIFIC:"){k=1}};l=length(t);split(tolower(substr(t,1,l-1)),d,",");print d[1]}'`
+ #ORGANISM_COMMON: human   ORGANISM_SCIENTIFIC: homo sapien
+ #For chain info and ligand/metal: ./pdb_checkChain -full -shift $ppdb
+
+ echo -e "$i\t$ppdb\t$pchains\t$echains\t$others" >> $temp2
+ echo -e "$i $ppdbname $identity $alnlength $resolution $year $pchains $echains2 $polymer \"$pdbtitle\""
+ #echo -e "$i\t$ppdb\t$pchains\t$echains\t$others\t$tits" >> $output2
+ echo -e "$i\t$ppdb\t$pchains\t$echains\t$others" >> $output2
+ #also see ./pdb_getProperty -newquick
+done
+echo "  Polymers are also generated as PDBs"
+
+nsingle=`grep SingleProtein $output2 | wc -l | awk '{print $1}'`
+echo "=> $npdb unique PDBs with $nsingle Single Proteins saved in $output2"
+
+if [ $blastonly -eq 1 ] ; then
+ echo "Only required to do NCBI blastp against sequence fasta $input"
+ echo "=> NCBI Blastp output with pairwise alignment and aligned sequence identity=$pc% is $ngroup PDB groups with $nrecords PDB chains in $output0"
+ echo "=> Total PDB entries of $nentry are found at sequence identity cutoff $pc % and minimum aligned sequence=$minialign saved in $output"
+ echo "=> Unique PDBs of $npdb with $nsingle Single Proteins and $refpdb as reference saved in $output2"
+ rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6*
+ exit
+fi
+
+
+#download NCBI/PDB website fasta or PDB-converted fasta sequence of unique PDBs:
+awk '{
+ pdb=substr($2,1,4);s=length($3)
+ for(i=1;i<=s;i++){
+  printf("%s%s\n",pdb,substr($3,i,1))
+ }
+ s=length($4);if($4=="SingleProtein"){s=0}
+ for(i=1;i<=s;i++){
+  printf("%s%s\n",pdb,substr($4,i,1))
+ }
+}' $temp2 > $temp5
+./sequence_download -out $output8 -pdb $temp5
+echo "=> NCBI/PDB-website fasta sequence of $npdb unique PDBs saved in $output8"
+./fasta_fromPDB -col 2 -list -out $output9 $temp2 > $temp5
+echo "=> PDB-converted FASTA sequence of $npdb unique PDBs saved in $output9"
+
+
+#Find longest identity PDB as reference: 
+# Reference PDB  1. Longest identity   2. Shortest sequence  3. Appear earliest in $output
+echo "=> Top $toplong PDBs that has largest identical residues:"
+sort -nr -k 6 $temp2 | awk '{n++;a[n]=$6;b[n]=$5;c[n]=$_}END{for(i=1;i<=(n-1);i++){for(j=i+1;j<=n;j++){
+if(a[i]==a[j]&&b[i]>b[j]){aa=a[i];a[i]=a[j];a[j]=aa;aa=b[i];b[i]=b[j];b[j]=aa;aa=c[i];c[i]=c[j];c[j]=aa;}
+}}
+for(i=1;i<=n;i++){print c[i]}}' > $temp5 #UniqueNum\tPDB\tChainCovered\tChainNoCovered\tLength\tIdentity\tAligned\tPercentage
+awk 'BEGIN{ file="'$output'";  n=-1;m=0
+ while ((getline line < file) > 0) { #Num PDB Chain Length Identity Percentage Title
+  n++; nf=split(line,d," "); r[n]=d[1];aa=tolower(d[2]);p[n]=sprintf("%s.pdb",aa)
+  #print n,r[n],p[n]
+ }
+ close(file)
+}{m++;a[m]=$6;b[m]=$5;c[m]=$_;pp[m]=$2}END{
+ for(i=1;i<=m;i++){
+  for(j=1;j<=n;j++){
+   if(p[j]==pp[i]){rr[i]=r[j];break}
+  }
+  #print rr[i],pp[i]
+ }
+ for(i=1;i<m;i++){
+  for(j=i+1;j<=m;j++){
+   if(a[i]==a[j]&&b[i]==b[j]&&rr[i]>rr[j]){
+    aa=a[i];a[i]=a[j];a[j]=aa;aa=b[i];b[i]=b[j];b[j]=aa;aa=c[i];c[i]=c[j];c[j]=aa;
+    aa=rr[i];rr[i]=rr[j];rr[j]=aa;aa=pp[i];pp[i]=pp[j];pp[j]=aa
+   }
+  }
+ }
+ for(i=1;i<=m;i++){print c[i]}
+}'  $temp5 | head -$toplong | tee $temp6 #sort by Appear earliest in $output2
+refpdb=`head -1 $temp6 | awk '{print $2}'`
+refpdbchain=`head -1 $temp6 | awk '{print substr($3,1,1)}'`
+reflength=`head -1 $temp6 | awk '{print $5}'`
+
+#Extract all ligands in downloaded PDBs
+echo "======================================================"
+./pdb_getligand -header -col 2 -chaincol 3 -exclude "$ligexcld" -refpdb $refpdb -outpdb PDB_inhibitors.pdb $output2
+echo "=> Output PDB with inhibitor is PDB_inhibitors.pdb "
+echo "======================================================"
+
+#display 2D ligand interaction diagram
+./lig_interaction_plot -l $refpdb
+
+
+#cal rmsd to refpdb
+echo "=> Pymol RMSD to reference PDB (largest identity/shortest length/FirstAppearance) $refpdb ($refpdbchain:$reflength) : Check tail -f $temp5"
+echo -e "$format2\tRMSD_$refpdb\tExp\tSpecies\tTitle" > $temp5
+for (( i=1; i<=$npdb; i++ )) ; do
+ ii=`expr $i + 1`
+ line=`head -$ii $output2 | tail -1 | awk '{print $1,$2,$3,$4,$5,$6,$7,$8}'`
+ ppdb=`echo $line | awk '{print $2}'`
+ pchain=`echo $line | awk '{print substr($3,1,1)}'`
+ #./pymol_rmsd  $refpdb $ppdb
+ ./pymol_rmsd -noshow -capchain -nopair -noout -chain1 $refpdbchain -chain2 $pchain $refpdb $ppdb > $temp6
+ rmsd=`grep 'RMSD  =' $temp6 | awk '{print $3}'`
+ protp=`./pdb_getProperty -quick $ppdb`
+ echo -e "$line\t$rmsd\t$protp" >> $temp5
+done
+mv $temp5 $output2 #UniqueNum       PDB     ChainCovered    ChainNoCovered  Length  Identity        Aligned Percentage      RMSD_1axc.pdb
+
+else #[ $force -eq 1 ] || [ ! -s $output2 ]
+ refpdb=`head -1 $output2 | awk '{l=length($9);a=substr($9,6,l-5);print a}'`
+ echo "Use existing output2 $output2"
+fi #[ $force -eq 1 ] || [ ! -s $output2 ]
+refpdbo=`echo $refpdb | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+lll=`awk '{if($2=="'$refpdb'"){print $_;exit}}' $output2`
+refpdbchain=`echo $lll | awk '{print substr($3,1,1)}'`
+reflength=`echo $lll | awk '{print $5}'`
+refiden=`echo $lll | awk '{print $6}'`
+echo " => Reference PDB (largest_identity/Shortest_length/FirstAppearance) is $refpdb ($refpdbchain:$reflength[$refiden])"
+echo "  RMSD to $refpdb saved in $output2"
+awk '{if(NR>1){print $1, $8, substr($2,1,4)}}' $output2 > $temp
+./do_gnuplot -labelXbycol 3 -title "RMSD to $refpdbo" -ylabel "Backbone RMSD({\305})" -xlabel "PDBs" $temp >& $temp2
+./pdb_check -less -noSS $refpdb
+
+########## Find reference2 PDB:  1. Longest identity   2. Longest sequence  3. Appear earliest in $output
+rf2=`awk '{if(NR>1){m++;a[m]=$6;b[m]=$5;c[m]=$_;pp[m]=$2;rr[m]=$1}}END{
+ for(i=1;i<m;i++){  #sort by identity
+  for(j=i+1;j<=m;j++){
+   if(a[i]==a[j]&&b[i]<b[j]){  
+    aa=a[i];a[i]=a[j];a[j]=aa;aa=b[i];b[i]=b[j];b[j]=aa;aa=c[i];c[i]=c[j];c[j]=aa;
+    aa=rr[i];rr[i]=rr[j];rr[j]=aa;aa=pp[i];pp[i]=pp[j];pp[j]=aa
+   }
+  }
+ }
+ for(i=1;i<m;i++){  #sort by identity
+  for(j=i+1;j<=m;j++){
+   if(a[i]==a[j]&&b[i]==b[j]&&rr[i]>rr[j]){  
+    aa=a[i];a[i]=a[j];a[j]=aa;aa=b[i];b[i]=b[j];b[j]=aa;aa=c[i];c[i]=c[j];c[j]=aa;
+    aa=rr[i];rr[i]=rr[j];rr[j]=aa;aa=pp[i];pp[i]=pp[j];pp[j]=aa
+   }
+  }
+ }
+ for(i=1;i<=m;i++){print c[i]}
+}' $output2 | head -1 `
+refpdb2=`echo $rf2 | awk '{print $2}'`
+refpdbchain2=`echo $rf2 | awk '{print substr($3,1,1)}'`
+reflength2=`echo $rf2  | awk '{print $5}'`
+refiden2=`echo $rf2 | awk '{print $6}'`
+echo " => 2nd Reference PDB (largest_identity/Longest_length/FirstAppearance) is $refpdb2 ($refpdbchain2:$reflength2[$refiden2])"
+[ "$refpdb" != "$refpdb2" ] && ./pdb_check -less -noSS $refpdb2
+
+echo "===> Top $toplong PDBs that has largest identical residues:"
+awk '{if(NR>1){print $_}}' $output2 > $temp2
+nsingle=`grep SingleProtein $temp2 | wc -l | awk '{print $1}'`
+sort -nr -k 6 $temp2 | awk '{n++;a[n]=$6;b[n]=$5;c[n]=$_}END{for(i=1;i<=(n-1);i++){for(j=i+1;j<=n;j++){
+if(a[i]==a[j]&&b[i]>b[j]){aa=a[i];a[i]=a[j];a[j]=aa;aa=b[i];b[i]=b[j];b[j]=aa;aa=c[i];c[i]=c[j];c[j]=aa;}
+}}
+for(i=1;i<=n;i++){print c[i]}}' | head -$toplong  | tee $temp6   #sort by smallest length
+#refpdb=`head -1 $temp6 | awk '{print $2}'`
+echo "===> Top $toplong PDBs that has largest RMSD to $refpdb from $output2:"
+sort -nr -k 8 $temp2 | head -$toplong
+maxrmsd=`sort -nr -k 8 $temp2 | head -1 | awk '{print $8}'`
+maxrmsdis=`echo $maxrmsd | awk '{print int($1)+1}'`
+echo "===> Top $toplong PDBs that has smallest RMSD to $refpdb from $output2:"
+sort -n -k 8 $temp2 | head -$toplong
+
+#####################################################################
+#Obtain protein properties, such as TITLE, source, etc.
+echo "=> PDB properties of $npdb for aligned chains saved in $output4"
+awk '{printf("%s%s\n",substr($2,1,4),substr($3,1,1))}' $output2 > $properlist
+./pdb_getProperty -capchain -out $output4 $properlist
+
+
+#####################################################################
+# RMSD_PyMol map calculation
+if [ $map -ne 1 ] ; then
+ echo "***Bypass RMSD_PyMol map calculation for $output3"
+else #map
+ if [ $force -eq 1 ] || [ ! -s $output3 ] ; then
+ echo "=> RMSD_PyMol map of $npdb unique PDBs  saved in $output3 :"
+ format3=`echo -e "Rank1\tRank2\tRMSD\tPDB1\tPDB2"`
+ echo -e $format3 > $output3
+ for (( i=1; i<=$npdb; i++ )) ; do
+  ppdb1=`head -$i $temp2 | tail -1 | awk '{print $2}'`
+  ppdb11=`echo $ppdb1 | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+  pchain1=`head -$i $temp2 | tail -1 | awk '{print substr($3,1,1)}'`
+  echo -n "$i "
+  echo "$i $i 0 $ppdb11 $ppdb11" >> $output3
+  for (( j=i+1; j<=$npdb; j++ )) ; do
+   ppdb2=`head -$j $temp2 | tail -1 | awk '{print $2}'`
+   ppdb21=`echo $ppdb2 | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+   pchain2=`head -$j $temp2 | tail -1 | awk '{print substr($3,1,1)}'`
+   ./pymol_rmsd -noshow -noout -nopair -capchain -chain1 $pchain1 -chain2 $pchain2 $ppdb1 $ppdb2 > $temp6
+   rmsd=`grep 'RMSD  =' $temp6 | awk '{print $3}'`     
+   echo "$i $j $rmsd $ppdb11 $ppdb21" >> $output3 
+  done #j 
+ done #i
+ echo " "
+ else
+  echo " Use existing RMSD_PyMol map $output3"
+ fi
+
+maxdis=15  #max rmsd displayed in contact map
+maxrmsd2=`awk '{if(NR>1){if($3>max){max=$3}}}END{print max}' $output3`
+maxpdb2=`awk '{if(NR>1){if($3>max){max=$3;a=$4;b=$5}}}END{print a,b}' $output3`
+echo " Maximum rmsd to ref $refpdb = $maxrmsd  In contactmap $output3 = $maxrmsd2 A for $maxpdb2" 
+maxdis=`echo $maxdis $maxrmsd2 | awk '{a=$1;if(a>$2){a=$2};print a}'`
+if [ $npdb -gt 50 ] ; then
+ ./sdf_contactmap -zrange [0:$maxdis] -ticnum 5 -nosort -halfmatrix -title "Homology Protein RMSD Map" $output3 >& $temp5
+else
+ ./sdf_contactmap -zrange [0:$maxdis] -ticnum 5 -nosort -halfmatrix -title "Homology Protein RMSD Map" -labelName -labeltic $npdb $output3 >& $temp5
+fi
+
+###################################################################################
+# Pick out PDB diverse subset and aligned at cutoff $divercut. When -divercut 0 : get all PDBs
+[ $maxrmsdis -gt 10 ] && maxrmsdis=10
+maxrmsdis1=`echo $maxrmsdis | awk '{print $1+1}'`  #for plot tip
+./gnuplot_dendogram -digit 1 -clusterout $output5 -halfmatrix -unicolor -smaller -clusterstep 0 $maxrmsdis1 1 $output3 > $temp
+echo "=> Cluster output file to pick out PDB clusters and diverse subset is $output5" 
+cline=`head -1 $output5 | awk '{cut='$divercut';min=999;for(i=3;i<=NF;i++){a=$i-cut;if(a<0){a=-a};if(a<min){min=a;col=i;c=$i}};print col,c}'`
+dcol=`echo $cline | awk '{print $1}'`
+divercut=`echo $cline | awk '{print $2}'`
+awk 'BEGIN{d='$dcol';n=0;ref="'$refpdb'";ref=substr(ref,1,4)}{if(NR>1){did=0;for(i=1;i<=n;i++){s=a[i]-$d;
+if(s==0){did=1;cc[i]++;if($2==ref){p[i]=$2};break}};
+if(did==0){n++;a[n]=$d;p[n]=$2;cc[n]=1}}}END{for(i=1;i<=n;i++){print a[i],p[i],cc[i]}}' $output5 | sort -n -k 1 > $temp6  #Rank|PDB
+ndiv=`wc -l $temp6 | awk '{print $1}'`
+echo "=> Aligned DB diverse subset of $ndiv PDBs at $divercut cutoff saved in: pymol $output6"
+echo "=>   Average C-alpha RMSD of sequence-aligned residue pairs at PDB rmsdCutoff <=$rmsdcut${A} saved in ${output10}"
+echo -n > $temp2;
+nrm=0
+for (( i=1; i<=$ndiv; i++ )) ; do
+ ppdb=`head -$i $temp6 | tail -1 | awk '{printf("%s.pdb",$2)}'`
+ prop=`awk 'BEGIN{p="'$ppdb'"}{if($2==p){print $_;exit}}' $output2 `
+ pchain=`echo $prop | awk '{print substr($3,1,1)}'`
+ plen=`echo $prop | awk '{print $5}'`
+ piden=`echo $prop | awk '{print $6}'` 
+ csize=`head -$i $temp6 | tail -1 | awk '{printf("%s",$3)}'`
+ if [ $i -eq 1 ] ; then
+  ppdb0=$ppdb
+  paln=$ppdb
+  pchain0=$pchain
+  rmsd=0
+  sspchain=$pchain
+  [ $sspchain == " " ] && sspchain='+'
+  ./pdb_secondary -chain $sspchain $ppdb
+  
+ else
+  paln=`head -$i $temp6 | tail -1 | awk '{printf("%s_aln.pdb",$2)}'`
+  ./pymol_rmsd -noshow -identical -nognu -pairout $temp6.prmsd -chain1 $pchain0 -chain2 $pchain -out $paln $ppdb0 $ppdb > $temp5  #Only align specific chains and output whole protein
+  #./pymol_rmsd -CE -out $paln $ppdb0 $ppdb > $temp5  # structural align/output whole PDBs
+  rmsd=`grep 'RMSD  =' $temp5 | tail -1 | awk '{print $3}'`
+  checkpair=`echo $rmsd $rmsdcut | awk '{if($1<=$2){print 1}else{print 0}}'`
+  if [ $checkpair -eq 1 ] ; then 
+   nrm=`expr $nrm + 1`
+   if [ $nrm -eq 1 ] ; then
+    awk '{a=1;if(NR==1){a="OccuredTimes";printf("%s\t%s\t%s\t%s\t%s\tMaxRMSD\tMaxRMSD_PDB\n",$1, $2,$3,$4,a)}
+     else{if(NR==2){b=$4;};printf("%s\t%s\t%s\t%s\t%s\t%s\t%s-%s\n",$1, $2,$3,$4,a,$2,b,$4)}}' $temp6.prmsd > $temp6.pall
+   else
+    ./list_mergeTwo -keepo1 -fill1 " - - - - " $temp6.pall 3 $temp6.prmsd 3 $temp6.po > $temp5
+    awk '{if(NR>1){if(NR==2){pname=$11};n=$5;np=n+1;max=$6;maxn=$7;a=$9;if($9=="-"){np=n;a=0}else{if($9>max){max=$9;maxn=sprintf("%s-%s",pname,$11)}};
+    x=($2*n+a)/np;
+    printf("%s\t%3.2f\t%s\t%s\t%d\t%s\t%s\n",$1,x,$3,$4,np,max,maxn)}else{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$1, $2,$3,$4,$5,$6,$7)}}' $temp6.po > $temp6.pall
+   fi
+   #head $temp6.prmsd
+  fi #checkpair
+ fi
+ protp=`./pdb_getProperty -quick $ppdb`
+ echo -e "$ppdb $pchain $csize $rmsd $plen $piden $protp" >> $temp2
+ pdbrefrmsd=$ppdb0
+done #i
+
+mv $temp6.pall ${output10}
+./do_gnuplot -header 2 -key off -xticsnum 20 -labelXbycol 3 -title "RMSD of Sequence Aligned Residue Pairs" -xlabel "Residues" -ylabel "Average Ca RMSD ({\305})" $output10 >& $temp6
+echo "=> Top 5 residues that has the largest average residue pair RMSD in $pdbrefrmsd saved in $output10 :"
+sort -nr -k 2 $output10 | head -5
+
+sort -n -k 4 $temp2 | awk '{printf("%s %s\n",NR,$_)}' > $temp3  #Sort PDB by RMSD
+echo -e "Rank\tPDB\tChain\tClusterSize\tRMSD\tLength\tIndenticals\tExp\tSpecies\tTitle"
+echo "REMARK Diverse PDB subset Aligned DB diverse subset of $ndiv PDBs at $divercut cutoff" > $output6  #output PDBs
+echo "REMARK   from $0 $oldline" >> $output6
+echo -e "REMARK Rank\tPDB\tChain\tClusterSize\tRMSD\tLength\tIndenticals\tExp\tSpecies\tTitle" >> $output6
+awk '{print "REMARK ",$_}' $temp3 >> $output6
+for (( i=1; i<=$ndiv; i++ )) ; do
+ line=`head -$i $temp3 | tail -1`
+ ppdb=`echo $line | awk '{print $2}'`
+ rppdb=`echo $ppdb |  awk '{split($1,a,".");print a[1]}'`
+ [ $i -gt 1 ] && ppdb=`echo $ppdb |  awk '{split($1,a,".");printf("%s_aln.pdb",a[1])}'`
+ hasheader=`grep 'HEADER' $ppdb | awk 'BEGIN{s=0}{if($1=="HEADER"){s++}}END{print s}'`
+ [ $hasheader -eq 0 ] && echo "HEADER  $rppdb" >> $output6
+ #echo "HEADER  $rppdb" >> $output6  #Pymol use HEADER to display protein name
+ cat $ppdb >> $output6
+ echo -e " $line"
+done
+
+fi #map
+
+
+###################################################################################
+# protein-protein interaction (PPI) for common residues of binding partners
+#Need test new part: ./protein-target-interaction
+if [ $downloadonly -eq 0 ] ; then
+if [ $new -eq 1 ] ; then
+awk '{if(NR>1){if($4!="SingleProtein"){print $_}}}' $output2  > $temp2  #UniqueNum|PDB|ChainCovered|ChainNoCovered|Length|Identity|Aligned|Percentage|RMSD
+nppi=`wc -l $temp2 | awk '{print $1}'`
+echo "=> PPI residue-residue Contact info saved in $output7"
+echo "Common residue-residue PPI pairs  have at ApperanceRatio cutoff >= $pcut for $nppi PPIs (resd multiple counted): "
+awk '{if(NR>1){if($4!="SingleProtein"){
+  n=length($4); for(i=1;i<=n;i++){
+   a=substr($4,i,1);printf("%s : chain %s : chain %s\n",$2,substr($3,1,1),a)
+  }}}}' $output2  > $temp2
+./protein-target-interaction -cpu $cpu -gap $gap -less $fforce $o3d -less -typereverse -pcut $pcut -rcut $rcut -rcut2 $rcut2 -mcut $mcut -mcut2 $mcut2 -out $output7 $temp2
+
+else #new
+awk '{if(NR>1){if($4!="SingleProtein"){print $_}}}' $output2  > $temp2  #UniqueNum|PDB|ChainCovered|ChainNoCovered|Length|Identity|Aligned|Percentage|RMSD
+nppi=`wc -l $temp2 | awk '{print $1}'`
+if [ $force -eq 1 ] || [ ! -s $output7 ] ; then
+echo "=> PPI residue-residue Contact info saved in $output7"
+echo "Common residue-residue PPI pairs  have at ApperanceRatio cutoff >= $pcut for $nppi PPIs (resd multiple counted): "
+echo -n > $temp ; echo -n > $output7; nus=0
+for (( i=1; i<=$nppi; i++ )) ; do
+ line=`head -$i $temp2 | tail -1`
+ ppdb=`echo $line | awk '{print $2}'`
+ pch=`echo $line | awk '{print substr($3,1,1)}'`
+ pch2=`echo $line | awk '{print $4}'`
+ wpch2=`echo $pch2 |  awk '{print length($1)}'`
+ echo $line >> $output7
+ for (( j=1; j<=$wpch2; j++ )) ; do
+  pc2=`echo $pch2 | awk '{j='$j';print substr($1,j,1)}'`
+  #Target protein as reference in sel1
+   ooo=${temp6}${i}'_'$j
+  ./vmd_pdb_contacts -fast -out $ooo -sel1 "chain $pch and not water" -sel2 "chain $pc2 and not water" $ppdb > $temp6
+  echo $ooo >> $temp
+  cat $ooo >> $output7 ; echo " " >> $output7
+  nus=`expr $nus + 1`
+ done
+ echo -n "$i "
+done
+echo " "
+else
+ echo " Use exisitng PPI residue-residue Contact info file $output7"
+fi
+awk '{if(substr($1,1,6)=="======"){exit}else{print $_}}' $output7 > $temp2
+echo " Residues in Partner PDBs are use residue type (-type) and target protein use resid (-notype2) for summation:"
+./vmd_pdb_contacts_common -gap $gap $o3d -gnu -shortmotif -mult $type -dupmotif -pcut $pcut -rcut $rcut -rcut2 $rcut2 -mcut $mcut -mcut2 $mcut2 -out $temp4 -displayout $temp5 -distop 10 $output7 > $temp3 
+echo "=======================Summary $output7 : $type gap -$gap -pcut $pcut -rcut $rcut -rcut2 $rcut2 :" >> $temp2
+cat $temp5
+cat $temp4 >> $temp2
+mv $temp2 $output7
+fi #new
+fi #if [ $downloadonly -eq 1 ] ; then
+
+########Check crystal/overlap/conserved water : output2 : 1 1ssk.pdb A SingleProtein 158 127 92   0 
+./pymol_alignment_water -file2 $output -pcol 2 -ccol 3 -list -clean -head -col 2 $output2
+
+########Display all PDBs, aligned by chains defined in $output
+awk '{if(NR>1){print $2}}' $output2 > $temp5.list
+./pymol_all -nocheck -CE -file2 $output -pcol 2 -ccol 3 $temp5.list >& $temp 
+
+############################################################################
+# To determine the most flexible/stable part of target protein
+echo "Use ./vmd_namd_rmsd_many to determine the flexiblity of atoms in target protein....."
+
+echo " "
+echo "=================================================================================================="
+echo "=> Reference PDB (largest_identity/Shortest_length/FirstAppearance) is $refpdbchain:$reflength($refiden) $refpdb"
+./pdb_getProperty -quick $refpdb
+echo "=> 2nd Reference PDB (largest_identity/Longest_length/FirstAppearance) $refpdbchain2:$reflength2($refiden2) $refpdb2"
+[ "$refpdb" != "$refpdb2" ] &&  ./pdb_getProperty -quick $refpdb2
+echo " "
+echo "=> $nsmart Domains/Records from SMART database for protein domain annotation is saved in $output_SMART"
+echo "=> NCBI Blastp output with pairwise alignment at sequence identity cutoff $pc % is $ngroup PDB groups with $nrecords PDB chains in $output0"
+echo "=> Total PDB entries of $nentry at sequence identity cutoff $pc%, align score>=$score and minimum aligned sequence=$minialign saved in $output"
+echo "=> Unique PDBs of $npdb with $nsingle Single Proteins and $refpdb as reference saved in $output2"
+echo "=> NCBI/PDB-website fasta sequence of $npdb unique PDBs saved in $output8"
+echo "=> PDB-converted FASTA sequence of $npdb unique PDBs saved in $output9"
+echo "=> PDB properties of $npdb for aligned chains saved in $output4"
+if [ $map -eq 1 ] ; then
+ echo "=> RMSD_PyMol map of $npdb unique PDBs  saved in $output3"
+ echo "=> Cluster output file to pick out PDB clusters and diverse subset is $output5" 
+ echo "=> Aligned by $pdbrefrmsd PDB diverse subset of $ndiv PDBs at ${divercut}${A} cutoff saved in: pymol $output6"
+ echo "=>   Average $pdbrefrmsd C-alpha RMSD of sequence-aligned residue pairs at PDB rmsdCutoff <=$rmsdcut${A} saved w/ $nrm PDBs in ${output10}" 
+fi
+echo "=> PPI residue-residue Contact with type=$type motif gap=$gap info saved in $output7"
+
+echo " "
+[ $map -eq 1 ] && echo "NOTE to get all aligned PDBs in $output6 : $0 -divercut 0 -noforce $oldline"
+[ $isNCBI -eq 0 ] && echo "   Adjust sequence identity cutoff -pc and align score -score to adjust output PDBs"
+echo "
+***Explore more! To query the detail PPI of a contact motif, run: $0 -motif XXX $input
+   To decrease/increase display of discontinue motif, modify gap=$gap by: $0 -gap 10 $input
+   Pairwise sequence alignment of PDB to target sequence: $0 -pairwise 1ul1A $input
+   To locate a sequence pattern in sequence, run ./sequence_search -fasta $input -pdb 0 -nosum -PPI $output7 $output9 [DEHC]x[DEHC] [DEHC]xx[DEHC]
+   To extract ligands from downloaded PDBs: ./pdb_getligand -header -col 2 -chaincol 3 -refpdb $refpdb -range 20 99 -exclude \"ATP ANP\" $output2
+     Or: ./pdb_getligand -pc 95 -score 150 -ncbi $input -range 20 200 -exclude \"ATP ANP\" \"????.pdb\" 
+   To display all aligned proteins: ./pymol_all -nocheck -CE -file2 $output -pcol 2 -ccol 3 '????.pdb'
+   To determine crstal/overlap/conserved water: ./pymol_alignment_water -lig UNK -dist 8 -aln1 "chain A" -aln2 "chain A" \"????.pdb\"
+   To find known inhibitor of a protein, search ChEMBL+PubChem BioAssay, then ./pdb_sdf_smi_mae_mol2_convert -ChEMBL ChEMBL_inhibitors.xls 
+"
+
+echo ""
+echo "   WARNing: PDB (NCBI) fasta sequence can be totally different to PDB residue numbering! There could be missing N-term, mutations and missing regions that"
+echo "     cause the mis-match PDB resid to fasta. See http://sebastianraschka.com/Articles/misleading-fasta-on-pdb.html"
+echo "     Real sequence numbering should be fasta either from PDB or NCBI (identical). Use ClustalW2 to compare PDB-convert-fasta to PDB/NCBI download fasta"
+
+echo "
+
+NOTE: NCBI blastp is not a good alignment tools. So it will miss some improtant homologies, See ~/ARI1
+  WARNing: NCBI gives Wrong seq aln for M254 in ACTL6A against 4EFH in ACTL6A/. Do not trust it easily. Check strcuture instead!
+  Use other alignment tools such as Clustral, T-coffee to align and build longer model!
+  Use SWISS-Model repository (https://swissmodel.expasy.org/repository/uniprot/O14497) to find more homology models!!!
+   Bad part: Repository randomly predicted none-aln part and generate error model for this region. See TET1/
+   WARNing: remember to check SWISS-MODEL repository as well as PubChem may miss short peptide as in FANCJ/ for D1138 
+    or wrong aln to kinase for nuclease as in Exo5/
+  The other way is to change balstp parameters, especially drop Drop 'Word Size' from default 6 to 3, can find more low id seqs!
+   WARNing: alignment from low seq iden may not be reliable and have many choices. See ~/ARI1 R2153
+
+
+"
+
+rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6* $properlist ; exit

@@ -1,0 +1,331 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+doout2=0
+doout3=0
+
+debug=0
+ftype=1  #=1: Input data file is contactmap-like (see ./sdf_contactmap .map) w/ 5 cols Rank1   Rank2   TanimotoScore   Name1   Name2
+cut=0.6
+cut2=0.35
+showcluster=1
+accum=1
+less=0
+keep=0
+keepo=$keep
+notitle=0
+noout=0
+dofull=1
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -out2) output2="$2"; doout2=1;shift 2;; 
+   -out3) output3="$2"; doout3=1;shift 2;; 
+   -cut)cut=$2;docut=1;shift 2;;
+   -cut2)cut2=$2;docut=1;shift 2;;
+   -top)showcluster=$2;shift 2;;
+   -accum)accum=$2;shift 2;;
+   -less)less=1;shift;;
+   -keep)keep=1;shift;;
+   -keepo)keepo=$2;shift 2;;
+   -notitle)notitle=1;shift;;
+   -noout)noout=1;shift;;
+   -nofull)dofull=0;shift;;
+   -full)dofull=1;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+ General Cluster script to cluster data file
+ This is a strict cluster algorithm:
+  1. Cluster#1 has the largest size at cutoff $cut, if not and has the largest size at $cut2, if not and has the largest score
+  2. Cluster#2 has the 2nd largest size when all cluster #1 elements are removed
+  3. Other cluster has all previous cluster elements are removed
+
+ Input File Type one:  Input data file is contactmap-like matrix (see ./sdf_contactmap maxtrix .map) w/ 5 cols and header line
+   DataRank1   DataRank2   TanimotoScore   DataName1   DataName2  #Must has header
+   1       1       1.000   AM404   AM404
+   314     1       0.517   CMP-077659      AM404
+   400     1       0.481   CMP-000001      AM404
+
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Usage: $0 [Options] Input
+ Options:
+  -debug : debug model on
+  -out Output : User defined output : Clusters of top $showcluster in format: DataName | DataRank | ClusterRank | Score 
+   [-full] : will assign none-clustered data into last cluster in Output so that ./sdf_contactmap will not error 
+   -nofull : will exclude none-clustered data into Output
+  -out2 Output : User defined output2 : Cluster elements (4 cols for cluster at cut, 3 cols for cluster at cut2)
+    WARNing: Output could be only 3 cols when there is no first level cluster at cut=$cut, but only 2nd level cluster at cut2=$cut2
+      Caused trouble in ./rmsd and ./induceFitDock
+  -out3 Output : User defined output3 : contactmap-like matrix w/o previous cluster elements 
+  -accum Level : accumulation level to call this script recursively
+  -less : less display
+  -keep : keep inermediate files such as cluster file and input matrix file (w/o previous elements) for each cluster
+  -notitle : will not add header/title on cluster data
+  -noout : no Output
+ Cluster : Sort cmpds based on cluster at similarity cutoff $cut. Largest cluster first, then $cut2 2nd level cluster, 
+            then sorted by largest TanScore in first pair [default]
+            -cut/-cut2 determine if better score is larger or smaller (backward=0/1. Default: larger score is better, e.g. Similarity)
+  -cut Cutoff : Similarity cutoff for first-level cluster. Lower cutoff will show first level cluster cmpds together in map [ $cut ]
+  -cut2 Cutoff2 : Similarity cutoff for 2nd-level cluster. Lower cutoff will show 2nd level cluster cmpds together in map [ $cut2 ]
+  -top topCluster : Calculate top topCluster [$showcluster]
+
+ Example: $0 -top 20 -cut 0.65 -cut2 0.35 HTSall_contact.map  
+        #calculate top 20 clusters (at cutoff=0.65) for contact map file. Same size cluster will be ranked by cutoff=0.35 size
+        #Make sure cut>cut2 to allow larger Similarity is the best score    
+          $0 -top 5 -cut 3 -cut2 5 RMSD.map
+        #For RMSD cluster, make sure cut<cut2 to allow smaller RMSD is the best score  
+
+ xNeed debug in ~/p38/Junn/FD :
+  ./cluster -top 5 -full -cut 3 -cut2 6 -out i FD_1cm8lm_ifd_a_FD13F_clu_s2_3_6.map
+ Shown output i with missing 3rd col: this is because there is no first level cluster!
+
+    NOTE: To fast cluster protein decoys, run ./zdock_cluster 
+    NOTE: This script currently called by ./sdf_contactmap
+ttt
+  exit
+fi
+
+[ $showcluster -le 0 ] && showcluster=5  #Make sure do some calculation
+inputo=$input
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`basename $input ${extension}`
+[ $doout -ne 1 ] && output=$infile'_cluster'$showcluster'_'$cut'_'$cut2'.xls'
+[ $doout2 -ne 1 ] && output2=$infile'_cl'$accum'_'$cut'_'$cut2'.xls'
+[ $doout3 -ne 1 ] && output3=$infile'_cl'$accum'_'$cut'_'$cut2'_left.xls'
+output3o=$output3
+
+backward=`echo $cut $cut2 | awk '{a=$2-$1;s=0;if(a>0){s=1};print s}'` #=1: RMSD cluster. =0: Similarity cluster
+
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/symbol.txt .
+fi
+
+R='\033[31m';G='\033[32m';Y='\033[33m';B='\033[34m';M='\033[35m';C='\033[36m'; N='\033[m'  #Color text of RBG Yellow Magenta Cyan Normal for echo -e 
+HR='\033[41m';HG='\033[42m';HY='\033[43m';HB='\033[44m';HM='\033[45m';HC='\033[46m';  #High-light Color text of RBG Yellow Magenta Cyan for echo -e
+A=`awk '{print $1}' symbol.txt | head -1`;PM=`awk '{print $2}' symbol.txt | head -1`;BL=`awk '{print $11}' symbol.txt | head -1` #Symbol for Amstrong and +/- for cat/echo
+LE=`awk '{print $3}' symbol.txt | head -1`;GE=`awk '{print $4}' symbol.txt | head -1`;NE=`awk '{print $8}' symbol.txt | head -1` #Symbol for <= ; >= ;!=
+alpha=`awk '{print $20}' symbol.txt | head -1`; beta=`awk '{print $21}' symbol.txt | head -1`;
+#echo -e "$R ColorText $A $N"
+
+if [ $less -ne 1 ] ; then
+ echo "Cluster $mapfile based on cluster size at similarity($backward) cutoff $cut, then $cut2, then MaxTanScore/RMSD:"
+ echo "  This is strict cluster: element will be shown in one cluster and will not be counted in later cluster"
+ echo "  Cluster ranked by cluster size at cutoff=$cut , same size cluster ranked by size of 2nd level cluster (at cutoff=$cut2)"
+fi
+
+if [ $showcluster -eq 1 ] ; then   #Only Find largest cluster (one only to terminate recursive)
+  #cut2=`echo $cut | awk '{printf("%3.2f",$1*2/3)}'`
+ #Rank1   Rank2   TanimotoScore   Name1   Name2
+
+ #Find largest cluster in matrix 
+ awk 'BEGIN{cut='$cut'; cut2='$cut2';nc=0;n=0;pre=-99999;ncluster=0;showcluster='$showcluster';backward='$backward';
+  ncmax=0;ncmax2=0;accum='$accum';notitle='$notitle'
+  outfile="'$output2'"
+  if(notitle==1){
+   printf("") > outfile
+  }else{
+   printf("DataName\tDataRank\tClusterRank\tScore\n") > outfile
+ }
+}
+{if(NR>1){  #bypass header Rank1   Rank2   TanimotoScore   Name1   Name2
+ if(NR==2){pre=$2;nc++;a[nc]=$2;b[nc]=$5;c[nc]=0;c2[nc]=0;ncc=0;d[nc]="";e[nc]="";d2[nc]="";e2[nc]="";u[nc]=0;s[nc]=0;sum[nc]=0;rank[nc]=$2;score[nc]=$3;sn2[nc]="";sn[nc]=""} 
+ if(pre!=$2){  #new cmpd
+  pre=$2;nc++;a[nc]=$2;b[nc]=$5;c[nc]=0;c2[nc]=0;ncc=0;d[nc]="";e[nc]="";d2[nc]="";e2[nc]="";u[nc]=0;s[nc]=0;sum[nc]=0;rank[nc]=$2;score[nc]=$3;sn2[nc]="";sn[nc]=""
+ }
+ ttt=strtonum($1)
+ if (backward==1){ #RMSD
+  if($3<=cut&&$1!=$2){ttt=strtonum($2);use[ttt]=1;ncc++;c[nc]++;d[nc]=sprintf("%s %s",d[nc],$1);e[nc]=sprintf("%s %s",e[nc],$4);sn[nc]=sprintf("%s %s",sn[nc],$3);}
+  if($3<=cut2&&$3>cut&&$1!=$2){c2[nc]++;d2[nc]=sprintf("%s %s",d2[nc],$1);e2[nc]=sprintf("%s %s",e2[nc],$4);sn2[nc]=sprintf("%s %s",sn2[nc],$3);}  #2nd level cluster
+ } else{ #Similarity
+  if($3>=cut&&$1!=$2){ttt=strtonum($2);use[ttt]=1;ncc++;c[nc]++;d[nc]=sprintf("%s %s",d[nc],$1);e[nc]=sprintf("%s %s",e[nc],$4);sn[nc]=sprintf("%s %s",sn[nc],$3);}
+  if($3>=cut2&&$3<cut&&$1!=$2){c2[nc]++;d2[nc]=sprintf("%s %s",d2[nc],$1);e2[nc]=sprintf("%s %s",e2[nc],$4);sn2[nc]=sprintf("%s %s",sn2[nc],$3);}  #2nd level cluster
+ }
+ #if(s[nc]<$3&&$1!=$2){s[nc]=$3}  #Get maximum TanScore without first level cluster (get max TanScore below first cluster level : cut
+ #record largest cluster
+ if(c[nc]>ncmax||(c[nc]==ncmax&&c2[nc]>ncmax2)){
+  ncmax=c[nc]; ncmax2=c2[nc]
+  nmax=nc
+ }
+}
+}END{
+ if(ncmax>0){  #has largest cluster, print out 4 cols #cmpdName | Rank | ClusterNumber | Score
+   nnn=split(d[nmax],dn," ")
+   nnn=split(e[nmax],en," ")
+   nnn=split(sn[nmax],snn," ")
+   #print b[nmax],a[nmax],accum,score[nmax] #cmpdName | Rank | ClusterNumber
+   printf("%s\t%s\t%s\t%s\n",b[nmax],a[nmax],accum,score[nmax]) >> outfile
+   for(i=1;i<=nnn;i++){
+    #print en[i],dn[i],accum,snn[i]  #print cluster inside: cmpdName | Rank | ClusterNumber (3 cols)
+    printf("%s\t%s\t%s\t%s\n",en[i],dn[i],accum,snn[i]) >> outfile
+   }
+ } else {  #No cluster? print out 3 cols for cut2 cmpds : 2nd-level cluster inside cmpdName | Rank |score (3 cols) when no first level cluster
+   if(ncmax2>0){
+    nnn=split(d2[nmax],dn," ")
+    nnn=split(e2[nmax],en," ")
+    nnn=split(sn2[nmax],snn," ")
+    #print b[nmax],a[nmax],score[nmax] #cmpdName | Rank
+    printf("%s\t%s\t%s\n",b[nmax],a[nmax],score[nmax]) >> outfile
+    for(i=1;i<=nnn;i++){
+     print en[i],dn[i],snn[i]  #print cluster inside: cmpdName | Rank | Score (3 cols)
+     printf("%s\t%s\t%s\n",en[i],dn[i],snn[i]) >> outfile
+    }
+   } else {
+    print "NoTwoLevelsClusterFound"
+   }
+ }
+}' $input
+nc=`wc -l $output2 | awk '{print $1-1}'`
+ntype=`tail -1 $output2 | wc -w | awk '{print $1}'`
+center=`head -2 $output2 | tail -1`
+
+ #Get new matrix w/ elements in largest cluster output3
+if [ $ntype -eq 4 ] ; then
+awk 'BEGIN{
+ file="'$output2'";  n=-1
+ while ((getline line < file) > 0) {
+  n++; nf=split(line,d," "); a[n]=d[2]  #element rank: #cmpdName | Rank | ClusterNumber
+ }
+ close(file)
+}{
+ did=0
+ for(i=1;i<=n;i++){
+  if($1==a[i]||$2==a[i]){did=1;break}
+ }
+ if(did==0){print $_}
+}' $input > $output3
+else
+ cp $input $output3
+fi
+
+if [ $ntype -eq 4 ] ; then
+ if [ $keepo -eq 1 ] ; then
+  echo "==> Cluster #$accum w/ $nc elements and cutoff=$cut for $input saved in $output2 : cmpdName | Rank | ClusterNumber | Score"
+  echo "    centered by: $center"
+ else
+  echo "==> Cluster #$accum w/ $nc elements centered by: $center"
+ fi
+else
+ if [ $ntype -eq 3 ] ; then  
+  if [ $keepo -eq 1 ] ; then
+   echo "==> Only 2nd level cluster #$accum w/ $nc elements and cutoff=$cut2 for $input saved in $output2 : cmpdName | Rank | ClusterNumber"
+   echo "    centered by: $center"
+  else
+   echo "==> Only 2nd level cluster #$accum w/ $nc elements and cutoff=$cut2 found. centered by: $center"
+  fi
+ else
+  echo "==> No clusters even for 2nd level cluster cutoff=$cut2 found for $input"
+ fi 
+fi
+echo $output2 > $temp
+echo $output3 > $temp2
+
+else #showcluster>1. Recursively get next cluster
+ echo -n > $temp
+ echo -n > $temp2
+ for (( i=1 ; i<= $showcluster ; i++ )) ; do
+  output2=$infile'_cl'$i'_'$cut'_'$cut2'.xls'
+  output3=$infile'_cl'$i'_'$cut'_'$cut2'_left.xls'
+  echo $output2 >> $temp
+  echo $output3 >> $temp2
+  $0 -nofull -noout -cut $cut -cut2 $cut2 -notitle -keep -keepo $keep -less -accum $i -out2 $output2 -out3 $output3 $input
+    #Note, before 2017/12, there was NO -cut $cut -cut2 $cut2 which could be wrong. Also add -nofull for full data set
+  input=$output3
+ done
+
+fi #showcluster=1
+
+
+if [ $noout -ne 1 ] ; then
+ if [ $showcluster -gt 1 ] && [ $notitle -ne 1 ] ; then
+  echo -e "DataName\tDataRank\tClusterRank\tScore" > $output
+ else
+  echo -n > $output
+ fi
+fi
+nf=`wc -l $temp | awk '{print $1}'`
+for (( i=1 ; i<=$nf ; i++ )) ; do
+ fff=`head -$i $temp | tail -1`
+ [ $noout -ne 1 ] && cat $fff >> $output
+ [ $keep -ne 1 ] && rm -f $fff
+ fff=`head -$i $temp2 | tail -1`
+ [ $keep -ne 1 ] && rm -f $fff
+done
+
+#Include none clustered data into Output as cluster rank #{showcluster+1}
+if [ $dofull -eq 1 ] ; then
+ nran=`expr $showcluster + 1`
+ [ "$nran" == "" ] && nran=-1
+ awk 'BEGIN{m=0;nran='$nran';
+ file="'$inputo'";  n=0;k=0
+ #DataRank1   DataRank2   TanimotoScore   DataName1   DataName2
+ while ((getline line < file) > 0) {
+  k++; nf=split(line,c," "); did=0
+  if(k>1){
+   for(i=1;i<=n;i++){
+    if(c[1]==a[i]){did=1;break}
+   }
+   if(did==0){n++;a[n]=c[1];b[n]=c[4];s[n]=c[3]}
+  }
+ }
+ close(file)  
+ }
+ {print $_;if(NR>1){m++;d[m]=$2;u[m]=0}}
+ END{
+  for(i=1;i<=n;i++){
+   did=0
+   for(j=1;j<=m;j++){
+    if(a[i]==d[j]){did=1;break}
+   }
+   if(did==0){printf("%s\t%d\t%d\t%s\n",b[i],a[i],nran,s[i])}
+  }
+ }' $output > $temp 
+ mv $temp $output 
+ echo "  None-clustered data are assigned as cluster #$nran"
+fi
+
+if [ $keep -eq 1 ] && [ $less -ne 1 ] ; then
+  echo "==> Matrix input $input w/o elements in largest cluster saved as $output3o"
+fi
+[ $keep -ne 1 ] && echo "    Intermediate cluster files are cleaned (matrix w/o previous clusters, data for each cluster). To keep them: -keep"
+if [ $noout -ne 1 ] ; then
+ echo "==> Top $showcluster clusters saved in (DataName|DataRank|ClusterRank|Score) $output"
+ echo " WARNing: $output may only have 3 cols for some data that do not have first level cluster at cut=$cut, but only 2nd level at cut2=$cut2"
+fi
+
+rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit
+

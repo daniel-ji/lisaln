@@ -1,0 +1,238 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+col=1
+head=0
+urlbase='https://www.genome.jp/dbget-bin/www_bget?'  #pathway data. takes: hsa:2237
+urlpicture='https://www.genome.jp/kegg-bin/show_pathway?'  #pathway picture. takes hsa03030
+max_try=5  #max try to access url 
+format=`echo -e "UniProtID\tDomain1\t..."`
+
+debug=0
+start=1
+ends=26
+force1=0  #force to get oncogenes in step 1
+force2=0  #force to get UniprotID in step 2.  =0: bypass step2 =1:redo step2 =2: Only redo genes that has no UniProtID in previous result
+force3=0
+force4=0
+pdb='NA'
+map=1
+model=0
+modelfolder='./'
+fill=0;fills=''
+dup=0
+species="human";lead=""
+doless=0
+
+oldline=$*   #all argvs
+#echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -out)output=$2;doout=1;shift 2;;
+   -col)col=$2;shift 2;;
+   -head)head=1;shift;;
+   -keepdup)dup=1;shift;;
+   -species)species="$2";shift 2;;
+   -pdb)lead=$lead' '$1;shift;;
+   -less)doless=1;shift;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+
+if [ -n "$1" ] ; then
+ input=$1
+else
+cat << ttt
+
+ Get KEGG pathway based on UniProtID/Names/... from KEGG website $urlbase
+ Started 2019/2
+
+ Reactome pathway can find from ./UniProt_get directly
+
+ Screen-dump:
+KEGG pathway names 3 for hsa:2237: DNA replication|Base excision repair|Non-homologous end-joining
+ KEGG pathway pictures : https://www.genome.jp/kegg-bin/show_pathway?hsa03030 hsa03410 hsa03450
+
+ Usage: [Options] $0 UniprotID/Name/GeneName/PDB/KEGGid or List
+  KEGGid: hsa:2237 for human FEN1
+  List: a list of UniprotID/Name/GeneName/KEGGid at col $col w/ header or not
+  
+ Options:
+  #-out Output : User defined output name. Format as $format
+  -col ColNum : When input is List, UniprotID col number. [$col]
+  -keepdup : Do NOT remove duplicate names. Default: duplicate names will be removed
+  -pdb : input is PDBid (or PDB w/ chain)
+  -species "SpeciesName": Default is human and  will search as FEN1_HUMAN in ID row. Can be scientific species as well
+  -head : When input is List, the first row is header to discard
+  -less : less display
+  
+ Example: 
+   $0 hsa:2237
+     #get KEGG pathway for KEGGid
+   $0 P18428
+     #get KEGG pathway for UniProtID P18428   
+   $0 Fen1
+     #get KEGG pathway for human FEN1
+   $0 -pdb 1ul1x
+     #get KEGG pathway for chain X of 1ul1 (human fen1) 
+   $0 -species "Yellowfever mosquito" FEN1 
+     #For other species Yellowfever mosquito of fen1
+   $0 -col 2 ProteinName.lst
+     #input is List w/ header and UniprotID/Name/GeneName/KEGGid in col 2
+
+
+  NOTE: Convert UniProt /PDB /GeneID : http://biodb.jp/index.cgi?lang=&tax
+        Search PDB by UniProt ID: PDB | Advanced Search | UniProtKB Access Number
+  NOTE: To download homology models for UniProt ID that does not have PDB, run ./pdb_model_download
+  NOTE: To Get protein Function, ProteinNames, shortProteinNames, GeneNames, run ./UniProt_getProperty
+  NOTE: To find domains from NCBI CCD: ./NCBI_blast -ccd protein.fasta
+  NOTE: ./UniProt_get can find most info of a protein in one place, including KEGG pathway
+    To find Reactome pathways, run ./UniProt_get
+
+ttt
+  exit
+fi
+
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'; temp7=$temp'7'
+
+momdir=`dirname $urlbase`
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/UniProt_get $ed/html_strip .
+fi
+
+[ $doout -ne 1 ] && output=$temp.out
+
+if [ -s $input ] ; then
+ [ $doless -eq 0 ] && echo "Input is List file w/ UniProtID in col $col"
+ if [ $head -eq 1 ] ; then
+  scol=`head -1 $input | awk '{s=0;for(i=1;i<=NF;i++){if($i=="UniProtID"){s=i}};print s}'`
+  if [ $scol -gt 0 ] ; then
+   col=$scol 
+   [ $doless -eq 0 ] && echo " Found UniProtID in col $col"
+  fi
+ fi
+ awk '{s='$col';h='$head';if(NR>h){print $s}}' $input > $temp3
+ [ $doout -ne 1 ] && output=$input'_Pfam.xls'
+else
+ echo $input  > $temp3
+fi
+nc=`wc -l $temp3 | awk '{print $1}'`
+
+if [ $dup -ne 1 ] ; then
+ [ $doless -eq 0 ] && echo "Remove duplicate names"
+ awk '{did=0;for(i=1;i<=n;i++){if($1==a[i]){did=1;break}};if(did==0){n++;a[n]=$1}}END{for(i=1;i<=n;i++){print a[i]}}' $temp3 > $temp2
+ mv $temp2 $temp3
+ ncu=`wc -l $temp3 | awk '{print $1}'`
+ [ $doless -eq 0 ] && echo " $ncu unique Proteins (total $nc) will be checked"
+ nc=$ncu
+else
+ [ $doless -eq 0 ] && echo " Total $nc Proteins will be checked" 
+fi
+
+start=1;ends=$nc
+
+#echo -e $format > $output
+for (( i=$start ; i<=$ends ; i++ )) ; do
+ ID=`head -$i $temp3 | tail -1 | awk '{print $1}'`
+ IDo=$ID
+ isKEGGid=`echo $ID | awk '{n=split($1,a,":");if(n==2){print 1}else{print 0}}'` #KEGGid as hsa:2237
+ if [ $isKEGGid -eq 0 ] ; then
+  ./UniProt_get -less -noKEGG $lead -species "$species" $ID | tee $temp
+  KEGGid=`grep 'KEGG Pathway check:' $temp | tail -1 | awk '{n=split($NF,a,"?");print a[n]}'`
+  if [ "$KEGGid" != "" ] ; then
+   echo "=> KEGGid is $KEGGid for $ID"
+   ID=$KEGGid
+  else
+   echo "=> WARNing: No KEGG pathway data for $ID"
+  fi  
+ fi
+ url=$urlbase$ID
+ er=1
+ cn=1
+ while [ $er -gt 0 ] ; do   #sometimes wget gets ERROR from busy server
+  wget $url -t 1 -O $temp >& $temp2   #-t 1  Only try once when failed
+  er=`grep "ERROR" $temp2 | wc -l | awk '{print $1}'`
+  cn=`awk 'BEGIN{print '$cn'+1}'`
+  [ $cn -gt $max_try ] && er=-1
+  [ $cn -gt 2 ] && echo Retry $cn times
+ done
+
+ #remove <> in html
+ ./html_strip -remove ";" -space -removejunk $temp > $temp2    
+ #cp $temp2 i
+
+#get KEGG pathway
+#Pathway
+#hsa03030  ; ;   DNA replication        hsa03410  ; ;   Base excision repair        hsa03450  ; ;   Non-homologous end-joining
+#Brite
+
+ awk 'BEGIN{nn=0}{
+  if(s==1&&$1=="Brite"){exit}
+  if(s==1){
+   m=split($_,a,"; ;")
+   #print m,a[1];print a[2];print a[3]; print a[4]
+   nn++
+   split(a[1],b," ") #remove space
+   #print "haha",nn,b[1]
+   if(nn==1){id=b[1]}else{id=sprintf("%s %s",id,b[1])}
+   for(i=2;i<=m;i++){
+    mm=split(a[i],b," ");x=0
+    #print i,mm,b[1];print b[2];print b[3];print b[4]
+    #for(i=1;i<=mm;i++){   #No need, split can clean all spaces
+    # if(b[i]!=" "&&b[i]!=""){
+    #  x++
+    #  if(x==1){nosp=b[i]}else{nosp=sprintf("%s %s",nosp,b[i])}
+    # }
+    #}
+    #mm=split(nosp,b," ")
+    nam=b[1]
+    for(j=2;j<mm;j++){nam=sprintf("%s %s",nam,b[j])}
+    if(mm==1){nam2=b[1]}else{nam2=sprintf("%s %s",nam,b[mm])}
+    if(i<m){
+     if(nn==1){name=nam}else{name=sprintf("%s|%s",name,nam)}
+     id=sprintf("%s %s",id,b[mm])
+     nn++
+    }else{     
+     if(nn==1){name=nam2}else{name=sprintf("%s|%s",name,nam2)}
+    }
+   }
+  }
+  if($1=="Pathway"&&NF==1){s=1;n=0;nl=0}
+ }END{
+  #Do NOT modify following 3 lines, as used in ./pathway_cluster
+  printf("=> KEGG pathway names %s for %s: %s\n",nn,"'$IDo'",name)
+  printf("   KEGG pathway link for protein %s: %s%s\n","'$IDo'","'$urlbase'","'$ID'")
+  printf("   KEGG pathway pictures: %s%s\n","'$urlpicture'",id)
+ }' $temp2 #>> $output
+
+done  #i
+
+if [ $doless -eq 0 ] ; then
+ echo "
+ KEGG has nice pathway pictures to check above links
+ To find Reactome pathways, run ./UniProt_get 
+"
+fi
+
+rm -f $temp* $temp2 $temp3 $temp4 $temp5 $temp6 $temp7; exit
+

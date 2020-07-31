@@ -1,0 +1,499 @@
+#!/bin/sh 
+
+starts=`date +%s` ; starttime=`date`
+thisfile="sdf_getFromName_many"
+temp=$thisfile'_'$$'.tmp'  #temp file
+temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'
+
+old=1  #=0: use new code to simplify output SDF
+do_duplicate=0  #=1: will NOT check duplicate compound name
+                #=[others]: duplicate compound name will be removed
+col=1
+         output=$temp4
+         startrow=0
+         endrow=0
+head=0
+dotag=0
+show=0
+
+oldline=$*   #all argvs
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -nodup) do_duplicate=1; shift;;
+   -keepd) do_duplicate=1; shift;;
+   -col) col=$2;shift 2;;
+   -head)head=1; shift;;
+   -nohead)head=0; shift;;
+   -fast) old=0;shift;;
+   -old) old=1;shift;;
+   -out) output=$2;shift 2;;
+   -range) startrow=$2;endrow=$3;shift 3;;
+   -tag)dotag=1;tag="$2";shift 2;;
+   -show)show=1;shift;;
+  esac
+  aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+ done
+fi
+fletter=`echo $1 | awk '{if(substr($1,1,1)=="-"){print 1}else{print 0}}'`
+if [ $fletter -eq 1 ] ; then
+  echo "Fatal error! Argument $1 has - as preceding letter which is unrecoginized and forbidden for safety case!"
+  exit
+fi
+
+
+if [ -n "$1" ] ; then
+         folder="$1"
+         fname="$2"
+   if [ -n "$3" ] ; then
+     col=$3
+    if [ -n "$4" ] ; then
+     output=$4
+     if [ -n "$5" ] ; then
+      startrow=$5
+      endrow=$6
+     fi
+    fi
+   fi
+else
+cat << ttt
+   ***** NOTE: $0 can replace ./glide_rept2sdf and ./sdf_getFromName *****
+     * Now the script can also search from NCI 260,000 cmpd Library when set isNCI=2 *
+  Readme in /home/holi/database/ZINC/readme
+     /home/holi/database/diversity_workflow.txt
+
+  Get the whole record (SDF) of the first occurence of Compound Name (first line of SDF)
+      from many sdf files in one folder (for ZINC diversity set which has only SMI, no sdf)
+  Can also get SDF based on tag name. e.g. -tag "NSC" to get SDF based on > <NCI> tag
+
+    Usage: $0 [Options] SDF(folder or sdf file or Regular Expression) "CmpdNameList"(or CmpdNames or *.rept) 
+      [CmpdNameCol] [Output FirstRow LastRow]
+
+    Options:
+     -nodup | -keepd : (Both same meaning) will NOT remove duplicate compound name which can save time
+         [default] : duplicate cmpd names will be removed
+     -out OutputName : Output SDF
+     -show : display images
+     -col C : col in Input NameList that has the compoundID. Same as [CmpdNameCol] [ $col ]
+      -head | [-nohead] : header row (first row) in Input NameList
+     -range  FirstRow LastRow : Cmpds in this range of CmpdNameList will be extracted. Line is after remove duplicate, if asked
+     -fast : Use new faster code which simplified SDF output. 
+       Each cmpdID will only generate one SDF. No deal w/ Tags. All tags will be included
+     -old : [default] Use old slower code. Deal with Tag, each cmpdName can have multiple SDFs depending on InputSDF. 
+       Deal w/ Tags when addTagRow>0
+     -tag "TagNames" : Get SDFs based on TagNames tag value (in > <TagNames>), instead of cmpd names in first row
+       e.g. -tag "ID Number" will get SDFs based on tag value in > <ID Number>
+
+     For *.rept as CmpdList, it will follow Glide *.rept format
+     FirstRow LastRow: Cmpds in this range of CmpdNameList will be extracted. Line number is after remove duplicate, if asked.
+      [default]: whole range
+
+    e.g. $0  /home/holi/database/ZINC/ZINC8_everything /home/holi/database/ZINC/purchable_diverse_0.9/6_t90.smi 2 /home/holi/database/ZINC/purchable_diverse_0.9/6_t90.sdf 
+    or: $0 'ZINC8_everything/p_*.sdf' 6_t90.smi 2   [Use '' or "" to quote Regular Expression]
+    or: $0 ZINC8_everything/ 1GB1.rept 1 1GB1.rept.sdf 1 100 
+        $0 -fast -out X.rept.sdf npd.sdf X.rept 
+  
+        $0 -show -tag "NSC" ~/database/NCI_CBIS.sdf -out A.sdf "133784 144480 102378 165283"
+          #Get SDFs based on NSC tag value from NCI compounds for 4 cmpds as NSC#. Must use NCI_CBIS.sdf for reference!
+        $0 -show -out order.sdf ../allin.sdf  "24108-89-2 67786-25-8"
+          #Get SDFs based on name in allin.sdf. Run in G4p/
+        $0 -col 3 -out FDA.sdf ~/database/drug2018MW.sdf unique.rept.purchase.xls
+          #To get SDF of FDA-approved drugs from VS purchase list for ordering. See TET1/ 
+
+    ****NOTE: Regular Expression for files must have "" or '' *******
+    ****  This script can also get SDF from NCI library when set isNCI=2 ***
+
+   WARNing: Output SDF is NOT the same order as CmpdNameList, but the order in reference SDF
+      If you need the same order as in Rept/List, use ./glide_rept2sdf instead!!!
+   NOTE: ./glide_rept2sdf is a better version, whose output is the same order as in input Rept/List
+      BUT only this script can get SDF based on Tag Name
+
+ttt
+  exit
+fi
+
+if [ "$fname" == "" ] ; then
+ echo "Fatal error @ $0 $oldline : no 2nd input for Name" 1>&2
+ exit
+fi
+
+do_multiple=0 #=1: one compound ID may output more than one SDF if available. Will be slow for search
+              #=[0]: one compound ID will generate one SDF
+do_quote=0  #=1: will NOT modify CmpdID
+            #=0: will remove quote mark "cmpdID" surround cmpdID
+isNCI=0  #=1: search from ~/database/NCI_CBIS.sdf database, compound name will be converted to VCN-XXXXXX
+         #=2: search from ~/database/NCI-Open_09-03.sdf, cmpds name will be compared to 2nd part of NSC XX
+forceNCI=0 #=[1]: will force type isNCI=1 when SDF files/folder has *NCI* in it.  
+addTagRow=0  #=others: Add a Tag $Tagname in output SDF valued as col #addTagRow
+Tagname="FileOriginalID"  #new Tag name when addTagRow > 0
+
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+isScaleMP=0  #=1: runs on ScaleMP machine, need special code for Schrodinger
+if [ -d "/flower_data/" ] ; then
+ isScaleMP=1; ed='/flower_data/hongzhili/database/pipeline_script/' #Admin defined directory with scripts
+fi
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp $ed/lists_remove_duplicate  $ed/sdf2images $ed/glide_mae2pdb_many .
+fi
+
+
+if [ $do_quote -ne 1 ] ; then
+  echo Will remove quote mark surrounding "cmpdID" if it is there
+fi
+
+if [ $forceNCI -eq 1 ] ; then
+  aaa=`echo $folder | grep 'NCI' | wc -l | awk '{print $1}'`
+  echo "Warning!!! forceNCI=$forceNCI. will force type isNCI=1 when SDF files/folder has *NCI* in it."
+  echo "  If the NCI sdf already has VCN-XXXXXX as name, do NOT use this selection!!!"
+  if [ $aaa -gt 0 ] ; then
+   isNCI=1
+   echo "WARNing! Since there is NCI keyword in SDF files/folder $folder"
+   echo "   the script takes the SDF files as NCI sdfs and set as isNCI=$isNCI!"
+   echo "  If this change is wrong, go inside script to change forceNCI = 0 and set isNCI to the correct type!!!"
+  fi
+fi
+
+if [ $isNCI -eq 1 ] ; then
+  #folder='~/database/NCI_CBIS.sdf'
+  echo "WARNing! isNCI=$isNCI. CmpdID will convert to VCN-XXXXXX" | tee -a $log
+  echo "$folder will be used for search" | tee -a $log
+fi
+if [ $isNCI -eq 2 ] ; then
+  folder='/home/holi/database/NCI-Open_09-03.sdf'
+  echo "WARNing! isNCI=$isNCI. CmpdID will be searched as 2nd part of NSC XX" | tee -a $log
+  echo "$folder will be used for search" | tee -a $log
+fi
+
+log=$fname.log ; [ ! -s $log ] &&  echo -n "" > $log  #log file
+
+#when $input is regular expression, shell script will extract it. So check it here
+numinput=`echo $folder | awk '{print NF}'`
+[ $numinput -gt 1 ] && echo Input is Regular Expression for $numinput files | tee -a $log
+
+cat << tit | tee -a $log
+  Get SDF file based on CompoundName (col $col) in $fname
+   from SDF file(s) in $folder
+   Cmpd names are used from row $startrow to $endrow [=0: all in use]
+  Output saved in $output
+  addTagRow=$addTagRow  #=others: Add a Tag <$Tagname> in output SDF valued as col #addTagRow
+  do_duplicate=$do_duplicate  #=1: will NOT check duplicate compound name
+                #=[others]: duplicate compound name will be removed
+  do_multiple=$do_multiple
+      #=1: one compound ID may output more than one SDF if available. Will be slow for search
+      #=[0]: one compound ID will generate one SDF
+  isNCI=$isNCI  #=1: search from ~/database/NCI_CBIS.sdf, compound name will be converted to VCN-XXXXXX
+                #=2: search from ~/database/NCI-Open_09-03.sdf, cmpds name will be compared to 2nd part of NSC XX
+  Started at $starttime
+tit
+
+isRept=`echo $fname | awk '{l=length($1);if(substr($1,l-4,5)==".rept"){print 1}else{print 0}}'`
+[ $isRept -eq 1 ] && echo "Compound Name List is treated as Glide docking output!" | tee -a $log
+
+[ $do_duplicate -eq 1 ] && echo "WARNing! do_duplicate=$do_duplicate" | tee -a $log
+[ $do_multiple -eq 1 ] && echo "WARNing! do_multiple=$do_multiple" | tee -a $log
+
+[ $addTagRow -gt 0 ] && echo "WARNing! addTagRow=$addTagRow. Add a Tag <$Tagname> in output SDF valued as col $addTagRow" | tee -a $log
+
+if [ $numinput -le 1 ] ; then
+ if [ -d $folder ] ; then
+  ls -l $folder/*.sdf | awk '{print $9}' > $temp
+ else
+  lastinput=`echo $folder | awk '{len=length($1);if(substr($1,len-3,4)==".sdf"){print substr($1,1,len-4)}else{print $1};exit}'`
+  inp=$lastinput'.sdf'  #forced *.sdf files
+  isabs=`echo $lastinput | awk '{if(substr($1,1,1)=="~"){print 1}else{print 0}}'`  
+  if [ $isabs -eq 1 ] ; then
+   echo "Error! SDFs $inp must use absolute directory instead of relative directory!!!"
+   echo "Make a change of $inp format (such as /home/holi/...) and redo please..."
+   exit 
+  fi
+  ls -l $inp | awk '{print $NF}' > $temp
+  echo "Search compound from SDF file(s) $folder :" | tee -a $log
+  cat  $temp | tee -a $log
+ fi
+else #Regular expression
+ echo $folder | awk '{for(i=1;i<=NF;i++){print $i}}' > $temp
+fi
+nfile=`wc -l $temp | awk '{print $1}'`
+echo Total $nfile SDF files to serach from | tee -a $log
+
+if [ $isRept -eq 1 ] ; then   #Glide *.rept
+# cat $fname | awk 'BEGIN{fir='$startrow';last='$endrow';nc=0}
+#{if(doit==1){if($1==""){exit}else{nc++;if(nc>=fir&&(last==0||nc<=last){print $2,0}}};
+#if(substr($1,1,4)=="===="){doit=1}}' > $temp3
+ cat $fname | awk '{if(doit==1){if($1==""){exit}else{print $2,0}}; if(substr($1,1,4)=="===="){doit=1}}' > $temp3
+else  #Name List or just name
+ if [ -s "$fname" ] ; then  #Name list file
+   cat $fname | awk '
+   BEGIN{a='$col';fir='$startrow';last='$endrow';isNCI='$isNCI';addTagRow='$addTagRow';doq='$do_quote';head='$head'}
+   { if(NR>head&&NR>=fir&&(last==0||NR<=last)){
+       nam=$a;tag=0
+       if(isNCI==1){l=length(nam);  #NCI_CBIS library? convert cmpdID to VCN-XXXXXX
+         if(l==1){nam=sprintf("VCN-00000%d",nam)};
+         if(l==2){nam=sprintf("VCN-0000%d",nam)};
+         if(l==3){nam=sprintf("VCN-000%d",nam)};
+         if(l==4){nam=sprintf("VCN-00%d",nam)};
+         if(l==5){nam=sprintf("VCN-0%d",nam)};
+         if(l==6){nam=sprintf("VCN-%d",nam)};
+         if(l>6){print "Error! Wrong name for NCI",$_}
+       }
+       if(doq!=1){   #check if quote marks surrounding cmpdID
+         sl=length(nam)
+         ss=substr(nam,1,1);se=substr(nam,sl,1)
+         if(ss==se&&(ss=="\"")){nam=substr(nam,2,sl-2)}
+       }
+       if(addTagRow>0){tag=$addTagRow} #add new Tag <$Tagname> to output 
+       print nam, 0, tag
+     }
+   }' > $temp3
+ else  #$fname are compound names
+   echo "$fname" | awk '{for(i=1;i<=NF;i++){print $i,0}}'  > $temp3  #$fname is compound name
+ fi
+fi
+nori=`wc -l $temp3 | awk '{print $1}'`
+[ $startrow -le 1 ] && startrow=1
+[ $endrow -lt 1 ] && endrow=$nori
+nsdf=$nori
+echo Total $nori compounds to extract SDF in original NameFile | tee -a $log
+[ $nori -eq 0 ] && echo "Error! No compound name found" | tee -a $log
+
+#remove duplicate compound name
+if [ $do_duplicate -ne 1 ] ; then
+
+  #sort $temp3 | awk 'BEGIN{pre="NONASBXFDRQ"}{if($1!=pre){print $_;pre=$1}}' > $temp2
+  #echo Sort CompoundName to remove duplicate names | tee -a $log
+
+ #do a quick check to see if there is duplicate cmpds
+  ./lists_remove_duplicate $temp3 1 $temp2 | tee -a $log
+  cat $temp2 | awk 'BEGIN{s1='$startrow';s2='$endrow'}{if(NR>=s1&&NR<=s2){print $_}}' > $temp3
+  nsdf=`wc -l $temp3 | awk '{print $1}'`
+  echo Total $nsdf compounds left after removing duplcate compound names and picked in-range cmpds | tee -a $log
+fi 
+
+cp $temp3 $temp2
+
+####### Loop for each cmpd
+istart=1;iend=$nfile
+[ $istart -ne 1 ] && echo Warning Not started from first file : $istart | tee -a $log
+echo -n > $output
+for (( i = $istart ; i <= $iend ; i++ )) ; do
+
+ left=`wc -l $temp2 | awk '{print $1}'`
+ if [ $left -eq 0 ] ; then
+   echo "No compoundID left. Done"  | tee -a $log
+   i=$iend 
+ else #left
+  infile=`head -$i $temp | tail -1`
+
+ if [ $dotag -ne 1 ] ; then
+ #--------------------new faster code, but no deal with  Tag. Each cmpdID will only generate one SDF 
+ if [ $old -eq 1 ] ; then #new
+  awk 'BEGIN{
+ file="'$temp2'"
+ n=0
+ while ((getline line < file) > 0) {
+  n++
+  nf=split(line,d," ")
+  a[n]=d[1]
+  did[n]=d[2]  #times the compound been extracted
+  tag[n]=d[3]  #new Tag <FileOriginalID>
+ }
+ close(file)
+ 
+ new=1;doit=0;
+}
+{
+ if(new==1){
+  for(i=1;i<=n;i++){
+   if(did[i]==0&&a[i]==$1){
+    did[i]++
+    doit=1
+    break
+   }
+  } 
+  new=0;
+ }
+ if(doit==1){ 
+  print $_
+ }
+ if(substr($1,1,4)=="$$$$"){new=1;doit=0}
+}
+END{
+ printf("") > file  #print out non-found moles
+ for(i=1;i<=n;i++){
+  if(did[i]==0) {
+   print a[i], did[i], tag[i] >> file
+  }
+ }
+}' $infile >> $output
+
+ #------------------- old slower code. Deal with Tag, each cmpdName can have multiple SDFs depending on InputSDF
+ else #old; 
+
+  awk 'BEGIN{
+ file="'$temp2'"
+ n=0
+ while ((getline line < file) > 0) {
+  n++
+  nf=split(line,d," ")
+  a[n]=d[1]
+  did[n]=d[2]  #times the compound been extracted
+  tag[n]=d[3]  #new Tag <FileOriginalID>
+ }
+ close(file)
+
+ new=1;doit=0;dom='$do_multiple';thisi=0
+ addTagRow='$addTagRow';Tagname="'$Tagname'";isNCI='$isNCI'
+}
+{
+ if(new==1){
+  for(i=1;i<=n;i++){
+   if((a[i]==$1||(isNCI==2&&a[i]==$2)) && (dom==1||did[i]==0)){
+    did[i]++
+    doit=1
+    thisi=i
+    break
+   }
+  }
+  new=0;
+ }
+ if(doit==1){
+  if(addTagRow>0&&substr($1,1,4)=="$$$$"){
+   printf("> <%s>\n",Tagname)
+   print tag[thisi]
+   print ""
+  }
+  print $_
+ }
+ if(substr($1,1,4)=="$$$$"){new=1;doit=0}
+}
+END{
+ printf("") > file  #print out non-found moles
+ for(i=1;i<=n;i++){
+  if(dom==1 ||did[i]==0) {
+   print a[i], did[i], tag[i] >> file
+  }
+ }
+}' $infile >> $output
+
+ fi #old
+
+
+ #--------------- extract SDFs based on tag name
+ else  #dotag=1: extract SDFs based on tag name
+
+  awk -v tags="$tag" 'BEGIN{
+ file="'$temp2'"
+ n=0
+ while ((getline line < file) > 0) {
+  n++
+  nf=split(line,d," ")
+  a[n]=d[1]
+  did[n]=d[2]  #times the compound been extracted
+  tag[n]=d[3]  #new Tag <FileOriginalID>
+ }
+ close(file)
+ 
+ new=1;doit=0;x=0
+}
+{
+ #if(new==1){ #Tag value matched?
+  if(doit==1){
+   for(i=1;i<=n;i++){
+    if(did[i]==0&&a[i]==$1){
+     did[i]++
+     doit=2
+     break
+    }
+   }
+   if(doit==1){
+    doit=0
+   } 
+  }
+  if($1==">"){  #find Tag?
+     l=length($_);s=substr($_,2,l-1)  #remove >
+     s1=match(s,"<");s2=match(s,">")  #find <> brackets
+     s3=substr(s,s1+1,s2-s1-1)
+     s3c=toupper(s3)
+     if(s3==tags){
+      doit=1   
+     }
+  }
+  x++
+  y[x]=$_
+ #}
+ if(substr($1,1,4)=="$$$$"){
+  if(doit==2){
+   for(i=1;i<=x;i++){print y[i]}
+  }
+  new=1;doit=0;x=0
+ }
+}
+END{
+ printf("") > file  #print out non-found moles
+ for(i=1;i<=n;i++){
+  if(did[i]==0) {
+   print a[i], did[i], tag[i] >> file
+  }
+ }
+}' $infile >> $output
+
+
+ fi #dotag
+
+
+left2=`wc -l $temp2 | awk '{print $1}'`
+
+ndi=`awk 'BEGIN{print '$left'-'$left2'}'`
+echo "$i : $ndi compounds (total $left2 of $nsdf ) done from $infile" | tee -a $log
+
+fi #left
+
+done  #i
+
+
+if [ $show -eq 1 ] ; then
+ ./sdf2images $output > $temp
+fi
+
+[ "$left2" == "" ] && left2=0
+if [ $left2 -ne 0 ] ; then
+ echo "Warning! $left2 of $nsdf compound IDs not found in SDF: " | tee -a $log
+ cat $temp2 | tee -a $log
+ echo "Error @$0 :  $left2 of $nsdf compound IDs not found in SDF $infile" | tee -a $log
+fi
+
+fsdf=`grep '$$$$' $output | wc -l | awk '{print $1}'`
+echo Final output SDF cmpds number is $fsdf | tee -a $log
+
+if [ $output == $temp4 ] ; then
+  echo "SDF file is:" | tee -a $log
+  cat $output | tee -a $log
+fi
+
+echo Output is $output | tee -a $log
+echo Log file is $log | tee -a $log
+
+if [ $dotag -eq 1 ] ; then
+ echo "WARNing: SDF is extracted based on Tag: > <$tag>" | tee -a $log
+fi
+
+#---------CPU time-tracking. See ~/CCSG/cpu_usage_logfile
+starts2=`date +%s` ; endtime=`date` ; runs=`awk 'BEGIN{print '$starts2'-'$starts'+1}'` ;
+hrs=`awk 'BEGIN{print '$runs'/3600}'` ; days=`awk 'BEGIN{print '$runs'/3600/24}'`
+echo Started at $starttime Ended at $endtime . Log file is $log | tee -a $log
+echo "Pipeline CPU time Is " $runs " secs " $hrs " hrs " $days " days " | tee -a $log
+
+echo "***WARNing: Output $output is NOT in same order as input $input ***** " | tee -a $log
+echo "*** To do so, run ./glide_rept2sdf $fname $folder " | tee -a $log
+
+rm -f $temp $temp2 $temp3 $temp4
+
+exit

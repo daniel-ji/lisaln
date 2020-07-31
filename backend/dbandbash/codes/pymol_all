@@ -1,0 +1,2370 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+thisfile=$0
+
+pymol='/opt/pymol_1.5/pymol.exe'  #pymol executable
+pymol16='/opt/pymol-1.8.6/bin/pymol'   #pymol executable for aligment
+pdb2pqr='/opt/pymol_1.5/freemol/share/pdb2pqr/pdb2pqr.py'  #Find this path by running PyMol | Plugin | ABPS Tools
+abps='/opt/pymol_1.5/freemol/bin/apbs.exe'  #Find this path by running PyMol | Plugin | ABPS Tools
+psize='/opt/pymol_1.5/freemol/share/apbs/psize.py' #Find this path by running PyMol | Plugin | ABPS Tools
+doout=0
+silence=1
+force=0;forc=''
+model=0;allmodel=0
+grid=0
+colorbyatom=''
+axis=0
+cutoff_contact=3 #contact residue Cutoff for emap2 to display
+contact=0; cpseudo=1
+DNAcolor='palecyan'  #DNA ring color. =0: each type of DNA-ring/nucleotide has its own color
+DNAback='orange'  #DNA backbone color
+docarea=0
+ray_opaque_background=1  ;#=0: transparent background
+glossy=0 #=1: shinny glossy surface
+spec_power=500 ;  #For reflection power: glossy or dull
+spec_reflect=2  ;#for reflection sharp or diffuse (small value)
+other=''
+extra1='';doextra1=0
+extra2='';doextra2=0
+dofine=0;self=''  #do fine-alignment
+
+show=1  #=1: show vmd plot
+display=1  #=1:display HBond pairs
+dohydro=1 #=1: display hydrophobic surface as red  =2: display hydrophilic surface as green
+single=1 #=1: only single display of hydro if only 1 input PDB. Otherwise, will display both hydrophobic and philic
+dolab=1 #=1: will use VMD label, which cannot show correct atomID, but can follow trajectory
+noout=0 #=1:No output files at all to save space when running many ligands
+area=1;SAS=0;sPSA=0;mPSA=0;PSA=0
+Goodsell=0
+smoothsurface=0;sbackbone=0;smoothsize=8
+sites=''; sitescolor='red blue green purple orange cyan pink lightblue lightgreen';dosite=0;
+sitestype=2  #=1: mesh of protein part =2: surface of ligand  =3: partial surface of protein part. Others: isosurface of protein part
+ligandscolor='util.cbam util.cbag util.cbac util.cbay util.cbas util.cbab util.cbao util.cbap util.cbak'  #color of ligand by-atom in DSP
+gaussian_resolution=5 #resolution for smooth surface and blobby side-chain: Small: thin. Large: Puffy [5-8] 
+pocket=0
+blobby=0
+sidechain=0
+labeltxt='NA';txtpos='';didlabel=0
+labelsize=21  #Label size
+labelpos='1.5,1.5,1.5'  #position offset of label
+labelfont=7  #=5:normal =6:Italic =7:bond =8:Italic-Bond
+labelcolor='yellow'  #Color of label : cyan
+dobox=0
+docaver=0;astart='0';protection_radius=4
+surface_cavity_mode=0
+transparency=0;dotrans=0
+closeSurface=0
+doCE=1;CE='-CE';ligaln=0;ligal="";atomaln=0;asel="";aselref=""
+bb='and not name c+o+n+ha+hn' #backbone atoms to pymol display to exlcude
+showdia=1 #=1: show 2D ligand interaction diagram
+dotraj=0;dcd="NA";interval=1;mdstart=1;mdstop=0;mdsel="all";mdwater=1 #=1: display NAMD trajectory file for MD
+hidesur=0 #=1: hide sufface
+
+showtype='surface'
+showpolar=0
+showligand=0  #show ligand in stick which is defined by -ligand
+showcharge=0 #=1: show PDB2PQR charge
+chargecut=0 #=1: user defined charge cut
+emap=0 #=1: show electrostatics map
+emap2=0;emap2c=0
+ligand='UNK';doligand=0
+bg_gradient=0  #=1: gradient background. =0: none-gradient
+bg_rgb_top='[230,230,230]'   #RGB color of top bg color for bg_gradient: Green [0,255,0]; yellow [255,255,0]  white[255,255,255]
+bg_rgb_bottom='[0,150,150]'  #RGB color of bottom bg color for bg_gradient: Cyan [0,255,255]; yellow [255,255,0]
+bar=0
+field='charmm'  #force field for pdb2pqr : charmm,amber,parse,tyl06
+mince=-1;maxce=1  #charge cutoff for e-map
+ray_trace_mode=0  #ray_trace_mode =0:default =1: w/ outline =2: outline only =3: less smoother 
+
+ProteinColor='cyan'  #protein color
+Hydrophobic=$ProteinColor ; #'lightorange' #color of Hydrophobic residues 
+Hydrophilic=$ProteinColor ; #'limegreen'   #color of Hydrophilic residues 
+Positive=$ProteinColor ; #'tv_red'         #color of Posotive residues
+Negative=$ProteinColor ; #'marine'         #color of Negative residues 
+
+selection='chain A and not resn UNK+HOH+TIP3+TIP+SOD+CLA'
+  #select protein only, not ligand, water, salt
+selection2="$selection";didsel1=0;didsel2=0
+showwater=1
+showdis=1
+showhb=1
+
+doarrow=0;
+arrww=''
+chain1='+' # ChainName is 1-char, + for whole protein, - for empty chain
+chain2='+' # ChainName is 1-char, + for whole protein, - for empty chain
+resname1='N/A'
+resname2='N/A'
+resid1=0
+resid2=0
+atom1='N/A' 
+atom2='N/A'
+simple='N/A'
+hbond1='N/A';hbond2='N/A';
+
+#Pymol HBond display:  set dash_width, 0.2 
+dash_width=0.2   #width of dashed line for HBond of PyMol. In new PC: 5
+dash_gap=0.01  #gap of dashed line for HBond of PyMol (empty part). In new PC: 0.5. Old PC: 0.3. Gap must be larger than 2xWidth to show real gap for round-end dash line
+dash_length=0.01   #length of dashed line solid part. Length will also add 2xWidth for round-end dash line 
+dash_round=1   #=1:dash-end is round. =0: dash-end is square
+
+do2=1 #Compare two proteins. Otherwise, same as ./pymol_show
+
+domirror=0;dooffx=0
+showfull=1 #show full PDB of top inputs
+showdetail=1  #show sperate chains/DNA/metal/ligand/hbonds of each protein
+loadfull=0 #=0: only load selection (e.g. chain A) of each align protein and show surface =1: will load full PDB of each aligned protein
+emap=0
+doTM=0
+domovie=0;extramovie='';morphy=0;fancy=0;cylinder=0;domsel=0;msel="chain A";msel2="chain B";mstep=60
+order=0
+downlead="";downall=0
+dp2=''
+dolabel=0 ; labelres=''; labeltype='name'
+docenter=0
+dofile=0;
+dofile2=0;header=1;ccol=3;pcol=2  #for chains to align. E.g. download PDBs from ./NCBI_blast_PDBs output papain.fasta_40_30_entries.xls in SARS/PLpro
+nocheck=0
+
+oldline=$*   #all argvs
+echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -nocheck)nocheck=1;shift;;
+   -file)dofile=1;file=$2;shift 2;;
+   -file2)dofile2=1;file2=$2;shift 2;;
+   -noheader)header=0;shift;;
+   -header)header=1;shift;;
+   -pcol)pcol=$2;shift 2;;
+   -ccol)ccol=$2;shift 2;; 
+   -center)docenter=1;centers="$2";shift 2;;
+   -label)dolabel=1;labelres="$2";shift 2;;
+   -labeltype)labeltype="$2";shift 2;;
+   -labelcolor)labelcolor="$2";shift 2;;
+   -labelpos)labelpos="$2";shift 2;;
+   -loadfull)loadfull=1;shift;;
+   -nodetail)showdetail=0;showfull=0;loadfull=1;dohydro=0;shift;;
+   -HIS)dp2=$dp2' '$1;shift;;
+   -rotation)angle="$2";dp2=$dp2' '$1' '$2;shift 2;;
+   -r)angle="$2";dp2=$dp2' '$1' '$2;shift 2;;
+   -angle)angle="$2";dp2=$dp2' '$1' '$2;shift 2;;
+   -axis)axis="$2";dp2=$dp2' '$1' '$2;shift 2;;
+   -order)order=1;shift;;
+   -hidesur)hidesur=1;shift;;
+   -silence)silence=1;shift;;
+   -ray_opaque_background)ray_opaque_background=$2;shift 2;;
+   -nosilence)silence=0;shift;;
+   -force)force=1;forc=$1;shift;;
+   -out) output=$2;doout=1;noout=0;shift 2;;
+   -pymol) pymol=$2;shift 2;;
+   -selection)selection="$2";didsel1=1;shift 2;;
+   -sel)selection="$2";selection2="$2";didsel1=1;didsel2=1;shift 2;;
+   -s)selection="$2";selection2="$2";didsel2=1;shift 2;;
+   -sel1)selection="$2";didsel1=1;shift 2;;
+   -sel2)selection2="$2";domirror=1;didsel2=1;shift 2;;
+   -ligand)ligand=="$2";doligand=1;shift 2;;
+   -emap2)emap2=1;shift;;
+   -contact)contact=1;shift;;
+   -fancy)fancy=1;shift;;
+   -cylinder)cylinder=1;shift;;
+   -cutoff_contact)cutoff_contact=$2;shift 2;;
+   -sel3)emap2=1;emap2c=1;atom1="$2";atom2="$3";atom3="$4";shift 4;;
+   -blobby)blobby=1;shift;;
+   -blobbyside)blobby=1;sidechain=1;shift;;
+   -gaussian_resolution)gaussian_resolution=$2;shift 2;;
+   -showstyle)showtype=$2; cpseudo=0;shift 2;;
+   -showtype)showtype=$2; cpseudo=0;shift 2;;
+   -cartoon)showtype='cartoon';shift;;
+   -sphere)showtype='spheres';shift;;
+   -bg_gradient)bg_gradient=1;shift;;
+   -nogradient)bg_gradient=0;shift;;
+   -color)bg_gradient=1;ProteinColor='cyan';Hydrophobic='lightorange';Hydrophilic='limegreen';Positive='tv_red';Negative='marine';shift;;
+   -nobg)bg_gradient=0;shift;;
+   -bg)bg_gradient=0;shift;;
+   -bg_rgb_top)bg_rgb_top="$2";bg_gradient=1;shift 2;;
+   -bg_rgb_bottom)bg_rgb_bottom="$2";bg_gradient=1;shift 2;;
+   -bar)bar=1;shift;;
+   -charge)showcharge=1;shift;;
+   -chargecut)chargecut=1;minc=$2;maxc=$3;shift 3;;
+   -emap)emap=1;shift;;
+   -trace_mode)ray_trace_mode=$2;shift 2;;
+   -colorbyatom)colorbyatom='util.cbam Selected';shift;;
+   -contactarea)docarea=1;shift;;
+   -SAS)SAS=1;shift;;
+   -PSA)PSA=1;shift;;
+   -area)area=1;shift;;
+   -noarea)area=0;shift;;
+   -Goodsell)Goodsell=1;showtype='spheres';shift;;
+   -goodsell)Goodsell=1;showtype='spheres';shift;;
+   -smoothsurface)smoothsurface=1;shift;;
+   -closeSurface)closeSurface=1;shift;;
+   -smooth)smoothsurface=1;shift;;
+   -smoothsize)smoothsize=$2;shift 2;;
+   -site)smoothsurface=1;sites="$2";dosite=1;gaussian_resolution=5;shift 2;;
+   -sitecolor)sitescolor="$2";shift 2;;
+   -sitemesh)sitestype=1;smoothsize=5;shift;;
+   -sitesur)sitestype=3;smoothsize=5;shift;;
+   -siteiso)sitestype=0;shift;;
+   -sbackbone)sbackbone=1;shift;;
+   -pocket)pocket=1;shift;;
+   -model)model=$2;shift 2;;
+   -allmodel)allmodel=1;shift;;
+   -showpolar)showpolar=1;shift;;
+   -single)single=1;shift;;
+   -both)single=0;shift;;
+   -b)single=0;shift;;
+   -grid)grid=1;shift;;
+   -nogrid)grid=0;shift;;
+   -labeltxt)labeltxt="$2";shift 2;;
+   -txtpos)txtpos="$2";shift 2;;
+   -axis)axis=1;shift;;
+   -box)dobox=1;shift;;
+   -transparency)transparency=$2;dotrans=1;shift 2;;
+   -trans)transparency=$2;dotrans=1;shift 2;;
+   -caver)docaver=1;shift;;
+   -astart)astart="$2";shift 2;;
+   -protection_radius)protection_radius=$2;shift 2;;
+   -cavity)surface_cavity_mode=2;shift;;
+   -putty)simple="$2";shift 2;;
+   -hbond)hbond1="$2";hbond2="$3";shift 3;;
+   -dash_width) dash_width=$2;shift 2;;
+   -dash_length)dash_length=$2;shift 2;;
+   -dash_gap)dash_gap=$2;shift 2;;
+   -dash_round)dash_round=1;shift;;
+   -dash_square)dash_round=0;shift;;
+   -DNAcolor)DNAcolor=$2;shift 2;;
+   -DNAback)DNAback="$2";shift 2;;
+   -glossy)glossy=1;shift;;
+   -spec_power)spec_power=$2;shift 2;;   #For reflection power: glossy or dull
+   -spec_reflect)spec_reflect=$2;shift 2;;   #for reflection sharp or diffuse (small value)
+
+#draw arrow:
+   -chain1) chain1=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+   -resn1) resname1=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+   -resid1) resid1=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+   -atom1) atom1=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+   -chain2) chain2=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+   -resn2) resname2=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+   -resid2) resid2=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+   -atom2) atom2=$2;doarrow=1;arrww=$arrww' '$1' '$2;shift 2;;
+
+   -show) show=1;shift;;
+   -noshow) show=0;shift;;
+   -noout) noout=1;shift;;
+   -other)other=$other' '"$2"';';shift 2;;
+   -hydrophobic)dohydro=1;shift;;
+   -hydrophilic)dohydro=2;shift;;
+   -hydro)dohydro=1;shift;;
+   -hydro2)dohydro=2;shift;;
+
+   -CE)doCE=1;CE=$1;shift;;
+   -ce)doCE=1;CE='-CE';shift;;
+   -noCE)doCE=0;CE='';shift;;
+   -noaln)doCE=2;shift;;   
+   -TM)doTM=1;ligal=$1;shift;;
+   -ligaln)doCE=0;dofine=0;doaln=0;ligaln=1;ligal=$1;shift;;
+   -nowater)showwater=0; shift;;
+   -dis)showdis=1;shift;;
+   -hb)showhb=1;shift;;
+   -mirror)domirror=1;shift;;
+   -off)dooffx=1;domirror=1;offx=$2;shift 2;;
+   -PPI)domirror=1;shift;;
+   -finesel)self="$2";dofine=1;shift 2;;
+   -atomaln)atomaln=1;shift;;
+   -aselref)aselref="$2";atomaln=1;shift 2;;
+   -asel)asel="$2";atomaln=1;shift 2;;
+   -noshowfull)showfull=0;shift;;
+   -dia)showdia=1;shift;;
+   -nodia)showdia=0;shift;;
+
+#do animation
+   -movie)domovie=1;shift;;
+   -roll)domovie=1;shift;;
+   -fade)domovie=1;extramovie=$extramovie' '$1;shift;;
+   -cfade)domovie=1;extramovie=$extramovie' '$1;shift;;
+   -frame)domovie=1;extramovie=$extramovie' '$1;shift;;
+   -morphy)domovie=1;morphy=1;extramovie=$extramovie' '$1;shift;;
+   -morph)domovie=1;morphy=1;extramovie=$extramovie' '$1;shift;;
+   -mstep)extramovie=$extramovie' '$1' '$2;shift 2;;
+   -msel)domovie=1;morphy=1;domsel=1;msel="$2";shift 2;;
+   -msel2)domovie=1;morphy=1;domsel=1;msel2="$2";shift 2;;
+   -mout)extramovie=$extramovie' -out '$2;shift 2;;
+
+# show MD trajectory
+   -traj)dotraj=1;showdia=0;shift;;
+   -dcd)dcd=$2;dotraj=1;showdia=0;shift 2;;
+   -interval)interval=$2;shift 2;;
+   -mdstart)mdstart=$2;shift 2;;
+   -mdstop)mdstop=$2;shift 2;;
+   -mdsel)mdsel="$2";shift 2;;
+
+#download PDB by protein name
+   -name)downlead=$downlead' '$1;shift;;
+   -fullname)downlead=$downlead' '$1;shift;;
+   -all)downlead=$downlead' '$1;downall=1;shift;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!"; exit;;
+  esac
+  aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+ done
+fi
+
+if [ -n "$1" ] ; then
+ input="$1" ; npdb=1
+ if [ -n "$2" ] ; then
+  input2="$2" ; npdb=2
+ fi
+ if [ -n "$3" ] ; then
+  input3="$3" ; npdb=3
+ fi
+ if [ -n "$4" ] ; then
+  input4="$4" ; npdb=4
+ fi
+ if [ -n "$5" ] ; then
+  input5="$5" ; npdb=5
+ fi
+
+else
+cat << ttt
+
+ Compare multiple proteins side-by-side, or comapre hydrophobic/philic electrostatics surface side-by-side for:
+ Display hydrophobic/charge, metal, water, fancy DNA, ligand of PDB surface
+  Can also display APBS electrostatics potential map and gradient background (v1.5)
+   Pymol Protein contact potential is like charge smoothing, more informative, but need manually display 
+    Directly click each selections in pymol: Action | generate | Vaccum Electrostatics | Potential Contact Potential
+   https://pymolwiki.org/index.php/Protein_contact_potential has compare with APBS
+       Recommend: Use pymol manual one Protein contact potential to view and publish: more informative
+  can calculate/show surface area and solvent access surface area (SAS) and Polar Surface Area (PSA) of selection
+  can calculate contact area of two selections by ./pdb_contact_surface
+  can show binding pocket etc.
+  can auto-download PDBs as in ./pymol_rmsd_many (not done yet)
+
+ Modified from ./pymol_show :
+  do2=1 #Compare two proteins. Otherwise, same as ./pymol_show
+
+   PyMol to make a color bar for electro-stattics map: http://www.mail-archive.com/pymol-users@lists.sourceforge.net/msg01476.html
+    Can directly click each selections in pymol: Action | generate | Vaccum Electrostatics | Potential Contact Potential
+    This is much better looking than VMD map as $0 -emap in this script. More smooth as it is kind of average of charge. But not as real!
+   Pymol Selection : http://www.pymolwiki.org/index.php/Property_Selectors
+    id : atom number
+   PyMol Label see http://pymolwiki.org/index.php/Label
+ Surface (0) from cavity(2): set surface_cavity_mode, 0  #Then Best is in pymol: Setting | Surface | Wireframe
+ Grid: set grid_mode,1 ;   set grid_slot, -2, PDB; (PDB in all slots); set grid_slot, 2, A;
+ Background/Gradient:  set bg_gradient, on;   set bg_rgb_top, [230,230,230]; set bg_rgb_bottom, [0,150,150]
+ Black-White Outline (normal: 0): set ray_trace_mode, 2;
+  Overlap BW image and selected color image to one by ImageMagick (or gimp): composite C.png BW.png Overlap.png   (-blend 30)
+   1. Make white color transparent: convert C.png -fuzz 2% -transparent white C.png
+   2. Overlap BW image and selected color image to one by ImageMagick: composite C.png BW.png Overlap.png   ( or -blend 30)
+ Add watermark: ./watermark or: composite -dissolve 50% -gravity center -quality 100 \( Watermark.png -resize 50% \) PDB.jpg PDB.jpg
+   See: http://www.xoogu.com/2013/how-to-automatically-watermark-or-batch-watermark-photos-using-imagemagick/
+
+PDB2PQR: python /opt/pymol_1.5/freemol/share/pdb2pqr/pdb2pqr.py --ff=charmm[amber,parse,tyl06] --chain --apbs-input 1TSRBm.in 1TSRBm.pdb 1TSRBm.pqr
+  --clean : Do no optimization, atom addition, or parameter assignment
+  --hbond | --contact | --salt | --rama :  hydrogen bonds to *.hbond, contacts to *.con, salt bridges to .salt, Ramachandran plots to .rama
+  --ligand=<path> : Calculate the parameters for the ligand in mol2 format at the given path. Pdb2pka must be compiled
+    * Adding a limited number of missing heavy atoms to biomolecular structures
+    * Determining side-chain pKas
+    * Placing missing hydrogens
+    * Optimizing the protein for favorable hydrogen bonding
+    * Assigning charge and radius parameters from a variety of force fields
+
+ Usage: [Options] $0 "InputPDB|PDB_List|UniprotID|ProteinName" [InputPDB2] [InputPDB3] [InputPDB4] [InputPDB5]
+ InputPDB : can be regular expression for many pdbs, can be PDBid (can w/ chain), UniprotID, human protein name, human protein fullname to download
+ PDB_List: PDB|Action(normal,hydrophobic,hydrophilic, or emap)|selections(toAnlign and Display)
+   xOr 4 cols: PDB|Action(normal,hydrophobic,hydrophilic, or emap)|selections(toDisplay)|chain(toAlign)
+ InputPDB2/3/4/5 : single PDB files or PDBid (can w/ chain) to download : 1u1lA
+  Actions: hydrophobic, hydrophilic , emap.   Others: just plain surface
+  e.g:
+     F74.pdb hydrophobic chain A and (byres (resn UNK) expand 20)
+     F74.pdb hydrophilic chain B
+     F75.pdb NA resn c+ca+n+o+nh
+   Then type: set grid_slot , X , F74_2
+
+ Options:
+  -other PyMolCommands : other pymol commands to execute at last. This can call multiple times
+  -model MODELnum : MODEL number for Induce Fit docking output or NMR PDB with many MODELs. Only display this MODEL
+     For Glide docking with MODELs as ligand poses, first(protein) and second(first ligand) will selected. All ligands will show (no need select)
+   -allmodel : all Models reading in for -pocket selection only
+  -colorbyatom : color Selection by element (oxygen in red, nitrogen in blue, hydrogen in white) and carbon color as:
+      light magenta : util.cbam  green: util.cbag  yellow: util.cbay purple: util.cbap  Pink:util.cbak
+  -silence | -nosilence : less|more screen dump
+  -force : force to recalculate .pqr .in
+  -fancy : show fancy cartoon (inside/outside different color)  
+  -cylinder : show cartoon as cylinder (See https://pymolwiki.org/index.php/Cartoon_Helix_Settings)
+  -blobby : show blobby (puffy) of Selection2
+  -blobbyside : only show side-chain of Selection2 as blooby
+  -out Output : Output pymol script (.pml PyMOL command scrip)  default: ListFile.pml
+  -show | -noshow :  show Pymol plot
+  -showpolar : color residues by its polar
+  -hidesur : hide all surfaces
+  -showstyle|-showtype cartoon|spheres|dots|lines|mesh : show Type instead of surface. Or Type for -eaps2|-contact of the contact residues   
+   -cartoon : Show cartoon instead of surface. Same as -showstyle cartoon
+   -sphere : show sphere instead of surface. Same as -showstyle sphere
+  -Goodsell | -goodsell  : show Goodsell-like image as in http://pymolwiki.org/index.php/Gallery 
+  -blobby : show blobby (puffy) of Selection2   NOTE: -blobby and -smooth use same method for display
+  -blobbyside : only show side-chain of Selection2 as blooby
+  -smooth | -smoothsurface : show smooth surface of Selection (expanded by Gaussian)
+   -gaussian_resolution GaussianResultion : resolution for smooth surface and blobby side-chain: Small: thin/small. Large: Large/Puffy [5-8] [$gaussian_resolution]
+   -sbackbone : Use backbone of Selection for smooth surface, since may take long time for calculation
+   -smoothsize DistanceToLigand : surface size (the distance of protein surface to ligand in A) [$smoothsize]
+   NOTE: When -pocket option, smooth surface are residues around 8A of ligand to show binding pocket
+  -site "model1 model2 ..." : For Drugable Site Prediction DSP to display multiple sites with smooth surface and different colors.
+   -sitecolor "Color1 Color2 ..."
+   Sites Display: default is shown surface of ligands for sites
+   -siteiso : Show  iso-surface for protein parts the sites. -smoothsize to define site's size. -gaussian_resolution to define resolution
+   -sitemesh : Show mesh for protein parts of the sites. -smoothsize to define site's size  
+   -sitesur : Show partial surface of protein part for sites  -smoothsize to define site's size  [Not recommended]
+     e.g. -site "1 4 10 15" will display 4 sites which are from model 1,4,10 and 15 respectively.
+          -sitecolor "red blue green orange" The colors of the above 4 sites will be red etc. respectively. [$sitescolor]
+          Ligand colors (by-atom) is predefined as: $ligandscolor      
+  -contactarea : only show contact area of -sel protein to -sel2 ligand with contact distance cutoff defined by -cutoff_contact [$cutoff_contact]
+  -area | -noarea: show the surface area and SAS in square Angstroms of the selection
+  -ASA : show the solvent access surface area in square Angstroms of the selection ( a ball of r=1.4A sticked on to surface, 1.4A puffy)
+  -PSA : calculate/show estimation of Polar Surface Area for N+O (hydrogen will be removed) [ Strict PSA: attached H-atom should also count]
+    Both solvent accessible PSA approximation (smaller need solvent squeeze in) and molecular PSA approximation calculated
+    See: http://www.pymolwiki.org/index.php/Displaying_Biochemical_Properties#Polar_surface_area
+  -noout : No output PyMol file
+  -pocket : show binding pocket (meshed surface) of ligand in PDB 
+  -axis : draw axis in center of protein
+  -center "CenterSelection" : center plot by pymol selection and zoom
+  -label "LabelResidues" : label residues by name for Pymol selections. e.g. -label "name H* and resn UNK" to label H-atoms for ./vmd_namd_distance_STD
+   -labeltype 'LabelFormat' : format to show label. [$labeltype]. e.g. -labeltype '"(%s, %s, %s)" % (resn, resi, b)' to label as (resn, resid, B-factor)
+   -labelcolor LabelColor : set label color
+   -labelpos LabelPosition : 0.5,0.5,0.5 to offset label to atom by 0.5A [$labelpos]
+  -labeltxt "Text" : label Text on whole image. Default position: top. 
+     To label one-letter resname instead of 3-letter see ./glide_hbonds or http://www.pymolwiki.org/index.php/Label#Labels_Using_One_Letter_Abbreviations
+     To label atom number in pymol: label SELECTION, " %s" % ID  ; or Label|atomidentifier|ID
+        formatted label: label SELECTION, " %s:%s %s" % (resi, resn, name)
+     NOTE: label command must be put at beginning of line w/o spaces! Otherwise, no work
+   -txtpos PositionSelection : Center of Selection to label Text. e.g. b/53/cg+cz to center text at chain B, resid 53, center of CG/CZ atoms
+  -trans | -transparency 0-1 : transparency of selection for suraface. =[1]: solid =0:invisible
+  -putty "Selections" : plot Selections in very simply uni-color putty cartoon (cartoon putty)
+  -hbond "Selection1" "Selection2" : Display hydrogen bond between Selection1 and Selection2. ./glide_hbonds is a better choice
+    set h_bond_cutoff_center, 3.6; set h_bond_cutoff_edge, 3.2; dist name, sele1, sele2, mode=2  #HBond distance cutoff 3.2A-3.6A
+    Or: Action | Find | Polar Contact | to other atoms in Object
+    -dash_width HBondWidth  : Thickness of HBond dashed line : $dash_width from Pymol
+    -dash_gap HBondGap  : Gap of HBond dashed line : $dash_gap from Pymol. Dash_gap is auto-corrected by this code for dash_round 
+    -dash_length HBondLength : Length of solid part of HBond dashed line [$dash_length]  Real length=HBondLength+2xHBondWidth for dash_round
+    -dash_round | -dash_square : HBond dash-line end is [round] or square  
+  -closeSurface : show close surface of selection, especially for discontinue residue surfaces which was scattered by normal display. Use pymol -create
+ #show cavity
+  -caver : run tunnel/channel analysis of PDB from CAVER software (http://www.caver.cz/)
+    -astart "Start_Atom_Number" : Atom numbers to start tunnel searching. e.g. -astart "96 180 195"  : searching cavities from 3 atoms: #96, #180 and #195
+      =[0]: Using all CA atoms as starting atoms
+    -protection_radius Radius : larger value to display wider-open channels. [$protection_radius]
+    Now PyMol has MOLE plugin can do the same thing to find channels inside PDB
+    NOTE: Error Mesg: No tunnels for clustering, computation was not finished. Is the starting point where it should be? 
+        Error could be too wide-open tunnel. Use $0 -caver -astart to specifiy start atoms or increase -protection_radius 20
+    NOTE: calculate cavity volume by POVME and show ligand nearby cavity, run ./pdb_cavity_volume
+  -cavity : Use pymol surface_cavity_mode to invert (>1, cavity) surface. Same as Settings > Surface > Cavities and Pockets
+    surface_cavity_mode=2 shows less cavities than =1. See http://www.pymolwiki.org/index.php/Surface_cavity_mode
+  NOTE: -cavity show too many hollows while -caver shows important tunnels. But -caver cannot show hollow that has no access to protein surface
+  NOTE: another software could be Hollow : http://hollow.sourceforge.net/
+  NOTE: PyMOL can detect cavities and voids : $0 -cavity -trans 0.7  or Settings > Surface > Cavities and Pockets,  
+ #draw arrow:  draw arrows/circle/gird for Nomal Mode Analysis, see ./pymol_arrow  ./NMA_elNemo
+  -chain1 | -chain2 ChainName : for two-point arrow, start/end point's chain name
+  -resid1 | -resid2 ResID : start/end point's ResID
+  -resn1 | -resn2 ResName : start/end point's ResName
+  -atom1 | -atom2 AtomName : start/end point's Atom Name
+   
+  -color : Will use gradient background and color residues by polarization
+  -trace_mode ray_trace_mode : Adding black-edge to cartoon : ray_trace_mode 0/1/2/3/4 [ $ray_trace_mode ]
+    =0:default =1: w/ outline =2: outline only  =3: less smoother
+    =2: black & white outline only. See http://kpwu.wordpress.com/tag/pymol/page/2/  http://www.pymolwiki.org/index.php/Ray#Modes
+   Overlap BW image and selected color image to one by ImageMagick (or gimp): composite C.png BW.png Overlap.png 
+  -bg | -bg_gradient : For PyNol v>=1.5, show gradient background  [ $bg_gradient ]
+   -bg_rgb_top RGBColor : RGB color of top bg color for bg_gradient: [ $bg_rgb_top ] yellow 
+   -bg_rgb_bottom RGBColor : RGB color of bottom bg color for bg_gradient: [ $bg_rgb_bottom ] Cyan
+   -nobg | -nogradient : no gradient background
+  X-bar : Add ugly vertical/horizontal color bar for ecletrostatics map or B-factor
+  -ray_opaque_background 1/0 : =0: background is transparent [$ray_opaque_background]
+  -glossy : shinny glossy surface
+  -spec_power ReflectPower : For reflection power: glossy or dull (small value) [$spec_power]
+  -spec_reflect ReflectFactor : For reflection sharp or diffuse (small value) [$spec_reflect]
+
+  -DNAcolor Color : Color for fance DNA-rings. Recommend: palecyan [$DNAcolor]
+     =0: Each type ring/nucleotide  has its own color
+  -DNAback Color : color for DNA-backbone [$DNAback]
+  -charge : show charge-colored atom calculated from PDB2PQR. PQR format same as PDB: Coords Charge(Occupancy col) Radius(B-factor col)
+   -chargecut MinCharge MaxCharge : User defined display cutoff for charge. Recommend -chargecut -0.3 0.3. 
+    Default: real charge range for -charge and [ $mince $maxce ] for -emap
+  -emap : show electrostatics potential map from APBS (PMF  POTENTIAL (kT/e))
+     NOTE: average/rough emap (Protein contact potential) can click each selections in pymol: 
+       Action | generate | Vaccum Electrostatics | Potential Contact Potential 
+        But the above cannot show DNA emap 
+     NOTE: VMD can show emap as well by using .dx file generated by this script. See http://www.ks.uiuc.edu/Research/vmd/minitutorials/colorbypot/ 
+     NOTE: PyMol APBS tools shows larger/better view of positive/negative patches, but looks puffy and unreal
+  -emap2 : grid-show of two emaps (emap2=1) by cutting PDB from the plane defined by 3 best contact residues in Selection to Selection2
+   -sel3 Sel1 Sel2 Sel3 : grid-show of two emaps (emap2=1) or -contact by cutting PDB from the plane defined by 3-selections (Sel1 Sel2 Sel3)
+    Rotational/Translational free (to x-axis) PDB is seperated into two PDBs by -sel and -sel2. Selection2 is flipped by -x.
+    So the two emaps will show side-by-side to see interaction surface in same view. 
+    NOTE: Sel1 Sel2 Sel3 are vmd selections, such as "name CA and resid 100 and resname ARG". -sel -sel2 are VMD selections as well
+  -contact : grid show of two selections (Selection to Selection2). 
+    Rotational/Translational free (to x-axis) PDB is seperated into two PDBs by -sel and -sel2. Selection2 is flipped by -x.
+    -cutoff_contact Cutoff : cutoff distance to show contact residues [ $cutoff_contact ]
+   NOTE: Default plot for contact residues are pseudo dots. Use '-style lines' etc. to change to other style
+
+
+  For this script:
+  -s | -sel "SelectionForAllPDBs" : Pymol Selection for all PDBs to display and align
+  -sel1 | -selection "Selection" : Pymol Selection of first PDB to display and align
+  -sel2 "Selection2" : Pymol Selection of 2nd/3/4 PDBs to display and align. e.g. chain A and (byres (resn ANP) expand 20). Or mirror part of firstPDB when -mirror
+     Not for PDB list file, which defined selections inside
+
+  Alignment methods: 
+  X-order : When input is a series of PDBs, keep same order as input. [default]: auto-check
+  [-CE | -ce] : do structural CE aligment of PDBs, first PDB as reference
+   -noCE : will do normal alignment, not default CE
+  -noaln : will NOT align PDBs. [default: will do regular alignment of PDBs]
+  -ligaln : align based on two similar ligands inside proteins by ./ligand_align, which produced best results for homologies
+  -TM : align based on structural TMalign
+  -finesel "Selection" : fine-aligment based on identical residues in a small region, such as near ligand. Together with -CE
+  -atomaln : atom/partial ligand/partial residues aligment. Must have same number of atoms in Selection2. Best align!!
+    -aselref "PymolSel": Pymol selection for refPDB in atom alignment
+    -asel "PymolSel": Pymol selection for Input in atom alignment
+    WARNing: do NOT use -sel "chain A" for atom align, which may change atom-order and give bad align!
+
+  Animations: See commands in ./pymol_movie   
+   -movie | -roll : rotate for 360 degrees
+   -morphy | -morph : animate structure changes of two states or two homology PDBs
+    -mout Out.mpg : Output movie for -morphy
+    -mstep Frames : Number of frames for morph
+    -msel | -msel PymolSel : two selections of one PDB when compare dimer structural difference by Morph
+   -frame Frames : Total frames for 360 degree rotate. 30 frames for a second
+   -fade : will toggle between two displays of a selection or make it disappear by manuplating transparency
+   -cfade : will toggle between two colors of a selection
+
+  -noshowfull : will not show Full selections (cartoon chain, metal etc.) for first and 2nd/3/4 input PDB. Also will not show 2D interaction diagram
+  -nodetail : will not show the seperate details (ligand/DNA/hbond/etc) for each individule PDB to save memory
+  -loadfull : will load full PDB of each aligned protein. [default] only load selection (e.g. chain A) of each align protein and show surface
+  -nodia | [-dia] : will not display 2D ligand interaction diagram
+    -r|-angle|-rotation Angle : rotation angle on display 2D ineraction map
+     -axis X/Y/Z (or x/y/z) : rotation axis, together with -r for angle [$axis]
+     -HIS : will convert protonated state HIP HIE HSE HSP HSD into HIS. See FTO/
+  -single : only display one dydrophobic when input is a single pdb. [default]
+   -b | -both : display both hydrophobic and philic when input is a single pdb 
+  -dis : will display residues near ligand at 3/4/5A 
+  -nocheck : will not check PDB properties, such as SS-bond, metal etc. to save time
+  -hb : will display pymol hbonds with ligand
+  -nogrid : turn off grid model to show PDBs side-by-side. Also see set grid_slot, -2, PDB: Put PDB into every slots
+  -nowater : will not display water
+  -pymol PyMolExec : Pymol excutable. Deafult: $pymol
+  -ligand "Selection3" : Selection3 to be displayed as sticks and also 3/4/5A distance residues to this selection 
+  -hydro | hydrophobic : display hydrophobic surface as red based on scale factor of each residues
+  -hydro2 | hydrophilic : display hydrophilic surface as green based on scale factor of each residues  
+    See NAMD/lipid_MD/readme http://www.protein.osaka-u.ac.jp/rcsfp/supracryst/suzuki/jpxtal/Katsutani/color_h.py
+  -emap : display self-calculated electrostatics potential map. Not good. Recoomend display emap manually from pymol
+   -force : force to recalculate .pqr .in for electrostatics potential maps from VMD
+    Faster and easy-to-check but rough/average way is to manually use (called Protein contact potential, cannot show DNA):
+      Pymol | Action | generate | Vaccum Electrostatics | Potential Contact Potential
+    Recommend: Use pymol manual one Protein contact potential to view and publish: more informative
+   -chargecut MinCharge MaxCharge : User defined display cutoff for charge. Recommend -chargecut -0.3 0.3. 
+    Default: real charge range for -charge and [ $mince $maxce ] for -emap
+  -PPI | -mirror : mirror display of two chains/selection of one protein, for PPI interaction check. Use -sel2 for mirror part
+   -off OffsetDistance : Offset OffsetDistance A distance of 2nd selection to leave a gap to check PPI
+     But may use negative OffsetDistance value if got wrong direction of offset
+   NOTE: Mirror image is hard to see. May try -off for better view
+  x-file ActionFile : file to guide actions for input PDBs. It includes 3 cols: PDB|DisplayAction|Chain(toAlign). Same as when input is PDBList
+    DisplayAction: normal, hydrophobic, hydrophilic or emap display
+    Chain(toAlign) : chain of PDB to do alignment. Only take the first char as chain
+  -file2 AlignChainFile : file to define alignment chain for input PDBs. E.g. download PDBs from ./NCBI_blast_PDBs output papain.fasta_40_30_entries.xls in SARS/PLpro
+   -pcol ColNum : col for PDB, may have .pdb or not [$pcol]
+   -ccol ColNum : col to have alignment chain. Only use the first character as chain to do alignment. [$ccol] First col must be PDB
+   -noheader|[-header] : whether file2 has header or not
+   When input is 'inside': inside is key word means PDBs to display are defined in alignChainFile
+  
+ #MD trajectory
+  -traj : will auto-search dcd named as input*.dcd for NAMD
+  -dcd TrajFile : Add NAMD(.dcd)/Gromacs(.xtc)/Amber/Desmond(.dtr) trajecotry file to input
+  -interval interval : interval to load trajtory [$interval]
+  x-mdstart StartFrame : startFrame to load [$mdstart]
+  X-mdstop StopFrame : stopFrame to load [$mdstop]
+  x-mdsel "Selection" : selection for trajtory, such as: -mdsel "not (resn TIP* or resn SOD+CLA)"
+
+ #download PDBs if not there:
+  -name : input is human protein name, such as FEN1  (Must be human!)
+  -fullname : "input" is human full protein name, such as "flap structure-specific endonuclease 1" (Must be human!)
+  -all: for human protein name, fullname or uniportID, download all PDBs related to it. [default]: only download a few represented PDBs
+  
+ How to show hydrophilic/hydrophobic surface more accurate?
+  Use -hydro2/-hydro option. See NAMD/lipid_MD/readme for each residue scale factors
+ How to find surface residues? 
+  Run in pymol: 
+   run findSurfaceResidues.py
+   sel ring, resn TYR+PHE
+   findSurfaceResidues.py ring, doShow=1 
+
+ How to do hand-docking (manual) with pymol?  See polQ/readme
+  1. Partial of protein/DNA can be moved in Editing Mode: Click right-bottom corner for Mouse Mode from "Viewing" to "Editing"
+     Or in Title bar: Mouse|3 Button Editing
+  2. Use 'creat' to create moveable, Selection to creat movable objects (not required)
+  3. In Editing Mode, ctrl+left(mouse) : 
+     Select selection Mode in Title bar: Mouse|Selection Mode|Objects
+     click to pick the moveable obj (otherwise, may only move atoms picked)
+  4. In Editing Mode, use shift+center(mouse) to move the moveable obj; shift+left to rotate the moveable obj
+    without holding shift key, can rotate/move all objs together as normal
+    ctrl+Z should re-do, but not working
+  5. Can save the moved/hand docking model by File|save molecule|Pick Selected Molecule
+
+ How to move partial of selection while other part are fixed? See above hand-docking
+   Select DNA2_Fix as DNA2 to be fixed: Action|Movement|Protect
+   Select DNA_D as dsDNA to be moved: Menu|Mouse|3 Button Editing|Click on to highlight DNA_D|Shift+Mouse to move DNA_D
+   Save final moved model as DNA2_dsDNAdm.pdb (delete CONECT terms)
+
+ How to generate publication quality picture with 600dpi (dots per inch)?
+   Normally figure size is about 640x480 pts for 6x4 inches
+   So for 6x4 inches picture:
+   ray 3600, 2700     (Then save as .png file. Add Text by SnagIt in Window)
+
+ How to add missing RNA/DNA/Protein residues or add chemical structures in pymol?
+  Can build missing RNA/DNA (even add some chemical groups) in Pymol2.3 Builder:  See Ago2/
+  https://pymolwiki.org/index.php/Builder
+  Can mutate the RNA/DNA by using ./vmd_namd_psfgen -RNA (-DNA)
+
+
+What residues good/bad on helix structure?
+Pace CN, Scholtz JM (July 1998). "A helix propensity scale based on experimental studies of peptides and proteins". Biophysical Journal. 75 (1): 422–7. 
+Proline (3.16kcal/mol) and Gly (1.0kcal/mol) are not good in helix with high penalty score:
+ Proline either breaks or kinks a helix, both because it cannot donate an amide hydrogen bond (having no amide hydrogen), 
+  and also because its sidechain interferes sterically with the backbone of the preceding turn – inside a helix,
+  this forces a bend of about 30° in the helix's axis.
+  Proline has poor helix-forming propensities by either breaking or kinking the helix
+  However, proline is often seen as the first residue of a helix, it is presumed due to its structural rigidity.
+ Glycine also tends to disrupt helices because its high conformational flexibility makes it entropically expensive 
+  to adopt the relatively constrained α-helical structure.
+Methionine, alanine, leucine, glutamate (Glu/E), and lysine uncharged ("MALEK" in the amino-acid 1-letter codes) all have especially
+high helix-forming propensities, whereas proline and glycine have poor helix-forming propensities.
+
+ How to align ligands in PDBs? See JMJD1B/readme
+  My code ./atom_align gives best aligment results for selected atoms or partial ligand: it can aln 3D ligand mae prepared by Maestro
+ To align based on ligand in PDB, download ligAlign:
+   Use ./ligand_align even works for none-identical ATP/ANP alignment
+     Tutorial: http://compbio.cs.toronto.edu/ligalign/tutorial.html
+
+ How to do structure alignment for PDBs with very low sequence identity?
+  Best could be my scaled RMSD method in ./pymol_rmsd_many
+ NOTE: ./TM_align can do structure aligment and generate TMscore for PSN (protein similarity network, PLOS one 8:e74477 2013),
+   which is a complemetary to phylogenetic tree. But structure aligment may not be as good as ligand-align. 
+   For example: gives low TMscore 0.54 for 3lfm and 5l9b in JMJD1B/PDBs
+   cealign Target, Object   ;# Align Object to Target 
+ NOTE: For comparing proteins with lower sequence identity, an alignment program like, Cealign is a better choice: http://www.pymolwiki.org/index.php/Cealign
+       Use -CE option, or type in pymol:
+        cealign aaa, bbb   #aaa coords will NOT change
+        cealign 1cll and i. 42-55, 1ggz and c. A     for (resid 42-45 of 1cll) vs (chain A of 1ggz). 1cll coords will NOT change
+        alignto PROT  #Multiple sequence alignment: CE aligned of all proteins in PyMol to one, called PROT
+ NOTE: NCBI blastp cannot work on PDBs 4c8d and 2oq6 need structural alignment (pymol -CE). See JMJD1B/
+  In this case, Ref Review paper: nature reviews:genetics 2006. vol7 715
+    Clustal Omega and MultAlin cannot do it as well for whole PDB sequences: http://www.ebi.ac.uk/Tools/msa/clustalo/
+     It can only do shorter seq with jmjc-domain only in PF02373_full_hs.txt.
+     It can generate phylogenetic tree
+    MultAlin cannot do it as well: http://multalin.toulouse.inra.fr/multalin
+       Good part of MultAlin is it will re-arrange proteins by seq identity. So good to filter identical sequences.
+        To totally rule out partially identical seqs, need to check chromosome location of each seq to see if they are same
+    NCBI blastp can do PF02373_full_hs.txt aligment, but it is the worst to do multiple aligments
+  Or: download the aligned domains from PFAM domain database: But the align could be very bad
+    NOTE: SMART seqs are better than Pfam!
+  WANRing: Pfam database does not include full length of jmjc-domain for JMJC1B/KDM3B in PF02373_full_hs.txt. Wrong!
+  Pfam also miss 7 jmjc proteins, while SMART only miss two: JMJD5. SMART database is better!
+   Metal binding HLD1562 is not included as Pfam starts from 1594aa. Only include GAPH1689aa.
+   Both SAMRT database jmjc_smart_hs.fasta.txt and review paper did it right
+   So both Pfam database and Multalin seq aligment are wrong for JMJC1B/KDM3B!
+
+iTOL can plot unrooted phylogenetic tree of kinase or others: https://itol.embl.de/
+A good kinase summary and structural/sequence alignment paper is: https://www.nature.com/articles/s41598-019-56499-4
+
+How to display EM or Cryo-EM with only CA atom in pymol?
+Cryo-EM PDB may only have CA or backbone coordinates, pymol cannot display.
+Or it has two chains named as i or I as in 5ool.pdb, pymol cannot display
+ Use ribbon to dsiplay backbone.  https://pymolwiki.org/index.php/Displaying_Biochemical_Properties
+ If only CA in PDB: set ribbon_trace,1
+ But some EM pdb with full backbone still cannot display in pymol: use Maestro to read and save out PDB for pymol See ~/ATM
+ NOTE: download from Swiss-model repository does not work (no side-chain built) : https://swissmodel.expasy.org/repository/uniprot/Q13315
+To add side-chain, Add side-chains to 5NP0 by betaSCPWeb: http://voronoi.hanyang.ac.kr/betascpweb
+ w/ minimization saved as scp.pdb  finished in 100sec (rmsd=0.001 w/ 5np0)
+Use Maestro preparation to add side-chain, takes very long time
+
+How to force pymol to show a region as helix or sheet or loop?  See http://pymol.org/pymol-command-ref.html
+  alter SelName, ss='H' ; rebuild  #force selection be helix display. ss='S' for beta sheet
+  alter 123-125/, ss='L' ; rebuild  #force resid 123-125 be loop display
+But may be bad looking as in DOT1L/
+
+How to animate conformational change of protein?
+ Run: $0 -morphy or ./pymol_movie -morphy
+ NOTE: To  create an interpolated trajectory from the first to the second conformation for two input/selections, 
+  need use paied-Pymol command Morph : https://pymolwiki.org/index.php/Morph  (A > generate > morph)
+   (morph tried to use hinge to make structure change)
+  X-ray core has this paid version pymol together with CCP4 that has morph. And also can display all types of EM PDBs. I bought it from 2019/9
+  load 5xra.pdb 5tgz.pdb ; align ; morph morph, 5xra, 5tgz  (CB1/)
+ Or use Targeted MD (TMD) simulations in NAMD: ./namd_whole_PDB -TMD
+
+How to predict flexible region (Intrinsically disordered proteins, IDP)?
+https://en.wikipedia.org/wiki/Intrinsically_disordered_proteins
+ Use ./namd_analysis to find the flexible residues during MD
+ Use ./NMA_elNemo normal mode prediction, which may give same results as MD. See ~/RhoA
+Online database and software: https://en.wikipedia.org/wiki/List_of_disorder_prediction_software
+IDP has more disorder-promoting amino acids A, R, G, Q, S, P, E and K (hydrophilic, charged)
+ and less order-promoting amino acids W, C, F, I, Y, V, L, and N (hydrophobic and uncharged) 
+ The remaining amino acids H, M, T and D are ambiguous, found in both ordered and unstructured regions
+ Dunker AK, Lawson JD, Brown CJ, Williams RM, Romero P, Oh JS, Oldfield CJ, Campen AM, Ratliff CM, Hipps KW, Ausio J, Nissen MS, Reeves R, Kang C, Kissinger CR, Bailey RW, Griswold MD, Chiu W, Garner EC, Obradovic Z (2001). "Intrinsically disordered protein". Journal of Molecular Graphics & Modelling. 19 (1): 26–59.
+
+Interactions:
+pi interaction : https://en.wikipedia.org/wiki/Pi_interaction
+  Aromatic ring has negative charge in center!
+ My code: ./pdb_getPiRing
+ Online server: Ring 2.0 http://protein.bio.unipd.it/ring/
+pi stacking (also called pi-pi stacking): https://en.wikipedia.org/wiki/Stacking_%28chemistry%29
+   refers to attractive, noncovalent interactions between aromatic rings, since they contain pi bonds.
+ Three types in protein: parallel-displaced > T-shaped > sandwich
+ Ring center distance: TYR/TRP/PHE ~5A
+ The interaction intensity should be TRP>PHE>TYR based on electrostatic surfaces (more negative in center, better)
+ Ring 2.0 use: (Most occured: 5.9A) cutoff: strict is 6.5A, relaxed is 7A
+Cation-Pi Interactions : LYS ...(TYR/TRP/PHE)s: https://en.wikipedia.org/wiki/Cation%E2%80%93pi_interaction
+ ~ 50% of aromatic residues Phe, Tyr, and Trp were within 6Å of amino groups.
+ Furthermore, approximately 25% of nitrogen containing side chains Lys, Asn, Gln, and His
+  were within van der Waals contact with aromatics and
+ 50% of Arg in contact with multiple aromatic residues (2 on average)
+ Ring 2.0 use: (Most occured bipeak: 3.5A/4.5A) cutoff: strict is 5A, relaxed is 7A
+Anion-pi interaction  : expelsion)
+CH-pi interaction: weaker hbond ~0.9 kcal/mol 3-4.5A(best 3.8A)  http://www.imtech.res.in/raghava/chpredict/cho.html
+  See ACTL6A for M254I mutation M254 forms CH-pi with W250 to stabilize helix structure
+ https://www.ncbi.nlm.nih.gov/pubmed/11243825: 
+ C-H-pi interactions appear to occur relatively frequently between side-chains of residues that are not very far apart in sequence. 
+  In some cases they might even be responsible for the stabilization of structural elements such as alpha or 310-helices or non-proline cis peptide bonds.
+ a preference for aromatic C-H groups was observed, but also for the aliphatic side-chains of the long, extended amino acid residues 
+  Lys, Arg and Met, and the Pro ring
+ H..C(Phe) (H to aromatic-C distance) ~2.9A. C-H..ring planar: ~140 degree (Euro J Organic Chem V2004 (23)
+    http://www.sciencedirect.com/science/article/pii/S0022283600944735
+  C..Phe center: ~
+ OH-pi, NH-pi: ~3.5 kcal/mol  OH-O -7.8kcal/mol  CH-O: 1.1 CH-pi: 0.9
+ XC...O=C <= 3.8A H...O=C <=3.3A, C-H...O >=120degree and H...O=C >= 90degree
+CH-O interaction: http://www.imtech.res.in/raghava/chpredict/cho.html
+ form 20-25% of the total number of hydrogen bonds ~1.1kcal/mol
+ H..O<2.5A, C..O<3.9A, C-H..O>90 degree
+halogen-pi interaction (crystal engineering 6 (2003) 69-77, Cl-pi: prot sci 2008 17:1129-1137,
+  C-Cl/C-Br-pi: Angewandte Chemie 2009,48,2911-16)
+  increase binding via dispersion force ~-2kcal/mol, not like Anion-pi
+
+hydrogen bond (HB):  D...H-A  (N/OH..Ph is hbond)
+halogen bond (XB) : D...X-A  Donor is electron rich. Acceptor is electron poor withdrawing H electron
+  Donor as F<Cl<Br<I (I is best for donor)
+  A difference between HB and XB is since halogen atoms are Lewis bases,
+   a halogen atom can both donate and accept in a halogen bond
+   O(H)-Br halogen bond: 2.7-3.0A (vdw distance 3.35A)
+   N-I halogen bond: 2.8A (vwd radius 3.53A)
+  https://en.wikipedia.org/wiki/Halogen_bond
+ C-X..N (I:7kcal/mol,2.8A Br:4.5,2.8A,Cl:2,2.9A) Chem Phy 374 (2010) 30-36
+ C-X..O/S-Y (I: 3.5A, Br: 3.37A, Cl: 3.27A) PNAS 101(48) 2004, 16789
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3835058/ :
+The presence of halogen atoms in a molecule increases its lipophilicity and hydrophobicity...
+ Consequently, halogen bonding can be considered as a hydrophobic equivalent of the hydrophilic hydrogen bonding.
+halogen bonds tend to be much more directional than (single) hydrogen bonds
+halogen bonds are hydrophobic whereas hydrogen bonds are hydrophilic
+halogen bonds tend to be more directional than (single) hydrogen bonds, with the typical R¿X···Y (Y is any nucleophilic site) bond angle
+ being closer to 180 degree
+the bond strength develops in the order I > Br > Cl (fluorine atom can act as a halogen-bond donor only when attached to particularly
+ strong electron-withdrawing groups). Therefore, the halogen bond interaction strength can be tuned through single-atom mutation while
+ hydrogen bond requires major changes into the residue the bond donor site is bound to.
+The van der Waals radii of iodine (bromine) and hydrogen are 1.98A (1.85A) and 1.20A. Size is different
+Run ./pdb_halogenbond
+
+
+ NOTE: To force display as helix/sheet, type: alter SelName, ss='S' ; rebuild   But may result in weird looking
+ NOTE: Pymol use PDB HEARDER line to determine display name in pymol. So assign what u want display by adding HEADER row. Or load A.pdb, name
+ NOTE: Pymol index is the same as atom number!! Need -addone here to convert vmd index to pymol
+ NOTE: PYMOL cartoon does NOT work for protein (MODEL 0) in Glide PDB. Need to extract it out as a single PDB and puts at the beginning of Pymol script
+       or type 'dss' to rebuild 2nd structure in PyMol
+ NOTE: Display > Color Space > CMYK (cyan-magenta-yellow-black) for true color printing. RGB color may not give same color as printing
+ NOTE: set transparency, 0.3, Selection     (1.0 invisible)  
+ NOTE: to show thin sticks, must create object first: creat aaa, chain A ; set stick_radius, 0.12, aaa (default sticks width=0.25) 
+ NOTE: fancy DNA to show DNA-rings is: set cartoon_ring_mode, 3; set cartoon_ring_color, cyan, DNA
+ NOTE: fancy cartoon: set cartoon_highlight_color, lightorange; set cartoon_fancy_helices, 1; set cartoon_fancy_sheets, 1; set cartoon_discrete_colors, 1; set cartoon_side_chain_helper, on
+ NOTE: cyclinder for cartoon use -cylinder : set cartoon_cylindrical_helices, 1
+ NOTE: to convert between surface and cavity mode : set surface_cavity_mode, 1 ; #Invert(1) or normal (0) surface to show cavity
+       Then in pymol: Setting | Surface | Wireframe
+ NOTE: To animate structural change of two states or two homology PDBs by Pymol Morphy: ./pymol_movie -morphy -out m.mpg A.pdb B.pdb
+ NOTE: Calculate volume of protein cavity: ~/POVME_2_0_1/readme  ~/PPAR/readme
+ NOTE: to create a close surface for a select part of protein, need create a new selection first:
+          sel A, id 1-100; create B, A; show surface, B
+ NOTE: To avoid surface hollow of prots for contacting ligand, create new ligand and delete old lig: 
+          sel lig, resn UNK; create ligand, lig; remove lig; delete lig; show surface, prots
+        Or just: sel prot, not lig; create protein, prot 
+ NOTE: to remove backbone atoms for clean show: not name c+n+ha+o+hn 
+   (keep ca atom to show backbone connection. Some times need move ca as well for unique color)
+ NOTE: HBond: The better version to demo VMD HBond is ./glide_hbonds  This one can only demo PyMol HBonds
+ NOTE: plot grid, circle, arrow,  cgo-related, use ./pymol_arrow
+ NOTE: Analyze pi-stacking and anion-pi interaction, run ./pdb_getPiRing
+ NOTE: Check halogen bond with ligand, run ./pdb_halogenbond
+ NOTE: standard procedures to analysis PDBs, see ./pdb_analysis
+ NOTE: Residue flexiblity/ RMSD of different PDBs for same protein: ./pymol_rmsd -identical -whole -chain1 A -chain2 A 2EWP.pdb 2E2R.pdb
+       Residue flexibility of homology PDBs: ./pymol_rmsd  -whole -all -chain1 A -chain2 A -gnu2 3GC8.pdb 1CM8.pdb
+       Align all MODELs to refPDB: ./pymol_rmsd -merge RefPDB.pdb MODELs.pdb
+       To map flexible residues from MD into pymol: ./pdb_mapRMSD -file full_20_0_ResidueRMS2.xls pim3_61_md_wb_ions.pdb  #PIM3/MD
+ NOTE: Fine-alignment of two homologys based on selection of residues (not the general alignment by pymol):
+   ./pdb_mapping -CE -finesel "byres (resn NPZ or resn ANP) expand 15" -aln1 "chain A" -aln2 "chain A" -sel "byres (resn NPZ or resn ANP) expand 6" 1CM8.pdb 3ene.pdb
+   ./pymol_pdb_fineAlign -aln1 "chain A" -aln2 "chain A" -sel "byres (resn P66 or resn ANP) expand 6" 1CM8.pdb 3itz.pdb 
+ NOTE: Find different residues of two homology proteins around ligand P66:
+  ./pdb_mapping -finesel "byres (resn P66 or resn ANP) expand 10" -aln1 "chain A" -aln2 "chain A" -sel "byres (resn P66 or resn ANP) expand 6" 1CM8.pdb 3itz.pdb
+ NOTE: FATCAT online server can compare two PDBs as well: http://fatcat.godziklab.org/
+
+ NOTE: For electrostatics map, use action=NA in input list and manually use pymol: This map looks smoother and better than VMD map, but not real
+    Pymol | Action | generate | Vaccum Electrostatics | Potential Contact Potential
+ NOTE: To check contact residues and contact pairs and hydrophoblic PPI, run ./pymol_pdb_contacts -sel "chain A" -sel2 "chain B" 3THW.pdb
+ NOTE: To generate 2D ligand/selectedProtein interaction diagram, use ./lig_interaction_plot
+ NOTE: To generate pymol movie for animation binding, fade, zoom etc. use ./pymol_movie
+ NOTE: To show metal chelation residues: ./pdb_metal_check 
+ NOTE: To align and compare 3D ligands from Maestro, run: ./atom_align -islig -s "resn UNK and name C1+C2+C5+C6+C10+C11" N1.mae N2.mae N3.mae (3D ligand aln. See Myc/)
+ NOTE: To display interaction network of hydrophobic interaction, hbond, pi-interaction for metal/ligand/residues, run ./pymol_pdb_contacts
+
+Example:
+
+   #For single input protein: can show chains (diff color), metal, hydrophobic/hydrophilic/emap, mirror image for PPI
+      $0 -morph -mstep 60 -msel "chain A+E" -msel2 "chain B+F" 3scl.pdb  #In ACE2/, compare structural difference of two monomers
+      $0 -name Fen1   #Will auto-download 3 represented PDBs for FEN1 (for human protein only!)
+      $0 2q8dA  #will auto-download PDB 2q8d chain A
+      $0 -all name Fen1  #Will auto-download all 11 FEN1 PDBs (for human protein only!)
+      $0 -all P39748  #Download all 11 PDBs related to Uniprot P39748 (FEN1)
+      $0 -fancy GlidePose.pdb  #Only show hydrophobic (not two for both phobic and philic). Show fancy cartoon
+      $0 -model 5 InduceFitDocking.pdb   #Only show #5 MODEL for induce fit docking pose file that have many MODELs inside
+      $0 -roll A.pdb  #also animation/rotate protein
+      $0 -b A.pdb (will show surface of first Chain by default, two for both phobic and philic side-by-side) 
+        #will show chains (different color cartoon), metal, DNA etc. of a protein (defined in Full: if you disable first/2nd protein). -noshowfull 
+        #Also hydrophobic/hydrophilic/emap side-by-side
+      $0 -sel "chain A+C" A.pdb 
+        #will show hydrophobic/hydrophilic/emap PDB surface side-by-side for selected chain A+C. Full protein is defined as Full
+      $0 -hydro -CE -sel "chain A and (byres (resn NPZ) expand 20)"  -sel2 "chain A and (byres (resn ANP) expand 20)" 3enem.pdb 1cm8.pdb
+        #Show hydrophobic surface as red based on scale factor of each residues and structure align of two proteins
+      $0 -off 10 -sel "chain A" -sel2 "chain B" 1fin.pdb
+        #Offset 10A to chain B to leave a gap to check PPI. May use negative OffsetDistance value if got wrong direction of offset
+      $0 -hydrophobic/-emap -mirror -sel "chain A" -sel2 "chain B" 1fin.pdb 
+         #Flip chain B as mirror image to check hydrophobic/emap interaction with chain A. Also check contact pairs. From CDK/
+         #Recommended to run instead that has better display: ./pymol_pdb_contacts -sel "chain A" -sel2 "chain B" 3THW.pdb in MSH2/ 
+         #Recommend to use -off which offset two selections for better view
+      $0 -force ...
+         #Force to recalculate eletrostatic map. Otherwise, exsiting map will be used that may not you want
+      $0 -traj -interval 10 3al2_md_wb_ions.pdb   #Automatically find NAMD trajecotry 3al2_md_wb_ions*.dcd and loaded
+      $0 -water -dcd 3al2_md_wb_ions_eq2_50ns_TMD0.dcd 3al2_md_wb_ions.pdb    #Will display water and salt
+        #load NAMD/Gromacs/Amber/Desmond trajectory file to show MD    
+
+   #For two inputs to animate structure change of two states or two homology PDBs
+      $0 -morphy -mout t.mpg 1r42.pdb ACE1/1o86.pdb      #Test in ACE2/ to show structural change of two states or two homology PDBs
+   #For two input proteins to compare side-by-side: will do alignment by different methods as -CE
+      $0 -hydro/-emap -sel "chain A" -sel2 "chain B" A.pdb B.pdb 
+      $0 -hydro -CE -sel "chain A" -sel2 "chain A" 1cm8.pdb 3enem.pdb   #CE align 
+      $0 -hydro/-emap -finesel "byres (resn NPZ or resn ANP) expand 15" -CE -sel "chain A and (byres (resn NPZ) expand 20)"  -sel2 "chain A and (byres (resn ANP) expand 20)" 3enem.pdb 1cm8.pdb  
+         #Do fine-aligment near ligand can improve align of homologies, see PI3K/
+      $0 -hydro -ligaln -sel "chain A and (byres (resn ATP) expand 20)"  -sel2 "chain A and (byres (resn ANP) expand 20)" 1e8x.pdb 1cm8.pdb
+         #Do ligand aligment for ATP in 1e8x and ANP in 1cm8 in PI3K/
+      $0 -hydro -TM -s "chain A" A.pdb B.pdb
+         #Do TMalign on chain A
+      $0 -hydro -asel "resn ATP and name N1+C2+N3+C4+C5+C6+N7+C8+N9" -aselref "resn ANP and chain A and name N1+C2+N3+C4+C5+C6+N7+C8+N9" 1cm8.pdb 1e8x.pdb
+         #Do atom alignment of two rings on ANP/ATP. Best alignment!! 
+         #Do not use -sel1 "chain A", which may change atom order and make bad alignment!
+ 
+   #For multiple proteins to compare side-by-side: -sel "chain A" good to check all X-ray inhibitors. -nodetail good to check PPI proteins
+     $0 -name FEN1 GEN1  #will auto-download 4 PDBs represented for two human proteins named as FEN1 and GEN1
+     $0 P39748 Q9H816  #will auto-download 6 PDBs represented for two uniprotIDs (not all PDBs)
+     $0 2q8dA 4v2wA 4v2vA 5t9j  #will auto-download 4 PDBs (can w/ chain ID at last). Align by chain A (default)
+     $0 -sel "chain A" -hydro '????.pdb'  #regular expression for many PDBs downloaded from PDB. Use chain A for align and display hydrophobic surf
+        #Only display other chains for top 5 PDBs. Other proteins only display chain A
+        #Good to check for all X-ray inhibitors in Chain A
+     $0 -nodetail '????.pdb'  
+        #Check all PDBs (aligned by chain A) for all ligand/metal/DNA/RNA together. See Ago2/
+     $0 -loadfull '????.pdb'
+        #Will show all chains (not only selection e.g. chain A). Good to check PPI proteins. See p53/
+     $0 -hydrophobic/-emap -sel "chain A" -sel2 "chain B" A.pdb B.pdb C.pdb D.pdb
+        #Compare upto 4 PDBs side-by-side on -hydrophobic/-emap surface and -sel2 for B/C/D
+     $0 -nogrid -CE PDB.list  
+        #input is PDB lists to display with action/selection inside: F74.pdb hydrophobic chain A and (byres (resn UNK) expand 20). 
+        #PDB.list has 3 cols: PDB|Action(normal,hydrophobic,hydrophilic, or emap)|selections(toAnlign and Display)
+        x# Or 4 cols: PDB|Action(normal,hydrophobic,hydrophilic, or emap)|selections(toDisplay)|chain(toAlign)
+     $0 -nocheck -file2 papain.fasta_40_30_entries.xls -header -ccol 3 -pcol 2 '????.pdb'
+         #Use alignChainFile (w/ header, aligned chain defined in col3 to align PDBs defined in col2). PDB may have .pdb or not. See SARS/PLpro
+     $0 -nocheck -file2 papain.fasta_40_30_entries.xls -header -ccol 3 -pcol 2 inside   [inside is key word means PDBs defined in alignChainFile]
+         #Use alignChainFile to do align. Also all dispalyed PDBs defined in alignChainFile
+
+ttt
+  exit
+fi
+
+if [ $dofile2 -eq 1 ] ; then
+ if [ "$input" == "inside" ] ; then
+  echo "Will use PDBs defined inside chainAlignFile $file2 col $pcol to display"
+  input=`awk 'BEGIN{p='$pcol';h='$header'}{if(NR>h){y=$p;x=tolower(y);l=length(x)-3;
+   if(substr(x,l,4)==".pdb"){printf("%s ", x)}else{printf("%s.pdb ", x)}}}' $file2`
+ fi
+fi
+
+nc=`echo "$input" | wc -w | awk '{print $1}'`
+infile="Show_$nc"
+if [ $nc -eq 1 ] ; then
+ infile=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+ isSDF=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".sdf"){print 1}else{print 0}}'`
+ [ $isSDF -eq 0 ] && input=$infile'.pdb'
+fi
+inputoriginal=$input
+inputo=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+inputoo=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print $1}else{printf("%s.pdb",$1)}}'`
+input2oo=`echo $input2 | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print $1}else{printf("%s.pdb",$1)}}'`
+inputo=`basename $inputo`
+infileo=`basename $infile`
+pqr=$infile'.pqr'
+ppqr=$infile'_PQR.pdb'
+ppqrname=`basename $ppqr .pdb`
+apbsin=$infile'.in'
+apbsdxn=$infile'_e'
+apbsdx=$apbsdxn'.dx'  #dx file is potential of grids
+apbsp=$infile'-input.p'
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4' ; temp5=$temp'5'
+
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+isScaleMP=0  #=1: runs on ScaleMP machine, need special code for Schrodinger
+if [ -d "/flower_data/" ] ; then
+ isScaleMP=1; ed='/flower_data/hongzhili/database/pipeline_script/' #Admin defined directory with scripts
+fi
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/1-char23-char  $ed/pdb_getChainResn $ed/vmd_pdb_rotation $ed/vmd_pdb_contacts $ed/pymol_arrow  $ed/vmd_namd_pdb_measure .
+ cp -f $ed/drawMinBoundingBox.py $ed/do_caver $ed/pdb_contactmap $ed/pdb_contact_surface $ed/image_manipulate $ed/color_h.py .
+ cp -f $ed/pdb_seperate $ed/pymol_show $ed/pymol_pdb_select $ed/pymol_pdb_contacts $ed/pdb_get3point .
+ cp -f $ed/findSurfaceResidues.py $ed/pdb_checkChain $ed/atom_align $ed/pymol_scriptout $ed/pdb_merge $ed/pdb_returnChain .
+ cp -f $ed/lig_interaction_plot $ed/pymol_movie $ed/pdb_check $ed/glide_hbonds $ed/pdb_download $ed/pdb_getProperty .
+ cp -f $ed/pdb_metal_check $ed/pdb_cavity_volume .
+fi
+
+#get metal names from ./pymol_scriptout
+metals=`./pymol_scriptout -getMetal 1`
+
+action='normal'
+[ $dohydro -eq 1 ] && action='hydrophobic'
+[ $dohydro -eq 2 ] && action='hydrophilic'
+[ $emap -eq 1 ] && action='emap'
+
+npdbo=$npdb
+#Input1 is regular expression or series of PDBs
+n1=`ls -l $input | wc -l | awk '{print $1}'`
+n1t=`echo $input | wc -w | awk '{print $1}'` 
+notlisthere=0
+if [ $n1 -gt 1 ] ; then
+ echo "Compare $action surfaces of $npdb proteins"
+ if [ $n1 -ne $n1t ] ; then #regular expression
+  ls -l $input | awk -v s="$selection" -v s2="$selection2" '{
+  if(NR==1){
+   print $NF, "'$action'", s
+  }else{
+   print $NF, "'$action'", s2
+  }}' > $temp.list
+  echo "Input1 is regular expression has $n1 proteins"
+ else #series of PDBs, keep order of PDBs
+  echo $input | awk -v s="$selection" -v s2="$selection2" '{
+   print $1, "'$action'", s
+   for (i=2;i<=NF;i++){
+    print $i, "'$action'", s2
+  }}' > $temp.list
+  echo "Input1 is series of PDBs with explicit names of $n1 proteins"
+ fi
+ npdbo=$n1 #used for alignment: =1: -nolan (no aligment) >1: do alignment
+ input=`ls -l $input | head -1 | awk '{print $NF}'`  #for full PDB show
+else
+ echo "$input" | awk '{for(i=1;i<=NF;i++){print $i}}' > $temp.list
+ n1=`echo $input | wc -w | awk '{print $1}'`
+ notlisthere=1
+ #echo $input > $temp.list
+fi
+
+#Check if need to download PDBs
+if [ $notlisthere -eq 1 ] ; then
+[ $npdb -ge 2 ] && echo $input2 >> $temp.list
+[ $npdb -ge 3 ] && echo $input3 >> $temp.list
+[ $npdb -ge 4 ] && echo $input4 >> $temp.list
+[ $npdb -ge 5 ] && echo $input5 >> $temp.list
+n1=`wc -l $temp.list | awk '{print $1}'` 
+echo -n > $temp.list2
+for (( i=1; i<=$n1 ; i++ )) ; do
+ pdbi=`head -$i $temp.list | tail -1 | awk '{print $1}'`
+ input1low=`echo $pdbi | awk '{print tolower($1)}'`
+ name1=`echo $pdbi | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print tolower(substr($1,1,l-1))}else{print tolower($1)}}'`
+ if [ ! -s $pdbi ] && [ ! -s $name1.pdb ] ; then
+  echo "Will download PDBid (can w/ chain)|UniprotID|HumanProteinName $pdbi as $name1.pdb"
+  #if [ $downall -eq 1 ] ; then
+  # ./UniProt_get -getPDB -less $name1
+  #else
+  ./pdb_download $downlead -HETATM -ligand $name1 | tee $temp
+  #fi
+ fi
+ ndown=`grep 'Will download the following' $temp | head -1 | awk '{print $5}'`
+ if [ "$ndown" == "" ] ; then  #This is PDBid (can w/ chain)
+  if [ ! -s $pdbi ] ; then
+   pdbi=$name1.pdb
+  fi
+  if [ ! -s $pdbi ] ; then
+   echo "Fatal error! Cannot find $pdbi"
+   rm $temp* ; exit
+  fi
+  if [ $i -eq 1 ] ; then
+   echo $pdbi $action $selection >> $temp.list2
+   pdbfirst=$pdbi
+  else
+   echo $pdbi $action $selection2 >> $temp.list2
+  fi
+ else #This is Uniprot|HumanProteinName
+  awk -v action="$action" -v sel="$selection" -v sel2="$selection2" '{
+   if(s>0&&k<s){k++;se=sel2;if(k==1&&'$i'==1){se=sel};print $NF,action,se}
+   if($1=="Will"&&$2=="download"&&$4=="following"){s=$5}
+  }' $temp >> $temp.list2
+ fi #"$ndown" == ""
+done
+n1=`wc -l $temp.list2 | awk '{print $1}'`
+npdb=1
+if [ $n1 -eq 1 ] ; then
+ input=`head -1 $temp.list2 | awk '{print $1}'`
+else
+ input=$temp.list2  #treat input as list for multiple proteins
+ echo "=> Final downloaded proteins = $n1"
+ cp $temp.list2 $temp.list
+ n1=1
+ cat $temp.list
+fi
+fi #notlisthere
+
+
+#Check disconnect etc of proteins
+if [ $nocheck -ne 1 ] ; then
+for (( i=1; i<=$n1 ; i++ )) ; do
+ pdbi=`head -$i $temp.list | tail -1 | awk '{print $1}'`
+ if [ $dotraj -ne 1 ] && [ -s $pdbi ] ; then  #bypass check for MD to save time
+  echo "=> Check #$i ($n1) $pdbi :"
+  ./pdb_check -noSS $pdbi
+ fi
+done
+fi
+
+if [ $npdb -eq 1 ] && [ $n1 -eq 1 ] ; then  #For file : one PDB or a list file
+ ispdb=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print 1}else{print 0}}'`
+ if [ $ispdb -eq 1 ] ; then #For single protein: hydrophobic/hydrophilic/electrostatics potential side-by-side
+  #Check if default chain A there
+  if [ $didsel1 -eq 0 ] ; then
+  # firstchain=`./pdb_returnChain $input | head -1 | awk '{a=substr($1,1,1);if(a=="-"){print ""}else{print "chain ",a," and "}}'`
+  # selection=$firstchain' not resn UNK+HOH+TIP3+TIP+SOD+CLA' 
+   selection='not resn UNK+HOH+TIP3+TIP+SOD+CLA'  #Display surface all chains
+  fi
+  
+  if [ $domirror -eq 0 ] ; then  #normal show for $selection
+   echo "Input $input is a single PDB to display hydrophobic/hydrophilic/electrostatics potential side-by-side for $selection"
+   echo "  Pymol has contact potential (very rough emap): Action | generate | Vaccum Electrostatics | Potential Contact Potential"
+   echo "  Then: set grid_slot,3,$inputo"
+   echo "$input hydrophobic $selection" > $temp.list
+   [ $single -ne 1 ] && echo "$input hydrophilic $selection" >> $temp.list
+   [ $emap -eq 1 ] && echo "$input emap $selection" >> $temp.list
+   doCE=2  #no aln
+  else  #Mirror show when -mirror for PPI interaction
+   echo "Seperate single protein $input by $selection and $selection2 . Mirror the later part for PPI interaction"
+   #PPI contact of two selections:
+   ./pymol_pdb_contacts -nodisplay -outcontact2 $temp4 -sel "$selection" -sel2 "$selection2" $input 
+   echo " ***Recommended to run for hydrophoblic PPI: ./pymol_pdb_contacts -sel \"$selection\" -sel2 \"$selection2\" $input "
+
+   echo "=> Select 3 contact residues/points as 3-point plane to remove protein translation/rotation:"
+  usebest=1 #Pick best triangle
+  if [ $usebest -eq 1 ] ; then #Need select best 3points triangle to define a better plane
+   echo "  Auto-selected best 3 points triangle with largest distances from ${inputo}_3points.txt :"
+   ./pdb_get3point -less -file $temp4 -out ${inputo}_3points.txt $input | tee $temp
+   best3p=`head -1 ${inputo}_3points.txt | awk '{print $1,$2,$3}'`
+   echo $best3p
+   res1=`echo $best3p | awk '{split($1,a,":");printf("resname %s and resid %s",substr(a[1],1,3),substr(a[1],4,10));if(a[2]!=""){printf(" and chain %s",a[2])}}'`
+   res2=`echo $best3p | awk '{split($2,a,":");printf("resname %s and resid %s",substr(a[1],1,3),substr(a[1],4,10));if(a[2]!=""){printf(" and chain %s",a[2])}}'`
+   res3=`echo $best3p | awk '{split($3,a,":");printf("resname %s and resid %s",substr(a[1],1,3),substr(a[1],4,10));if(a[2]!=""){printf(" and chain %s",a[2])}}'`
+  else  #random pick: first/middle/last
+   echo "  Pick 3 first/middle/last points triangle from ${inputo}_3points.txt :" 
+   res1=`cat $temp4 | awk '{split($1,a,":");printf("resname %s and resid %s",substr(a[1],1,3),substr(a[1],4,10));if(a[2]!=""){printf(" and chain %s",a[2])}}'`
+   res2=`cat $temp4 | awk '{b=int(NF/2)+1;split($b,a,":");printf("resname %s and resid %s",substr(a[1],1,3),substr(a[1],4,10));if(a[2]!=""){printf(" and chain %s",a[2])}}'`
+   res3=`cat $temp4 | awk '{split($NF,a,":");printf("resname %s and resid %s",substr(a[1],1,3),substr(a[1],4,10));if(a[2]!=""){printf(" and chain %s",a[2])}}'`
+  fi #usebest
+   echo " ($res1) ($res2) ($res3)"  
+
+   #remove translation/rotation of PDB vs 3-point plane: 3 points will have x=0 and center=0,0,0
+   ./vmd_pdb_rotation -sel1 "$res1" -sel2 "$res2" -sel3 "$res3" -out ${inputo}_mv.pdb $input > $temp 
+   ./pymol_pdb_select -sel "$selection" -out ${inputo}_A.pdb ${inputo}_mv.pdb > $temp
+   ./pymol_pdb_select -sel "$selection2" -out ${inputo}_B.pdb ${inputo}_mv.pdb > $temp
+
+   if [ $dooffx -eq 0 ] ; then
+   #Mirror the 2nd selections: #x-axe mirror Only reverse XZ is good. But pymol cannot take mirror protein cartoon to display correctly 
+    ./vmd_pdb_rotation -xz -out ${inputo}_rB.pdb ${inputo}_B.pdb > $temp
+    ./vmd_pdb_rotation -xz -out ${inputo}_rmv.pdb ${inputo}_mv.pdb > $temp
+    echo " Will mirror the 2nd selections $selections . WARNing: Use -off 10 could have better view of PPI"
+   else
+    #This may also usefull to display to offset the 2nd selection in X-axis for 10A, then set grid_mode, off
+    ./vmd_pdb_rotation -offset $offx 0 0 -out ${inputo}_rB.pdb ${inputo}_B.pdb > $temp
+    ./pdb_merge -out ${inputo}_rmv.pdb ${inputo}_A.pdb ${inputo}_rB.pdb
+    echo " Will offset the 2nd selections $selections for $offx A, so that have better PPI view. But may need -off -$offx if wrong offset direction "
+    echo "WARNing: if offset overlapped proteins, may need: -off -$offx"
+   fi
+   
+   npdb=3
+   inputmv=${inputo}_mv.pdb  #full PDB after remove translation/rotation
+   inputmv2=${inputo}_rmv.pdb  #full PDB thenafter mirror/offset
+   input=${inputo}_A.pdb   #first selection after remove translation/rotation
+   input2=${inputo}_rB.pdb  #2nd selection after mirror/offset
+   input3=${inputo}_B.pdb  #2nd selection after remove translation/rotation. Will display in same grid as $input
+   selection='all' ; selection2='all'
+   [ $dohydro -eq 0 ] && dohydro=1 #display hydrophobic surface
+  fi
+ else #a single file
+  echo "Input $input is a PDB list with actions/selections inside"
+  cp $input $temp.list
+  npdbo=2
+ fi
+fi #npdb
+
+#For multiple proteins or plots
+if [ $npdb -gt 1 ] ; then
+ echo "Compare $action surfaces of $npdb proteins"
+ if [ $npdb -ge 2 ] ; then
+  #Check if default chain A there
+  if [ $didsel1 -eq 0 ] ; then
+   firstchain=`./pdb_returnChain $input | head -1 | awk '{a=substr($1,1,1);if(a=="-"){print ""}else{print "chain ",a," and "}}'`
+   selection=$firstchain' not resn UNK+HOH+TIP3+TIP+SOD+CLA'
+  fi
+  if [ $didsel2 -eq 0 ] ; then
+   firstchain=`./pdb_returnChain $input2 | head -1 | awk '{a=substr($1,1,1);if(a=="-"){print ""}else{print "chain ",a," and "}}'`
+   selection2=$firstchain' not resn UNK+HOH+TIP3+TIP+SOD+CLA'
+  fi
+  echo "$input $action $selection" > $temp.list
+  echo "$input2 $action $selection2" >> $temp.list
+ fi
+ [ $npdb -ge 3 ] && echo "$input3 $action $selection2" >> $temp.list
+ [ $npdb -ge 4 ] && echo "$input4 $action $selection2" >> $temp.list
+ [ $npdb -ge 5 ] && echo "$input5 $action $selection2" >> $temp.list
+
+fi #npdb
+
+npdb=`wc -l $temp.list | awk '{print $1}'`
+echo " $npdb surfaces will be displayed side-by-side"
+
+inputo=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+inputo=`basename $inputo`
+input2o=`echo $input2 | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+input2o=`basename $input2o`
+inputo2=`head -1 $temp.list | tail -1 | awk '{print $1}'`  #For Full display of PDBs
+
+
+[ $doout -ne 1 ] && output=$input'.pml'
+ofile=`echo $output | awk '{l=length($1)-3;if(substr($1,l,4)==".pml"){print substr($1,1,l-1)}else{print $1}}'`
+output=$ofile'.pml'
+
+
+if [ $docarea -eq 1 ] ; then
+ d='-display'
+ [ $show -eq 0 ] && d='-nodisplay'
+ ./pdb_contact_surface $d -cut $cutoff_contact -sel1 "$selection" -sel2 "$selection2" $input
+ exit
+fi
+
+#For round-end dashed-line to show HBonds, dash_gap must be more than 2 times of dash_radius to show real gap since the round end
+if [ $dash_round -ne 0 ] ; then
+ dash_gap=`echo $dash_width $dash_gap | awk '{print $2+2*$1}'`
+fi
+
+[ $emap2 -eq 1 ] && grid=1
+[ $contact -eq 1 ] && grid=1
+[ $npdb -eq 1 ] && grid=0
+gridmode=''
+[ $grid -eq 1 ] && gridmode='set grid_mode, 1'
+
+#if [ $nc -eq 1 ] ; then
+ ./vmd_namd_pdb_measure $input | tee $temp
+ centerx=`grep 'Center is' $temp | tail -1 | awk '{print $4}'`
+ centery=`grep 'Center is' $temp | tail -1 | awk '{print $5}'`
+ centerz=`grep 'Center is' $temp | tail -1 | awk '{print $6}'`
+ sizex=`grep 'Protein size is' $temp | tail -1 | awk '{print $4}'`
+ sizey=`grep 'Protein size is' $temp | tail -1 | awk '{print $5}'`
+ sizez=`grep 'Protein size is' $temp | tail -1 | awk '{print $6}'`
+ topx=`echo $centerx $sizex | awk '{printf("%5.2f",$1+$2/2)}'`
+ topy=`echo $centery $sizey | awk '{printf("%5.2f",$1+$2/2)}'`
+ topz=`echo $centerz $sizez | awk '{printf("%5.2f",$1+$2/2)}'`
+ topyoff=`echo $topy 10 | awk '{printf("%5.2f",$1+$2)}'`  #off from topy
+ #echo "Top : ( $topx $topy $topz )"
+#fi
+
+
+#################################################################################################################################################
+#Two emaps show side-by-side
+# A roughly worked one to split protein as an apple and compare two inner side, see ./pymol_pdb_contacts
+if [ $emap2 -eq 1 ] || [ $contact -eq 1 ] ; then
+ didlabel=1
+ ./vmd_pdb_contacts -noshowpair -nodup -showtop 10 -sel1 "$selection" -sel2 "$selection2" $input | tee  $temp
+ #./pdb_contactmap -showpair -cut 4 -nognu -chain1 A -chain2 X A.pdb
+ awk 'BEGIN{cut='$cutoff_contact';s=0}{if($2=="A:"&&$1=="2.00"){s++};if($2=="A:"&&$1<=cut&&s==2){for(i=3;i<=NF;i++){printf("%s ",$i)}}}' $temp > $temp2
+ ./1-char23-char $temp2 > $temp3
+ contact1=`cat $temp3 | awk -v sel1="$selection" '{for(i=1;i<=NF;i++){
+    if(i>1){printf(" or ")}
+    l=length($i)-3;printf(" ( resname %s and resid %s ) ",substr($i,1,3), substr($i,4,l))
+   }
+   printf(" and ( %s )",sel1)}'`
+ #creat psedoatoms for contact residues:
+ cat $temp3 | awk -v sel1="$selection" '{for(i=1;i<=NF;i++){
+    l=length($i)-3
+    printf("pseudoatom Contact1_%d, resname %s and resid %s and ( %s )\n",i,substr($i,1,3), substr($i,4,l),sel1)
+    printf("show dots, Contact1_%d\n",i)
+    printf("label Contact1_%d,  \"%s\"\n",i,$i)
+    printf("set grid_slot, 2, Contact1_%d\n",i)
+   }}' > $temp4
+ awk 'BEGIN{cut='$cutoff_contact';s=0}{if($2=="A:"&&$1=="2.00"){s++};if($2=="A:"&&$1<=cut&&s==1){for(i=3;i<=NF;i++){printf("%s ",$i)}}}' $temp > $temp2
+ ./1-char23-char $temp2 > $temp3
+ contact2=`cat $temp3 | awk -v sel1="$selection2" '{for(i=1;i<=NF;i++){
+    if(i>1){printf(" or ")}
+    l=length($i)-3;printf(" ( resname %s and resid %s ) ",substr($i,1,3), substr($i,4,l))
+   }
+   printf(" and ( %s )",sel1)}'`
+ #creat psedoatoms for contact residues:
+ cat $temp3 | awk -v sel1="$selection2" -v pdb="Original2" '{for(i=1;i<=NF;i++){
+    l=length($i)-3
+    printf("pseudoatom Contact2_%d, resname %s and resid %s and ( %s ) and %s\n",i,substr($i,1,3), substr($i,4,l),sel1, pdb)
+    printf("show dots, Contact2_%d\n",i)
+    printf("label Contact2_%d,  \"%s\"\n",i,$i)
+    printf("set grid_slot, 1, Contact2_%d\n",i)
+   }}' >> $temp4
+  
+ if [ $emap2c -eq 0 ] ; then
+  #Found 3-point to define plane
+  atm=`grep 'Top 3 residues in ' $temp | tail -1 | awk '{a=NF-2;b=NF-1;print $a,$b,$NF}'`
+  atom1=`echo $atm | awk -v sel1="$selection" '{l=length($1)-3;print "resname ",substr($1,1,3), " and resid ", substr($1,4,l), " and ",sel1}'` 
+  atom2=`echo $atm | awk -v sel1="$selection" '{l=length($2)-3;print "resname ",substr($2,1,3), " and resid ", substr($2,4,l), " and ",sel1}'`
+  atom3=`echo $atm | awk -v sel1="$selection" '{l=length($3)-3;print "resname ",substr($3,1,3), " and resid ", substr($3,4,l), " and ",sel1}'`
+ fi
+ #remove translation/rotation of PDB vs 3-point plane
+ ./vmd_pdb_rotation -sel1 "$atom1" -sel2 "$atom2" -sel3 "$atom3" $input | tee $temp
+ outpdb=`grep 'Output PDB w/ removal of rotation and translation in X-axis is' $temp | tail -1 | awk '{print $NF}'`
+ #cp $input $outpdb
+ ./pdb_getChainResn -capchain -sel "$selection" -out $infile'_1.pdb' $outpdb #get first PDB
+ ./pdb_getChainResn -capchain -sel "$selection2" -out $infile'_4.pdb' $outpdb  #get 2nd PDB
+ ./vmd_pdb_rotation -x -out $infile'_2.pdb' $infile'_4.pdb'   #x-axe mirror  
+ ./vmd_pdb_rotation -x -out $infile'_3.pdb' $infile'_1.pdb'   #x-axe mirror
+
+ if [ $emap2 -eq 1 ] ; then
+  $0 -emap $forc -noshow $infile'_1.pdb' > $temp  #emap of first PDB
+  grep -i error $temp
+  grep 'Using existing PMF file for APBS electrostatics potential map. Otherwise use -force to recalculate' $temp
+  ppqr1=$infile'_1_PQR.pdb'
+  apbsdx1=$infile'_1_e.dx'  #dx file is potential of grids
+  $0 -emap $forc -noshow $infile'_2.pdb' > $temp  #emap of 2nd PDB
+  grep -i error $temp
+  grep 'Using existing PMF file' $temp
+  ppqr2=$infile'_2_PQR.pdb'
+  apbsdx2=$infile'_2_e.dx'  #dx file is potential of grids
+ fi
+ echo "delete all" > $output
+ echo "util.cbaw" >> $output
+ echo "hide everything" >> $output
+ echo "set orthoscopic, on" >> $output
+ echo "set dot_width=1" >> $output
+# echo "
+#set label_size, 3
+#set label_font_id, 13
+#set label_shadow_mode, 3
+# " >> $output
+ if [ $bg_gradient -eq 1 ] ; then
+  echo "set bg_rgb_top, $bg_rgb_top" >> $output
+  echo "set bg_rgb_bottom, $bg_rgb_bottom"  >> $output
+  echo "set bg_gradient, on" >> $output
+ fi
+ echo "load ${infile}_1.pdb, PDB1" >> $output
+ echo "load ${infile}_2.pdb, PDB2" >> $output
+ echo "load ${infile}_3.pdb, Original1" >> $output
+ echo "load ${infile}_4.pdb, Original2" >> $output
+ if [ $axis -eq 1 ] ; then
+  ./pymol_arrow -axe -name axis1 -out $temp'.py' ${infile}_1.pdb
+  echo "run $temp.py" >> $output
+  echo "set grid_slot, 1, axis1" >> $output
+  ./pymol_arrow -axe -invx -name axis2 -out $temp2'.py' ${infile}_2.pdb
+  echo "run ${temp2}.py" >> $output
+  echo "set grid_slot, 2, axis2" >> $output
+ fi
+ echo "set grid_slot, 1, Original2" >> $output
+ echo "set grid_slot, 2, Original1" >> $output
+ echo "set cartoon_color, green" >> $output
+ echo "$gridmode" >> $output
+ echo "set grid_slot, 1, PDB1" >> $output
+ echo "set grid_slot, 2, PDB2" >> $output
+ echo "set grid_slot, 1, Original2" >> $output
+ echo "hide lines" >> $output
+ echo "
+  set cartoon_highlight_color, lightorange ; #change the color of internal side of helices and side of strands
+  set cartoon_fancy_helices, 1  ; #provide fancy borders of the helices and strands
+  set cartoon_fancy_sheets, 1
+  set cartoon_discrete_colors, 1 ; #in the loop regions sometimes colored same as helices when connected to strands or helices
+  set cartoon_side_chain_helper, on ; #When side-chain show sticks, backbone will NOT show
+  show cartoon
+ " >> $output
+ if [ $emap2 -eq 1 ] ; then
+  didlabel=1
+  echo "load ${ppqr1}, PQR1" >> $output
+  echo "load ${apbsdx1}, emap1"  >> $output
+  echo "show surface, PQR1" >> $output
+  echo "ramp_new elvl1, emap1, [$mince,0,$maxce], [red, white, blue]" >> $output   #create charge bar
+  echo "set surface_color, elvl1, PQR1," >> $output
+  echo "disable elvl1" >> $output
+  echo "load ${ppqr2}, PQR2" >> $output
+  echo "load ${apbsdx2}, emap2"  >> $output
+  echo "show surface, PQR2" >> $output
+  echo "ramp_new elvl2, emap2, [$mince,0,$maxce], [red, white, blue]" >> $output   #create charge bar
+  echo "set surface_color, elvl2, PQR2," >> $output
+  echo "disable elvl2" >> $output
+  echo "set grid_slot, 1, PQR1" >> $output
+  echo "set grid_slot, 1, elvl1" >> $output
+  echo "set grid_slot, 2, PQR2" >> $output
+  echo "set grid_slot, 2, elvl2" >> $output
+  #isosurface:
+  echo "isosurface negPQR1, emap1, $mince ; #isosurf for negative isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+  echo "isosurface posPQR1, emap1, $maxce ; #isosurf for positive isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+  echo "set surface_color, elvl1, negPQR1," >> $output
+  echo "set surface_color, elvl1, posPQR1," >> $output
+  echo "isosurface negPQR2, emap2, $mince ; #isosurf for negative isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+  echo "isosurface posPQR2, emap2, $maxce ; #isosurf for positive isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+  echo "set surface_color, elvl2, negPQR2," >> $output
+  echo "set surface_color, elvl2, posPQR2," >> $output
+  echo "disable negPQR2" >> $output
+  echo "disable posPQR2" >> $output
+  echo "disable negPQR1" >> $output
+  echo "disable posPQR1" >> $output
+  echo "set grid_slot, 1, negPQR1" >> $output
+  echo "set grid_slot, 1, posPQR1" >> $output
+  echo "set grid_slot, 2, negPQR2" >> $output
+  echo "set grid_slot, 2, posPQR2" >> $output
+ else
+  echo "show surface">>$output
+  echo "color cyan, PDB1">>$output  
+  echo "color cyan, PDB2">>$output
+ fi #emap2
+ echo "sel plane, $atom1 or $atom2 or $atom3" >> $output
+ echo "sel Cont1_${cutoff_contact}, ( $contact1 ) and Original1" >> $output
+ echo "sel Cont2_${cutoff_contact}, ( $contact2 ) and Original2" >> $output
+ echo "orient $contact1" >> $output
+ #echo "set dot_radius, 4" >> $output
+ echo "set dot_color , green" >> $output
+ echo "set label_color, magenta" >> $output
+ echo "hide everything, Original1 or Original2" >> $output
+ if [ $cpseudo -eq 1 ] ; then
+  #Use pseudoatom dot-sphere to display contact residues
+  cat $temp4 >> $output 
+  [ $contact -eq 1 ] && echo "color blue, ( $contact1 and PDB1 ) or ( $contact2 and PDB2 )">>$output 
+ else
+  didlabel=1
+  echo "show $showtype , Cont1_${cutoff_contact} or Cont2_${cutoff_contact}"  >> $output
+  [ $contact -eq 1 ] && echo "color blue, ( $contact1 and PDB1 ) or ( $contact2 and PDB2 )">>$output
+  echo -e "label name CA and ($contact1 or $contact2), \"%s%s\" % (resn, resi)" >> $output
+  echo "set label_color, blue, ( $contact1 or $contact2 ) and not (Original1 or Original2)" >> $output
+  echo "set label_color, magenta, ( $contact1 or $contact2 ) and (Original1 or Original2)" >> $output
+ fi
+ echo "ray 600" >> $output
+ echo " =======> Pymol Output is $output"
+ if [ $show -eq 1 ] ; then
+  $pymol $output >& $temp
+ else
+   $pymol -c $output >& $temp
+ fi
+ [ $silence -eq 0 ] && cat $temp
+ grep -i error $temp
+ rm -f $temp $temp.py $temp2.py $temp2 $temp2.pdb $temp.pdb $temp3 $temp3.pdb $temp4 ; exit 
+fi
+
+
+
+#####################################################################################################################################
+# Normal single plot
+
+cat <<pp > $output
+# draw text using cgo
+#from pymol import cmd
+#from pymol.cgo import *
+#from pymol.vfont import plain
+
+# For one-letter label. See http://www.pymolwiki.org/index.php/Label
+one_letter ={'VAL':'V', 'ILE':'I', 'LEU':'L', 'GLU':'E', 'GLN':'Q', \
+'ASP':'D', 'ASN':'N', 'HIS':'H', 'TRP':'W', 'PHE':'F', 'TYR':'Y',    \
+'ARG':'R', 'LYS':'K', 'SER':'S', 'THR':'T', 'MET':'M', 'ALA':'A',    \
+'GLY':'G', 'PRO':'P', 'CYS':'C'}
+# To label residues in 3A in one-letter: label Lig_3A and name ca, "%s%s" % (one_letter[resn],resi) ; set label_color, blue, Lig_3A
+
+#delete all
+util.cbaw
+hide everything
+bg_color white
+set ray_opaque_background, $ray_opaque_background ; #=0: transparent background
+
+set spec_power, $spec_power ;  #For reflection power: glossy or dull
+set spec_reflect, $spec_reflect  ;#for reflection sharp or diffuse (small value)
+pp
+
+#glossy surface See http://www.playmol.com/resources/pymol/glossysurface.html
+if [ $glossy -eq 1 ] ; then
+ echo "set spec_power, 500; set spec_reflect, 2  ;#for shinning glossy surface" >> $output
+fi
+
+#Gradient background for PyMol v1.5
+if [ $bg_gradient -eq 1 ] ; then
+echo "set bg_rgb_top, $bg_rgb_top" >> $output
+echo "set bg_rgb_bottom, $bg_rgb_bottom"  >> $output
+echo "set bg_gradient, on" >> $output
+fi
+
+if [ $axis -eq 1 ] ; then
+#generate .py to draw axes See: http://www.pymolwiki.org/index.php/Axes
+ ./pymol_arrow -axe -out $temp'.py' $input
+ echo "run $temp.py" >> $output
+fi
+
+#draw text
+if [ "$labeltxt" != "NA" ] ; then
+ textstyle=1  #=1: normal style  =2: CGO style (http://pymolwiki.org/index.php/CGO_Text)
+ didlabel=1
+if [ $textstyle -eq 1 ] ; then
+echo -e "
+set label_size, 30
+#set label_size, -5 ; #This is huge font
+set label_font_id, 7 ; #started from 5 (normal) 6 (Italic) 7(Bold) 8(Italic-Bold)
+#set label_shadow_mode, 3  ; #mode 3 does NOT work!
+#pseudoatom Text, pos=[10.0, 17.0, -3.0] ; #pseudoatom see http://www.pymolwiki.org/index.php/Pseudoatom
+#pseudoatom Text, b/53/cg+cz ; #center text at chain B, resid 53, center of CG/CZ atoms  
+#pseudoatom Text ; #default position is center 
+pseudoatom Text, pos=[$centerx, $topyoff, $centerz] ; #Put text on top of protein 
+set label_color, magenta, Text
+hide everything, Text
+label Text, \"$labeltxt\"
+" >> $output
+fi
+#CGO text: http://pymolwiki.org/index.php/CGO_Text
+if [ $textstyle -eq 2 ] ; then
+echo -e "
+# draw text using cgo
+from pymol import cmd
+from pymol.cgo import * 
+from pymol.vfont import plain
+
+cgo = []
+axes = [[2.0,0.0,0.0],[0.0,2.0,0.0],[0.0,0.0,2.0]]
+pos = [0.0,0.0,0.0]
+wire_text(cgo,plain,pos,'$labeltxt',axes)
+#pos = [0.0,-3.0,0.0]
+#cyl_text(cgo,plain,pos,'Hello Universe',0.10,axes=axes) 
+cmd.set("cgo_line_radius",0.03)
+cmd.load_cgo(cgo,'Text')
+" >> $output
+fi
+fi
+#fancy DNA ring color
+if [ "$DNAcolor" == "0" ] ; then
+ DAcolor='green';DCcolor='palecyan';DGcolor='gray40';DTcolor='red';DUcolor='pink';
+else
+ DAcolor=$DNAcolor;DCcolor=$DNAcolor;DGcolor=$DNAcolor;DTcolor=$DNAcolor;DUcolor=$DNAcolor;
+fi
+
+#Loop for each plot/protein and do align: List formatted as "PDB|Action|Selections"
+pdballs=''
+allaligned=''
+noali='' ; [ $npdbo -eq 1 ] && noali='-noaln'  
+for (( i=1 ; i<=$npdb ; i++ )) ; do
+ pdbn=`head -$i $temp.list | tail -1 | awk '{print $1}'`
+ pdbnn=`echo $pdbn | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+ selc=`head -$i $temp.list | tail -1 | awk '{for(i=3;i<=NF;i++){a=sprintf("%s %s",a,$i)}}END{print a}'`
+ if [ $dofile2 -eq 1 ] ; then  #user defined chain to do align
+  caln=`head -$i $temp.list | tail -1 | awk 'BEGIN{
+   file="'$file2'";  c='$ccol';header='$header';n=-header;x='$pcol'
+   while ((getline line < file) > 0) {
+   n++; nf=split(line,d," "); a[n]=substr(d[c],1,1) #only keep first char as chain to align
+   if(substr(d[x],length(d[x])-4,4)!=".pdb"){d[x]=sprintf("%s.pdb",d[x])}  #add .pdb if not there
+    p[n]=tolower(d[x])
+   }
+   close(file)}{ch="-";for(i=1;i<=n;i++){if(p[i]==tolower($1)){ch=a[i];break}};print ch}'`
+  if [ "$caln" != "-" ] ; then
+   selc='chain '$caln   
+   echo " Align by $selc of $pdbn" 
+  fi
+ fi
+ if [ $i -eq 1 ] ; then  
+  pdb1=$pdbn
+  pdb1nn=$pdbnn
+  selc1=$selc
+  #./pdb_seperate -allsel -sel "$selc" $pdbn   #Must sperate PDBs for correct grid slot display : selections only from $selc
+  ./pdb_seperate -sel "$selc" $pdbn   #selections from all PDB
+  allaligned='('$pdbnn'_'$i' and ('$selc'))'
+ else
+  allaligned=$allaligned' or ('$pdbnn'_'$i' and ('$selc'))'
+  if [ $doCE -eq 2 ] ; then #no align
+   #./pdb_seperate $noali -allsel -sel "$selc" $pdbn
+   ./pdb_seperate $noali -sel "$selc" $pdbn
+  else
+   if [ $dofine -eq 1 ] ; then  #do fine-alignment
+    #./pdb_seperate $noali -allsel $CE -aln $pdb1 -sel2 "${selc1}" -sel "$selc" -finesel "$self" $pdbn
+    ./pdb_seperate $noali $CE -aln $pdb1 -sel2 "${selc1}" -sel "$selc" -finesel "$self" $pdbn
+   else
+    if [ $atomaln -eq 1 ] ; then  #do atom-aligment
+     #./pdb_seperate $noali -allsel -asel "$asel" -aselref "$aselref" -aln $pdb1 -sel2 "${selc1}" -sel "$selc" $pdbn      
+     ./pdb_seperate $noali -asel "$asel" -aselref "$aselref" -aln $pdb1 -sel2 "${selc1}" -sel "$selc" $pdbn
+    else #do ligand-align or CE align or TMalign
+     #./pdb_seperate $noali -allsel $ligal $CE -aln $pdb1 -sel2 "${selc1}" -sel "$selc" $pdbn
+     ./pdb_seperate $noali $ligal $CE -aln $pdb1 -sel2 "${selc1}" -sel "$selc" $pdbn
+    fi
+   fi
+  fi
+  [ $i -eq 2 ] && input2o2=${pdbnn}_A.pdb
+  [ $i -eq 3 ] && input3o2=${pdbnn}_A.pdb
+  [ $i -eq 4 ] && input4o2=${pdbnn}_A.pdb
+  [ $i -eq 5 ] && input5o2=${pdbnn}_A.pdb
+ fi 
+ infil=`echo $pdbn | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'` 
+ pdbnameo=`basename $infil`
+ pdbname=${pdbnameo}_$i
+ action=`head -$i $temp.list | tail -1 | awk '{print $2}'`
+ if [ $i -eq 1 ] ; then
+  pdballs=$pdbname
+  centerpdb=$pdbname
+ else
+  pdballs=`echo "$pdballs or $pdbname"`
+ fi
+ grd=$i
+ if [ $domirror -eq 1 ] ; then
+  if [ $dooffx -eq 1 ] ; then  #put offset 2nd pdb in grid 1
+    [ $i -eq 2 ] && grd=1
+    if [ $i -eq 3 ] ; then
+      grd=2
+      echo "load ${pdb1nn}_P.pdb , selpdb1; set grid_slot , $grd , selpdb1; color cyan, selpdb1; show cartoon, selpdb1; hide surface, selpdb1" >> $output
+    fi
+  else #Put none-mirrored 2nd selection into grid one
+    [ $i -eq 3 ] && grd=1 
+  fi
+ fi
+ if [ $loadfull -eq 0 ] ; then   #Only load aligned selection e.g. chain A
+  echo "load ${pdbnameo}_P.pdb , $pdbname" >> $output
+  echo "set grid_slot , $grd , $pdbname ; color cyan, $pdbname ; show cartoon, $pdbname ; show $showtype , $pdbname" >> $output
+ else  #load full aligned PDB
+  echo "load ${pdbnameo}_A.pdb , $pdbname ; show cartoon, $pdbname ;" >> $output
+ fi
+done
+pdballs='( '$pdballs' )'
+
+
+## Show sperate parts of each PDB: ligand, ligand nearby, hbonds, metal, DNA
+if [ $showdetail -eq 1 ] ; then
+for (( i=1 ; i<=$npdb ; i++ )) ; do
+ pdbn=`head -$i $temp.list | tail -1 | awk '{print $1}'`
+ infil=`echo $pdbn | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'` 
+ pdbnameo=`basename $infil`
+ pdbname=${pdbnameo}_$i
+ pdbname2=$pdbname
+
+ showit=1 ; grd=$i
+ if [ $domirror -eq 1 ] ; then
+  if [ $dooffx -eq 1 ] ; then  #put offset 2nd pdb in grid 1
+    [ $i -eq 2 ] && grd=1
+    [ $i -eq 3 ] && grd=2
+  else #Put none-mirrored 2nd selection into grid one
+    [ $i -eq 3 ] && grd=1
+  fi
+ fi
+ if [ $npdbo -eq 1 ] && [ $i -gt 1 ] ; then
+  showit=0 
+ fi
+ if [ $npdbo -eq 1 ] ; then
+  grd="-2"
+  pdbname=$pdbnameo
+  pdbname2=$pdballs
+ fi
+ if [ $showit -eq 1 ] ; then
+  echo "load ${pdbnameo}_L.pdb , ${pdbname}_lig" >> $output
+  echo "set grid_slot , $grd , ${pdbname}_lig ; hide surface, ${pdbname}_lig ; util.cbam ${pdbname}_lig ; show sticks, ${pdbname}_lig" >> $output
+  if [ $showdis -eq 1 ] ; then
+   echo "sel ${pdbname}_lig_3A, $pdbname2 and not ${pdbname}_lig $bb and byres ${pdbname}_lig expand 3" >> $output
+   echo "sel ${pdbname}_lig_4A, $pdbname2 and not ${pdbname}_lig $bb and byres ${pdbname}_lig expand 4" >> $output
+   echo "sel ${pdbname}_lig_5A, $pdbname2 and not ${pdbname}_lig $bb and byres ${pdbname}_lig expand 5" >> $output
+   echo "set grid_slot , $grd , ${pdbname}_lig_3A ;" >> $output
+   echo "set grid_slot , $grd , ${pdbname}_lig_4A ;" >> $output
+   echo "set grid_slot , $grd , ${pdbname}_lig_5A ;" >> $output  
+  fi
+  if [ $showhb -eq 1 ] ; then
+   echo "dist ${pdbname}_lig_hb, ${pdbname}_lig, $pdbname2 and not ${pdbname}_lig, mode=2; set grid_slot, $grd , ${pdbname}_lig_hb" >> $output
+   echo "disable ${pdbname}_lig_hb" >> $output
+  fi
+
+  echo "load ${pdbnameo}_D.pdb , ${pdbname}_DNA" >> $output
+  echo "set grid_slot , $grd , ${pdbname}_DNA ; hide surface, ${pdbname}_DNA" >> $output
+  echo "set cartoon_nucleic_acid_color, $DNAback , ${pdbname}_DNA ; cartoon dumbbell, ${pdbname}_DNA ; show cartoon, ${pdbname}_DNA" >> $output
+  echo "load ${pdbnameo}_M.pdb , ${pdbname}_metal" >> $output
+  echo "set grid_slot , $grd , ${pdbname}_metal ; hide surface, ${pdbname}_metal ; color yellow, ${pdbname}_metal ; show spheres, ${pdbname}_metal" >> $output
+
+  if [ $showwater -eq 1 ] ; then
+   echo "load ${pdbnameo}_W.pdb , ${pdbname}_water" >> $output
+   echo "set grid_slot , $grd , ${pdbname}_water ; hide surface, ${pdbname}_water ; color red, ${pdbname}_water" >> $output
+  fi
+ fi #$i -eq 1 
+ 
+done
+else #showdetail
+ echo "sel Selected, $selection" >> $output
+fi #showdetail
+
+if [ $npdb -gt 1 ] && [ $grid -eq 1 ] ; then
+ echo "viewport 1024 , 500" >> $output  #use wide screen for grid
+fi
+
+cat <<ttt >> $output
+#Generated by $0 $oldline
+
+#viewport 1024 , 500
+set orthoscopic, on
+$gridmode
+hide lines
+#spectrum count, rainbow
+dss   ; #rebuild 2nd structure in case PDB from Glide which lost 2nd structure show
+
+set transparency, $transparency ; #0.0 will be an invisible and 1.0 a completely solid surface
+set surface_cavity_mode, $surface_cavity_mode ; #Invert(1) or normal (0) surface to show cavity
+
+set dot_solvent, 1 ; #to calculate surface aera (0) or solvent accessible surface area (1) 
+set dot_density, 2 ; #The accuracy of the measurement depends on the density of dots, which is controlled by the dot_density setting (1-4)
+set solvent_radius, 1.4 ; #This defines the solvent radius. default 1.4A
+set ray_opaque_background, $ray_opaque_background ;#=0: transparent background
+set dash_round_ends, $dash_round    ; #End of dash line: round or square. May need ray to showup dash line in my old machine 
+set dash_gap, $dash_gap          
+set dash_radius, $dash_width
+set dash_length, $dash_length
+
+bg_color white
+set ray_trace_mode, $ray_trace_mode  
+
+ttt
+
+if [ $fancy -eq 1 ] ; then   #shown fancy cartoon
+echo "
+set cartoon_highlight_color, lightorange ; #change the color of internal side of helices and side of strands
+" >> $output
+fi
+
+if [ $cylinder -eq 1 ] ; then #show Cylindrical Helices: https://pymolwiki.org/index.php/Cartoon_Helix_Settings
+echo "
+ set cartoon_cylindrical_helices, 1 ; #turn on Cylindrical Helices
+" >> $output
+fi 
+
+cat <<xxx >> $output
+set cartoon_fancy_helices, 1  ; #provide fancy borders of the helices and strands
+set cartoon_fancy_sheets, 1
+set cartoon_discrete_colors, 1 ; #in the loop regions sometimes colored same as helices when connected to strands or helices
+#set cartoon_side_chain_helper, on ; #When side-chain show sticks, backbone will NOT show. But will make beta-sheet curly!
+
+cartoon automatic  ; #cartoon type : automatic , rectangle, oval http://pymolwiki.org/index.php/Cartoon
+
+set sphere_scale, 0.5, (all)  ; #smaller metal ball
+
+#set valence, 0.1  ; # show double bond of ligand. To disable: set valence, 0
+
+ #spectrum count, rainbow_rev, DNA  ; #Spectrum color: http://www.pymolwiki.org/index.php/Spectrum
+#DNA cartoons. See http://kpwu.wordpress.com/tag/pymol/page/2/
+
+ set cartoon_ring_mode, 3  ;#set to 0 for normal cartoon
+ set cartoon_nucleic_acid_mode, 0
+ #set cartoon_ring_color, red   ; #DNA side-chain/ring color
+ set cartoon_ring_transparency, 0.5
+ #set cartoon_oval_length, 1.6
+ #set cartoon_oval_width, 0.8
+ #set cartoon_ring_width, 0.5
+
+ #select dna_A, resn DA or resn ADE ; #Each ring has different color
+ #select dna_C, resn DC or resn CYT
+ #select dna_G, resn DG or resn GUA
+ #select dna_T, resn DT or resn THY
+ #select rna_U, resn DU or resn URA
+ #set cartoon_ring_color, $DAcolor, dna_A
+ #set cartoon_ring_color, $DCcolor, dna_C
+ #set cartoon_ring_color, $DGcolor, dna_G
+ #set cartoon_ring_color, $DTcolor, dna_T
+ #set cartoon_ring_color, $DUcolor, rna_U
+ #set cartoon_ring_color, cyan, DNA ; #same color for all rings
+
+$colorbyatom 
+
+xxx
+
+
+#show accurate hydrophobic surface as red:
+#show accurate hydrophilic surface as green:
+#Show electrostatics potential map: APBS generate more accurate one, unit is KT/e
+for (( i=1 ; i<=$npdb ; i++ )) ; do
+ pdbn=`head -$i $temp.list | tail -1 | awk '{print $1}'`
+ inf=`echo $pdbn | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+ pdbname=`basename $inf`
+ pdbname=${pdbname}_$i
+ action=`head -$i $temp.list | tail -1 | awk '{print $2}'`
+ if [ "$action" == "hydrophobic" ] ; then
+  echo "run color_h.py ; color_h $pdbname ; show surface, $pdbname ; #set cartoon_color, cyan" >> $output
+  if [ $dooffx -eq 1 ] && [ $i -eq 1 ] ; then
+   echo "run color_h.py ; color_h selpdb1 ; show surface, selpdb1 ; #set cartoon_color, cyan" >> $output
+  fi
+ fi
+ if [ "$action" == "hydrophilic" ] ; then
+  echo "run color_h.py ; color_h2 $pdbname ; show surface, $pdbname ; #set cartoon_color, cyan" >> $output
+  if [ $dooffx -eq 1 ] && [ $i -eq 1 ] ; then
+   echo "run color_h.py ; color_h2 selpdb1 ; show surface, selpdb1 ; #set cartoon_color, cyan" >> $output
+  fi
+ fi
+ #If set cartoon_color, cyan : cartoon color cannot change any more!
+
+ #This is accurate Electrostatics Potential Map, takes a little time. Pymol manual one is very rough
+ if [ "$action" == "emap" ] ; then
+  echo "Using VMD to generate Electrostatics Potential Map for $pdbn : Unit: KT/e  Takes mins.."
+  echo " Faster and smoother show (but rough result) is to manually use Action | generate | Vaccum Electrostatics | Potential Contact Potential"
+  echo " Recommend: Use pymol manual one (Protein contact potential) to view and publish: more informative"
+  echo ./pymol_show -emap $forc -noshow ${inf}_P.pdb
+  ./pymol_show -emap $forc -noshow ${inf}_P.pdb > $temp  #emap of first PDB
+  grep -i error $temp
+  grep 'Using existing PMF file for APBS electrostatics potential map.' $temp
+  grep '==> Real Atom Charge ranges' $temp
+  mincr=`grep '==> Real Atom Charge ranges' $temp | tail -1 | awk '{print $7}'`
+  maxcr=`grep '==> Real Atom Charge ranges' $temp | tail -1 | awk '{print $9}'` 
+  [ $force -ne 1 ] && echo "WARNing: if emap is still old unexpected one, remember to use -force to generate new emap!" 
+  if [ $chargecut -eq 0 ] ; then
+   mince=$mincr;maxce=$maxcr
+  else
+   echo "==> Display Atom Charge ranges [ $mince , $maxce ]"
+  fi
+  ppqr1=${inf}'_P_PQR.pdb'
+  apbsdx1=${inf}'_P_e.dx'  #dx file is potential of grids
+  grd=$i
+  if [ $domirror -eq 1 ] ; then
+   if [ $dooffx -eq 1 ] ; then  #put offset 2nd pdb in grid 1
+    [ $i -eq 2 ] && grd=1
+    [ $i -eq 3 ] && grd=2
+   else #Put none-mirrored 2nd selection into grid one
+    [ $i -eq 3 ] && grd=1
+   fi
+  fi
+  echo "load ${ppqr1}, ${pdbname}_emap ; load ${apbsdx1}, emap$i ; show surface, ${pdbname}_emap ;" >> $output
+  echo "ramp_new elvl$i, emap$i, [$mince,0,$maxce], [red, white, blue] ; " >> $output
+  echo "set surface_color, elvl$i, ${pdbname}_emap " >> $output
+  echo "set grid_slot , $grd , ${pdbname}_emap; disable ${pdbname}" >> $output
+  #echo "isosurface negPQR, emap$i, $mince ; #isosurf for negative isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+  #echo "isosurface posPQR, emap$i, $maxce ; #isosurf for positive isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+  #echo "set surface_color, elvl$i, negPQR," >> $output
+  #echo "set surface_color, elvl$i, posPQR," >> $output
+  #echo "delete negPQR" >> $output
+  #echo "delete posPQR" >> $output  
+  echo "disable elvl$i" >> $output  #charge bar
+ fi
+done
+
+#Load the full PDB (not seperation, to display chains in different color) into grid 1
+if  [ $showfull -eq 1 ]  ; then
+ fullpd=$inputo2
+ [ $domirror -eq 1 ] && fullpd=$inputmv
+ [ $dooffx -eq 1 ] && fullpd=$inputmv2 
+ echo "
+ #For first PDB, defined as Full
+ load $fullpd , Full ; set grid_slot, 1, Full ; hide lines, Full ; show cartoon , Full
+ sel Full_metal, Full and $metals ; 
+ show spheres, Full_metal; color yellow, Full_metal
+ sel Full_lig, Full and not polymer ; show sticks, Full_lig ; util.cbam Full_lig
+" >> $output
+
+#select each chains and display chain in different color
+ ./pdb_checkChain $inputo2 > $temp
+ nchains=`wc -l $temp | awk '{print $1}'`
+ chainnames=`awk '{printf("%s",$1)}' $temp`
+ echo "There are $nchains chains: $chainnames"
+ for (( i=1; i<=$nchains ; i++ )) ;do
+  [ $i -eq 1 ] && colorch='cyan'
+  [ $i -eq 2 ] && colorch='green'
+  [ $i -eq 3 ] && colorch='blue'
+  [ $i -eq 4 ] && colorch='warmpink'
+  [ $i -eq 5 ] && colorch='skyblue'
+  [ $i -eq 6 ] && colorch='lightpink'
+  [ $i -eq 7 ] && colorch='deeppurple'
+  [ $i -eq 8 ] && colorch='brightorange'
+  chai=`head -$i $temp | tail -1 | awk '{print $1}'`
+  echo "
+   sel Full_$chai , Full and chain $chai ; show cartoon, Full_$chai ; color $colorch , Full_$chai 
+  " >> $output
+ done
+
+ if [ $npdbo -eq 1 ] ; then
+  input2o2=$inputo2
+  input3o2=$inputo2
+ fi
+ if [ $npdb -gt 1 ] ; then
+  fullpd=$input2o2
+  [ $domirror -eq 1 ] && fullpd=$inputmv2
+  [ $dooffx -eq 1 ] && fullpd=$inputmv
+  echo "
+ #For 2nd PDB, defined as Full2
+ load $fullpd , Full2 ; set grid_slot, 2, Full2 ; hide lines, Full2 ; show cartoon , Full2
+ sel Full2_metal, Full2 and $metals ; 
+ show spheres, Full2_metal; color yellow, Full2_metal
+ sel Full2_lig, Full2 and not polymer ; show sticks, Full2_lig ; util.cbam Full2_lig ; util.cbam Full_lig
+" >> $output
+ fi
+
+ if [ $npdb -gt 2 ] && [ $domirror -eq 0 ] ; then
+ echo "
+ #For 3rd PDB, defined as Full3
+ load $input3o2 , Full3 ; set grid_slot, 3, Full3 ; hide lines, Full3 ; show cartoon , Full3
+ sel Full3_metal, Full3 and $metals ; 
+ show spheres, Full3_metal; color yellow, Full3_metal
+ sel Full3_lig, Full3 and not polymer ; show sticks, Full3_lig ; util.cbam Full3_lig ;  util.cbam Full2_lig ; util.cbam Full_lig
+" >> $output
+ fi
+
+ if [ $npdb -gt 3 ] && [ $domirror -eq 0 ] ; then
+ echo "
+ #For 4th PDB, defined as Full4
+ load $input4o2 , Full4 ; set grid_slot, 4, Full4 ; hide lines, Full4 ; show cartoon , Full4
+ sel Full4_metal, Full4 and $metals ; 
+ show spheres, Full4_metal; color yellow, Full4_metal
+ sel Full4_lig, Full4 and not polymer ; show sticks, Full4_lig;util.cbam Full4_lig;util.cbam Full3_lig ;util.cbam Full2_lig;util.cbam Full_lig
+" >> $output
+ fi
+
+ if [ $npdb -gt 4 ] && [ $domirror -eq 0 ] ; then
+ pn=5;pnam='Full5'
+ echo "
+ #For 5th PDB, defined as Full5
+ load $input5o2 , $pnam ; set grid_slot, $pn, $pnam ; hide lines, $pnam ; show cartoon , $pnam
+ sel ${pnam}_metal, $pnam and $metals ; 
+ show spheres, ${pnam}_metal; color yellow, ${pnam}_metal
+ sel ${pnam}_lig, ${pnam} and not polymer ; show sticks, ${pnam}_lig;util.cbam ${pnam}_lig;
+ util.cbam Full4_lig ; util.cbam Full3_lig ;util.cbam Full2_lig;util.cbam Full_lig
+" >> $output
+ fi
+
+ #recenter
+ echo "center $centerpdb" >> $output
+
+fi #showfull
+
+#Sel all metal/water/DNA/RNA at last: must put it here after all PDBs are loaded in which takes time!
+#[ $npdb -gt 10 ] && sleep $npdb   #wait for PDBs all read
+echo "
+sel Metal_all, $metals 
+sel Water_all, resn HOH+TIP3+TIP
+sel DNA_all, resn A+T+C+G+U+DA+DT+DC+DG+DU+GUA+ADE+THY+CYT+URA
+sel ligand_all, not polymer and not Metal and not water and not DNA
+sel notChainA_butDNA, not DNA_all and not chain A
+sel AllAligned, $allaligned
+sel NotAligned, not ($allaligned)
+show spheres, Metal_all
+color yellow, Metal_all
+" >> $output
+
+#For AAD Glide pose with many ligand MODELs, first protein MODEL will dispalyed as Protein or PDB id. Use following to deal with:
+if [ $npdb -eq 1 ] ; then
+ hasmodes=`grep MODEL $inputo.pdb | wc -l | awk '{print $1}'`
+ [ "$hasmodes" == "" ] && hasmodes=0
+ if [ $hasmodes -gt 1 ] ; then
+  pnam=`grep HEADER $inputo.pdb | awk 'BEGIN{s=0}{if(NF>2){s=1;a=$NF;exit}}END{if(s==0){a="Protein"};print a}'`
+  #HEADER    DNA BINDING PROTEIN/DNA                 24-AUG-17   6ASD   (Pymol display as: 6ASD) 
+echo "
+hide lines, $pnam
+show cartoon, $pnam
+dss
+" >> $output
+ fi
+fi
+
+#For MD trajecory: https://pymolwiki.org/index.php/Load_Traj
+if [ $dotraj -eq 1 ] ; then
+ if [ "$dcd" == "NA" ] ; then
+  dcd=`ls -lrst ${inputo}*.dcd | tail -1 | awk '{print $NF}'`
+ fi
+ if [ ! -s $dcd ] ; then
+  echo "Fatal error! Cannot find MD trajectory file $dcd"
+ else
+  echo "=> Load NAME/Gromacs/Amber/Desmond MD traj $dcd into Full"
+  echo "  Use Use mset to play with states: https://pymolwiki.org/index.php/Mset"
+echo "
+ #load_traj $dcd, Full, 0 , dcd ,  $interval , 0 , $mdstart , $mdstop , , "$mdsel"   ; #NOT working as called wrong
+ load_traj $dcd, Full, interval=$interval  ; #selection="$mdsel" does not work
+ hide everything, Full_W ; hide everything, Full_I  ; #hide water and salt
+ hide surface
+ # improve PyMOL performance for many-state objects and long movies: https://pymolwiki.org/index.php/Defer_builds_mode
+ set defer_builds_mode, 3
+ #Use Use mset to play with states: https://pymolwiki.org/index.php/Mset
+" >> $output  
+ fi
+fi
+
+
+#hide all surfaces
+if [ $hidesur -eq 1 ] ; then
+ echo "
+ hide surface
+" >> $output
+fi
+
+#label selected residues
+if [ $dolabel -eq 1 ] ; then
+ echo "label $labelres , $labeltype " >> $output
+fi
+
+#center plot
+if [ $docenter -eq 1 ] ; then
+ echo "center $centers ; zoom $centers" >> $output
+fi
+
+#label residues
+if [ $didlabel -ne 1 ] ; then
+ echo "
+set label_size, $labelsize   ;#label font size =20
+set label_font_id, $labelfont ;#=5: normal =6: Italic =7: bond =8: Italic-Bond
+set label_position, ($labelpos)  ;#label position offset
+set label_color, $labelcolor ;#label color 
+ " >> $output
+fi
+
+#transparency for all
+if [ $dotrans -eq 1 ] ; then
+ echo "
+  set transparency, $transparency  ; #surface
+  set stick_transparency, $transparency ; #stick
+  set cartoon_transparency, $transparency ; #cartoon
+  set sphere_transparency, $transparency ; #spheres
+ " >> $output 
+fi
+
+#####################Done!!
+########################################## Done!
+
+#color residues by its polar
+if [ $showpolar -eq 1 ] ; then
+ echo "color brown, Hydrophobic1" >> $output
+ echo "color green, Hydrophilic1" >> $output
+ echo "color blue, Positive1" >> $output
+ echo "color red, Negative1" >> $output
+ #echo "color pink, Others1" >> $output
+ echo "color brown, Hydrophobic2" >> $output
+ echo "color green, Hydrophilic2" >> $output
+ echo "color blue, Positive2" >> $output
+ echo "color red, Negative2" >> $output
+ #echo "color pink, Others2" >> $output
+
+fi
+
+#calculate surface area and SAS and PSA
+area=0  #not work yet here
+if [ $area -eq 1 ] ; then
+ echo "#calculate surface area and polar surface SAS of selection" >> $output
+ echo "set dot_solvent, 0 ; #for surface area" >> $output
+ echo -e "SelectedArea=cmd.get_area(\"(Selected1 or Selected2)\")" >> $output
+ echo -e "print \"SelectedArea= \", SelectedArea" >> $output
+ echo "set dot_solvent, 1" >> $output
+ echo -e "SelectedSAS=cmd.get_area(\"(Selected1 or Selected2)\")" >> $output
+ echo -e "print \"SelectedSAS= \", SelectedSAS" >> $output
+ echo "" >> $output
+fi
+
+#show binding pocket
+if [ $pocket -eq 1 ] ; then
+ #echo "hide everything"  >> $output
+ echo "set surface_carve_cutoff, 4.5" >> $output
+ echo "set surface_carve_selection, Ligand" >> $output
+ echo "set surface_carve_normal_cutoff, -0.1" >> $output
+ echo "set surface_type, 2 ; # mesh" >> $output
+ echo "sel pocket, Selected within 8 of Ligand" >> $output
+ echo "show surface, pocket" >> $output   #8A of ligand
+ echo "set two_sided_lighting" >> $output
+ echo "set transparency, 0.5" >> $output
+ echo "show sticks, Ligand" >> $output
+ #echo "show lines, Selected" >> $output
+ echo "orient Ligand " >> $output
+ echo "set surface_color, yellow, pocket" >> $output
+ echo "unset ray_shadows" >> $output
+ echo "*** Change Surface_Type: set surface_type, 0   0:Normal 1:Dots 2:Mesh/Triangles"
+ if [ $closeSurface -eq 1 ] ; then  #Generate closed surface by mesh
+  echo "create pocket_closeSurface, Selected within 4 of Ligand" >> $output
+  echo "show mesh, pocket_closeSurface" >> $output
+ fi
+fi
+
+#blobby side-chain
+if [ $blobby -eq 1 ] ; then
+ sidechain2=''
+ [ $sidechain -eq 1 ] && sidechain2='not n. C+O+N+CA and '
+ [ $pocket -eq 0 ] && echo "hide surface" >> $output
+ echo "sel sel2, $sidechain2 $selection2 " >> $output
+ echo "set gaussian_resolution, $gaussian_resolution ; # was 1.5 A map resolution. Larger value for large/puffy" >> $output
+ echo "map_new map_blobby, gaussian, 0.2, sel2, 5 ; # 0.2 A sampling; lower=smoother" >> $output
+ echo "isosurface surf_blobby, map_blobby, 5; # create a surface from the map" >> $output
+ echo "color cyan, surf_blobby" >> $output
+fi
+
+#show smoothsurface of selection
+if [ $smoothsurface -eq 1 ] ; then
+ bb=''
+ [ $sbackbone -eq 1 ] && bb='n. CA+C+N+O and '
+ selection='Selected'  #selections for smooth surface
+ if [ $dosite -ne 1 ] ; then
+  if [ $allmodel -eq 1 ] || [ $model -gt 0 ] ; then
+   selection="Selected within $smoothsize of Ligand"  #8A of ligand
+  fi
+  #3.5 A map resolution
+  [ $blobby -eq 0 ] && echo "hide surface" >> $output
+  echo "set gaussian_resolution, $gaussian_resolution" >> $output   #larger resolution: too puffy. 5-8 recommended
+  # new gaussian map w/resolution=0.5 Ang on Selected backbone (Time-consuming for all atoms! and too thin and ugly)
+  echo "map_new map_smooth, gaussian, 1, $bb $selection, 5" >> $output 
+  # create a surface from the map
+  echo "isosurface surf_smooth, map_smooth, 3" >> $output 
+  echo "color yellow, surf_smooth" >> $output
+  echo "show sticks, Ligand" >> $output
+ else  #DSP sites
+  nsite=`echo $sites | wc -w | awk '{print $1}'`
+ 
+  echo "
+ #DSP Sites:
+ hide lines
+ disable Ligand_HBond
+ set cartoon_color, wheat, Protein
+" >> $output
+  [ $blobby -eq 0 ] && echo "hide surface" >> $output
+  echo "set gaussian_resolution, $gaussian_resolution" >> $output   #larger resolution: too puffy. 5-8 recommended
+  for (( i = 1; i <= $nsite ; i++ )) ; do
+   sitei=`echo $sites | awk '{n='$i';print $n}'`
+   colori=`echo $sitescolor | awk '{n='$i';print $n}'`
+   [ "$colori" == "" ] && colori='cyan'
+   coloril=`echo $ligandscolor | awk '{n='$i';print $n}'`
+   [ "$coloril" == "" ] && coloril='util.cbam'
+   siteiname='Sites'$i
+   ./pdb_getChainResn -allEND -capchain -out $siteiname.pdb -model $sitei $input > $temp  #Get ligand.
+   selection="Selected within $smoothsize of $siteiname"  #8A of ligand
+   echo "load $siteiname.pdb , $siteiname" >> $output
+   echo "$coloril $siteiname" >> $output   #color ligands by-atom
+   echo "map_new site${i}_map , gaussian, 1, $bb $selection, 5" >> $output
+   if [ $sitestype -eq 1 ] ; then   #sites shown as mesh
+    echo "isomesh sites${i}_mesh , site${i}_map, 1" >> $output
+    echo "color $colori , sites${i}_mesh" >> $output
+   else
+    if [ $sitestype -eq 2 ] ; then   #sites shown as ligand surface
+     echo "show surface , $siteiname" >> $output
+     echo "color $colori , $siteiname" >> $output
+    else
+     if [ $sitestype -eq 3 ] ; then   #sites shown as partial surface of protein
+      echo "sel sites${i}_surf, Protein and byres ( $siteiname ) expand $smoothsize" >> $output
+      echo "show surface , sites${i}_surf" >> $output
+      echo "color $colori , sites${i}_surf" >> $output
+     else
+      echo "isosurface sites${i}_iso , site${i}_map, 3" >> $output
+      echo "color $colori , sites${i}_iso" >> $output
+     fi
+    fi
+   fi
+   echo "show sticks, $siteiname" >> $output
+  done
+  echo "center Sites1" >> $output
+ fi #dosite
+fi
+
+#show Goodsell-like image: http://pymolwiki.org/index.php/Gallery
+if [ $Goodsell -eq 1 ] ; then
+ echo "hide everything" >> $output
+ echo "show spheres"  >> $output
+ echo "color lightblue, not Selected" >> $output
+ echo "color magenta, Selected" >> $output
+ echo "remove solvent"  >> $output
+# set the view as centered Selected and 8A around
+ echo "orient all within 8 of Selected" >> $output
+# set the lights, ray tracing setttings
+# to get the Goodsell-like rendering
+ echo "unset specular"  >> $output
+ echo "set ray_trace_gain, 0"  >> $output
+ echo "set ray_trace_mode, 3" >> $output 
+ echo "bg_color white"  >> $output
+ echo "set ray_trace_color, black" >> $output
+ echo "unset depth_cue" >> $output
+fi
+
+#Simple plot of selection
+if [ "$simple" != "N/A" ] ; then
+ echo "sel Simple, $simple" >> $output
+ echo "cartoon putty, Simple" >> $output
+ #echo "set ray_trace_mode,2" >> $output
+fi
+
+#Display hydrogen bonds
+if [ "$hbond1" != "N/A" ] ; then
+ echo "dist HBonds, ${hbond1}, ${hbond2}, mode=2" >> $output
+fi
+
+#show SAS : http://www.pymolwiki.org/index.php/Displaying_Biochemical_Properties#Surface-Related
+if [ $SAS -eq 1 ] ; then
+ echo "alter Selected, vdw=vdw+1.4" >> $output   #1.4 is radius of solvent
+ echo "show surface, Selected"
+fi
+
+#PDB2PQR to get charge/radius of each atom
+if [ $emap -eq 1 ] || [ $showcharge -eq 1 ] ; then
+ apbs='--apbs-input'
+ #apbs='' ; [ $emap -eq 1 ] && apbs='--apbs-input'
+ if [ $force -eq 1 ] || [ ! -s $pqr ] || [ ! -s $apbsin ] ; then
+   python $pdb2pqr --ff=$field --chain $apbs $input $pqr > $temp
+   [ $silence -eq 0 ] && cat $temp 
+   [ $silence -eq 0 ] && echo python $pdb2pqr --ff=$field --chain $apbs $input $pqr
+ else
+  echo "Using exisitng $pqr and $apbsin"
+ fi
+ cp $pqr $ppqr
+ rangec=`cat $pqr | awk 'BEGIN{max=-99999;min=99999}{if($1=="ATOM"){a=substr($_,55,8);c=strtonum(a);if(c>max){max=c};if(c<min){min=c}}}END{print min,max}'`
+ mincr=`echo $rangec | awk '{print $1}'`
+ maxcr=`echo $rangec | awk '{print $2}'`
+ echo "==> Real Atom Charge ranges [ $mincr , $maxcr ] from PDB2PQR"
+
+#display charge
+ if [ $showcharge -eq 1 ] ; then
+  if [ $chargecut -ne 1 ] ; then
+   minc=$mincr;maxc=$maxcr
+  fi
+  echo "==> Displayed Atom Charge ranges [ $minc , $maxc ]"
+cat << ppqqrr >> $output
+ hide $showtype , $infileo
+ load $ppqr
+ sel Selected_PQR, $selection and $ppqrname
+ spectrum q, red_white_blue, selection=Selected_PQR, minimum=$minc, maximum=$maxc  ;#Color by Occupancy: http://www.pymolwiki.org/index.php/Color
+ hide lines, Selected_PQR
+ show $showtype , Selected_PQR
+ ramp_new elvl1, emap, [$minc,0,$maxc], [red, white, blue] ; #create charge bar
+ppqqrr
+ fi
+
+#For electrostatics potential map
+ emapX=0  #bypass previous emap
+ if [ $emapX -eq 1 ] ; then
+  if [ $force -eq 1 ] || [ ! -s $apbsdx ] ; then
+   python $psize $pqr  > $temp2   #get center, grid etc.
+   center=`awk '{if($1=="Center"&&$2=="="){print $3,$5,$7}}' $temp2`
+   cglen=`awk '{if($1=="Coarse"&&$2=="grid"){print $5,$7,$9}}' $temp2`
+   fglen=`awk '{if($1=="Fine"&&$2=="grid"){print $5,$7,$9}}' $temp2`
+   dime=`awk '{if($1=="Num."&&$2=="fine"){print $6,$8,$10}}' $temp2`
+   #Ref: http://ihome.cuhk.edu.hk/~b102142/pymol/pymol_tutorial.html
+   cat $apbsin | awk -v center="$center" 'BEGIN{apbsdxn="'$apbsdxn'";s=0}{
+     did=0
+     if(NF==1&&$1=="elec"){s++;if(s==2){exit}} ; #Only keep one pair of elec ... end
+     if($1=="cgcent"||$1=="fgcent"){did=1;print "    ",$1,center}
+     if($1=="calcenergy"){did=1;print "    calcenergy no"}
+     if($1=="temp"){did=1;print "    temp 310.000000          # System temperature (298.15 default) PyMol use 310K"} 
+     if($1=="write"&&$2=="pot"){did=1;print "write pot dx ",apbsdxn}
+     if($1=="pdie"){did=1;print $_;
+      print "    ion charge  1 conc 0.150000 radius 2.000000"
+      print "    ion charge -1 conc 0.150000 radius 1.800000"
+      print "    ion charge  2 conc 0.000000 radius 2.000000"
+      print "    ion charge -2 conc 0.000000 radius 2.000000"
+     }
+     if(did==0){print $_} 
+    }' > $temp2
+  mv $temp2 $apbsin 
+  $abps $apbsin > $temp2
+  [ $silence -eq 0 ] && cat $temp2
+  else
+   echo "Using existing PMF file $apbsdx"
+  fi
+ if [ $chargecut -ne 1 ] ; then
+  minc=$mince;maxc=$maxce
+ fi
+ echo "==> Displayed PMF ranges [ $minc , $maxc ]"
+ #Ref: http://kpwu.wordpress.com/tag/pymol/
+ echo "hide $showtype , $infileo" >> $output
+ echo "load $ppqr, PQR" >> $output
+ echo "load $apbsdx, emap"  >> $output
+ echo "show surface, PQR" >> $output 
+ echo "ramp_new PQR_bar, emap, [$minc,0,$maxc], [red, white, blue]" >> $output   #create charge bar
+ echo "set surface_color, PQR_bar, PQR," >> $output  
+ echo "isosurface negPQR, emap, $minc ; #isosurf for negative isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+ echo "isosurface posPQR, emap, $maxc ; #isosurf for positive isosurface name, map, level [,(selection) [,buffer [,state [,carve ]]]]" >> $output
+ echo "set surface_color, PQR_bar, negPQR," >> $output
+ echo "set surface_color, PQR_bar, posPQR," >> $output
+ echo "disable negPQR" >> $output
+ echo "disable posPQR" >> $output
+ fi  #emap
+fi #[ $emap -eq 1 ] || [ $showcharge -eq 1 ]
+
+#show cavity/tunnel/channel of PDB from CAVER software
+if [ $docaver -eq 1 ] ; then
+ ./do_caver -astart "$astart" -protection_radius $protection_radius -noshow $input > $temp
+ [ $silence -eq 0 ] && cat $temp
+ tail -10 $temp
+ caverpy=`grep 'PyMol Output:' $temp | tail -1 | awk '{print $3}'`
+ echo "run $caverpy
+ sel Channels, tun_cl_* ; #all channels in Channels
+ color grey, Channels
+ delete v_origins; delete structure ; #delete duplicate caver PDB
+ set grid_mode, 1;   #Put protein/channel in Grid on, channels in Grid 2
+ set grid_slot, 1, $infileo
+ #set grid_slot, -2, tun_cl_*
+ set grid_slot, 2, tun_cl_*
+ #set grid_mode, 0 ; #disbale grid
+" >> $output
+echo "
+  NOTE: if Error Mesg: No tunnels for clustering, computation was not finished. Is the starting point where it should be? 
+        Error could be too wide-open tunnel. Use $0 -astart "97 109 121" to specifiy start atoms or increase $0 -protection_radius 20
+  NOTE: All outputs that from PyMol screen will directed to ${infileo}_CAVER/pymol/
+  NOTE: PyMOL can detect cavities and voids : $0 -cavity -trans 0.7 or Settings > Surface > Cavities and Pockets
+ **To disable grid: set grid_mode, 0;  To show Channels in both grid: set grid_slot, -2, tun_cl_*
+"
+fi
+
+#draw arrow
+if [ $doarrow -eq 1 ] ; then
+ #echo "./pymol_arrow -name arrow -out ${temp}.py $arrww $input"
+ ./pymol_arrow -length 5 -color "0.95, 0.78, 0.00" -color2 "1.00, 0.6, 0.8" -name arrow -out ${temp3}.py $arrww $input 
+ echo "run ${temp3}.py" >> $output
+ #cat ${temp3}.py
+fi
+
+#draw box
+if [ $dobox -eq 1 ] ; then
+ echo "#Draw box: drawMinBoundingBox [selection, [padding, [linewidth, [redColor, [greenColor, [blueColor]]]]]"  >> $output
+ echo "run drawMinBoundingBox.py" >> $output
+ #echo "drawBoundingBox $infileo, linewidth=2.0, r=0.33, g=0.80, b=1.0" >> $output   #box on whole PDB
+ echo "drawBoundingBox Selected, linewidth=2.0, r=0.33, g=0.80, b=1.0" >> $output   #box on selection
+fi
+
+echo $other >> $output
+echo "ray" >> $output
+
+#calculate surface area and SAS and PSA
+if [ $PSA -eq 1 ] ; then
+ echo "#calculate Polar Surface Area PSA of selection" >> $output
+ echo "set dot_solvent, 0 ; #for surface area" >> $output
+ echo -e "
+ set dot_density, 3
+ remove hydro
+ remove solvent
+ sel PolarAera, elem N+O and Selected
+ #sel NoneArea, elem C+S and Selected
+ show dots, PolarAera
+ set dot_solvent, on
+ sPSAArea=cmd.get_area(\"PolarAera\")
+ set dot_solvent, off
+ mPSAArea=cmd.get_area(\"PolarAera\")
+ print \"sPSAarea= \", sPSAArea
+ print \"mPSAarea= \", mPSAArea
+" >> $output
+ echo "" >> $output
+fi
+
+#animation
+#[ $npdb -eq 1 ] && domovie=1 #rotate protein 
+if [ $domovie -eq 1 ] ; then
+ if [ $morphy -eq 1 ] ; then
+  if [ $domsel -eq 1 ] ; then
+   ./pymol_movie $extramovie -msel "$msel" -msel2 "$msel2" $inputoo $input2oo
+  else
+   ./pymol_movie $extramovie $inputoo $input2oo 
+  fi
+  rm -f $temp* ; exit
+ fi
+ ./pymol_movie -noshow -out3 $temp3 $extramovie $inputo.pdb > $temp
+ cat $temp3 >> $output
+ echo "More animation/movie can be done in ./pymol_movie $inputo.pdb"
+fi
+
+cat << ee
+ =======> Pymol Output is : pymol $output
+ee
+
+if [ $show -eq 1 ] ; then
+  nohup $pymol $output &
+  sleep 4
+else
+  $pymol -c $output >& $temp
+  [ $silence -eq 0 ] && cat $temp
+  grep Error $temp
+fi
+
+SelectedArea=`grep 'SelectedArea=' $temp | tail -1 | awk '{print $2}'`
+SelectedSAS=`grep 'SelectedSAS=' $temp | tail -1 | awk '{print $2}'`
+sPSA=`grep 'sPSAarea=' $temp | tail -1 | awk '{print $2}'`
+mPSA=`grep 'mPSAarea=' $temp | tail -1 | awk '{print $2}'`
+
+[ $silence -eq 0 ] && cat $output
+
+echo "Selection is $selection"
+echo "PyMol output is " $output
+if [ $area -eq 1 ] ; then
+ echo "==> Surface area of Selection = " $SelectedArea
+ echo "==> Solvent Access Surface Area (SAS) of Selection = " $SelectedSAS
+fi
+if [ $PSA -eq 1 ] ; then
+ echo "==> Molecular Ploar Surface Area of whole protein (mPSA) of Selection ~ " $mPSA
+ echo "==> Solvent accessible Ploar Surface Area of whole protein (sPSA) of Selection ~ " $sPSA
+fi
+
+#Display 2D interaction diagram for first 4 PDBs
+if [ $showfull -eq 1 ] ; then
+for (( i=1 ; i<=$npdb ; i++ )) ; do
+ pdbn=`head -$i $temp.list | tail -1 | awk '{print $1}'`
+ inf=`echo $pdbn | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+ pdbname=`basename $inf`
+ pdbname=${pdbname}_$i
+ action=`head -$i $temp.list | tail -1 | awk '{print $2}'`
+ if [ $showdia -eq 1 ] && [ $i -le 4 ] ; then  #display 2D ligand interaction diagram
+  ./lig_interaction_plot $dp2 -l $pdbn
+ fi
+done
+fi
+
+if [ $noout -eq 1 ] ; then
+ rm $output
+fi
+
+#Display PDB info:
+echo "PDBs info:"
+for (( i=1; i<=$n1 ; i++ )) ; do
+ pdbi=`head -$i $temp.list | tail -1 | awk '{print $1}'`
+ if [ $dotraj -ne 1 ] && [ -s $pdbi ] ; then  #bypass check for MD to save time
+  ./pdb_getProperty -newquick $pdbi
+ fi
+done
+
+
+
+cat << nnot
+
+ Background/Gradient:  set bg_gradient, on;   set bg_rgb_top, [230,230,230]; set bg_rgb_bottom, [0,150,150]
+ Hydrophobic/hydrophilic surface in accurate, use -hydro/-hydro2 option, shown as red/green 
+ Black-White Outline (normal: 0/1): set ray_trace_mode, 2; set ray_trace_color, black; cartoon putty;  
+   1. Make white color transparent: convert C.png -fuzz 2% -transparent white C.png
+   2. Overlap BW image and selected color image to one by ImageMagick: composite C.png BW.png Overlap.png   ( or -blend 30)
+  by ./image_manipulate -overlap -transparent -solid 1  -out Overlap.png BW.png C.png
+ Add watermark: ./image_manipulate -watermark
+ To label residues in 3A in one-letter:  label Ligand_3A and name ca, "%s%s" % (one_letter[resn],resi) ; set label_color, blue, Ligand_3A
+
+ For single protein: pdb_1 is hydrophobic surface (red); pdb_2 is hydrophilic surface (blue) ; pdb_3 for manually generate Electrostatics map
+ Surface (0) vs. Cavity(2): set surface_cavity_mode, 0. Then in pymol: Setting | Surface | Wireframe
+ Grid: set grid_mode,1 ;   set grid_slot, -2, PDB; (PDB in all slots); set grid_slot, 2, A;
+ Pymol Protein contact potential (charge smoothing):
+   Action | generate | Vaccum Electrostatics | Protein Contact Potential
+   set grid_slot, 3, pdb_e_chg  
+ To generate Pymol movie for a pocket (zoom-out/in, roll angles), save the view as site.pse: ./pymol_movie -site -out site.mpg site.pse
+ To generate Pymol movie for DSP (roll twices for surface/cartoon), save the view as dsp.pse : ./pymol_movie -dsp -out dsp.mpg dsp.pse
+ To show metal chelation residues: ./pdb_metal_check $input
+ To check all metals/ligand/DNA/RNA/water/PPI-proteins, see Metal/ligand/DNA_all : $0 -loadfull '????.pdb'
+ To display interaction network of hydrophobic interaction, hbond, pi-interaction for metal/ligand/residues, run ./pymol_pdb_contacts
+
+ To animate structural change of two dimer  by Pymol Morph: ./pymol_movie -morphy -msel "Chain A+E" -msel2 "chain B+F" -out m.mpg A.pdb
+nnot
+
+if [ $dooffx -eq 0 ] ; then
+ echo "This offset the 2nd selections $selections in $input for $offx A, so that have better PPI view."
+ echo " But if wrong offset direction to cause proteins overlap, run: $0 -off -$offx ..."
+fi
+
+
+
+rm -f $temp* $temp.py $temp2.py $temp3.py $temp2 $temp2.pdb $temp3 $temp4 ; exit
+
+
+
+

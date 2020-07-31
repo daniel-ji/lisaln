@@ -1,0 +1,699 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+dospecies=0
+distop=5
+cutshow=60;docutshow=1
+clusterout='cluster.tmp';doclusterout=0
+clusterout2='cluster.tmp';doclusterout2=0
+
+zrange="[0:100]" #heatmap plot zrange cutoff. =0: automatical
+sidecolor=1 #Color for palette =1:dark =2:hot 
+ #sidebar/palette color:=1:blue-yellow(smaller blue) =2:hot(red-white) =3:grey. =4:blue-red($cut)-yellow($cut2)-white
+ #     =5: reverse of =1 (larger value now yellow)
+fontcolor='blue'  #font color for heatmap tics 
+dofont=0; #=0: auto font size
+nobold='' #font default is bold
+others='-nodendo -fast'; others2=""
+force=0; force2=0
+less=0
+display=1;plot=0
+cutname=0;ph=''
+
+#./sequence_download :
+led=""
+mapled='-fast'
+type=1  #=1: PDB ID with chain  =2: NCBI Protein GI number
+together=1  #=1: get fasta all together in efetch =0: get each seq one by one
+removedup=1 #=1: remove duplicate sequence
+ncol=1
+douniprot=0
+head=0
+clean=0
+force=0
+isfast=0
+doout2=0
+dopair=1
+startr=1;endr=0
+dotops=0;
+cut1=50 ; cut2=30
+dosearch=0;nosearchplot=0
+plotaln=0
+keepnum=0
+
+other2="";dostepc=0;cstep=13 #For ./gnuplot_dendogram
+rank=''
+#drange="50 15"  #dendograph range for dendo of seq id
+#lists="50 45 40 35 30 28 26 24 22 20 18 15 13 10"  #dendograph cluster cutoff for seq id
+lists="70 60 50 45 40 35 30 28 26 24 22 20 18 15 13 10"  #dendograph cluster cutoff for seq id
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in   
+   -plotaln)plotaln=1;shift;;
+   -search)dosearch=1;less=1;search="$2";shift 2;;
+    -nosearchplot)nosearchplot=1;shift;;
+   -sort)others=$others' '$1;dosort=1;shift;;
+   -nosort)others=$others' '$1;dosort=0;shift;;
+   -cluster)others=$others' '$1;dosort=2;shift;;
+   -cut1)cut1=$2;docut=1;others=$others' -cut '$2;shift 2;;
+   -cut2)cut2=$2;docut=1;others=$others' '$1' '$2;shift 2;;
+   -top)startr=1;endr=$2;shift 2;;
+   -range)startr=$2;endr=$3;shift 3;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -species)dospecies=1;shift;;
+   -force)force=1;led=$led' '$1;mapled=$mapled' -force -lessforce';shift;;
+   -force2)force=1;force2=1;shift;;
+   -zrange)zrange=$2;shift 2;;
+   -cut)cut=$2;docut=1;shift 2;;
+   -cut2)cut2=$2;docut=1;shift 2;;
+   -barcolor)sidecolor=$2;shift 2;;
+   -fontcolor)fontcolor="$2";shift 2;;
+   -fontsize)dofont=1;fontsize_xtics=$2;fontsize_ytics=$2;shift 2;;
+   -nobold)nobold=$1;shift;;
+   -less)less=1;shift;;
+   -range)drange=$2' '$3;shift 3;;
+   -list)lists="$2";shift 2;;
+   -noplot)display=0;shift;;
+   -plot)plot=1;shift;;
+   -nopair)dopair=0;shift;;
+   -pair)dopair=1;shift;;
+   -uniprot)douniprot=1;together=0;type=2;led=$led' '$1;shift;;
+   -out2)output2="$2"; doout2=1;led=$led' -out '$2;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c';./tem
+   -pdb)type=1;led=$led' '$1;shift;;
+   -gi)type=2;led=$led' '$1;shift;;
+   -ncol)ncol=$2;led=$led' '$1' '$2;shift 2;;
+   -col)ncol=$2;led=$led' '$1' '$2;shift 2;;
+   -each)together=0;led=$led' '$1;shift;;
+   -keepdup)removedup=0;led=$led' '$1;shift;;
+   -head)head=1;led=$led' '$1;shift;;
+   -clean)clean=1;led=$led' '$1;shift;;
+   -fasta)isfast=1;shift;;
+   -cutname)cutname=1;ph=$ph' '$1;shift;;
+   -cutshow)cutshow=$2;docutshow=1;shift 2;;
+   -nocutshow)docutshow=0;shift;;
+   -distop)distop=$2;shift 2;;
+   -clusterout)clusterout=$2;doclusterout=1;shift 2;;
+   -clusterout2)clusterout2=$2;doclusterout2=1;shift 2;;
+   -tops)dotops=1;tops="$2";shift 2;;
+   -top)startr=1;endr=$2;shift 2;;
+   -range)startr=$2;endr=$3;shift 3;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"; npdb=1
+ if [ -n "$2" ] ; then
+  input2="$2"; npdb=2
+ fi
+ if [ -n "$3" ] ; then
+  input3="$3"; npdb=3
+ fi
+ if [ -n "$4" ] ; then
+  input4="$4"; npdb=4
+ fi
+ if [ -n "$5" ] ; then
+  input5="$5"; npdb=5
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Download seq from UniportID, PDBid or list, or fasta 
+  and check seq identity for protein similarity
+ Use EBI Clustal Omega websever from ./clustalo_lwp.pl to align protein sequence
+    https://www.ebi.ac.uk/Tools/msa/clustalo/
+  It also returns phylogenetic tree, Percent Identity Matrix
+  It also generate seq identity heatmap to cluster proteins (results not as good as structural aln: ./pymol_rmsd_many ./TM_align)
+  It also generate pairwise seq identity heatmap when compare two proteins at each time (more meanfull than group)
+  It also generate phylogenetic tree : same as Clustal websever, but different protein order
+  It can also search most seq identical proteins from a list of input protein fastas
+ NOTE: Percent Identity matrix for multiple proteins together is not same as pairwise Identity : even with -nan value
+
+ Another multiple seq aln tools is NCBI COBALT
+
+  Download ./clustalo_lwp.pl :
+    https://www.ebi.ac.uk/seqdb/confluence/pages/viewpage.action?pageId=54646458
+    When searching at https://www.ebi.ac.uk/Tools/msa/clustalo/
+    Usage is at ending of this script
+    MUST install Perl modules: LWP and XML::Simple
+    
+ NOTE: To build homolgy model from Clustal alignment: 
+    A. Log into SWISS-MODEL (MUST)!
+    B. Use Alignment Model in SWISS-MODEL to do Homology modeling by taking CLUSTALW output as input:
+     Click Support Input as 'Target-Template Alignment'
+     http://swissmodel.expasy.org/  by reading in CLUSTALW output
+     Use FASTA as input
+    C. Run ./pdb_renumber_residue X.pdb NNN to renumber residues!
+ Model can download from SWISS model repository as well!
+
+http://www.researchgate.net/post/Which_is_the_best_tool_to_perform_phylogenetic_analysis :
+For my analyses, I use Clustal Omega for DNA or M-COFFEE for protein alignments, cure the alignment with GBlocks, search for the best model using jmodeltest (DNA) or prottest (protein), and then I do maximum likelihood analyses using PhyML.
+Useful links:
+http://www.ebi.ac.uk/Tools/msa/clustalw2/
+http://www.phylogeny.fr/version2_cgi/index.cgi
+http://www.atgc-montpellier.fr/phyml/
+http://evolution.genetics.washington.edu/phylip/software.html
+Then you can use MEGA and Figtree to edit the trees.
+
+iTOL can  plot unrooted phylogenetic tree of kinase or others: https://itol.embl.de/
+Uniprot kinase names for human, mouse etc: https://www.uniprot.org/docs/pkinfam
+
+   How to align several sequences by using NCBI blastp?
+   NCBI Blastp website (http://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome)
+ | check 'Align two or more sequences' | Enter Query Sequence (Single Sequence) | Enter Subject Sequences (can be multiple sequence)
+    NOTE: NCBI does not put all sequence together. For publication, may try http://multalin.toulouse.inra.fr/multalin/
+    To align with EBI Clustal: ./clustal_seq_align fasta.txt
+
+
+ A1: T-coffee is a good align for multiple sequence. Use it to generate Clustral aln if NCBI is too short: See ~/FANCJ/
+    http://tcoffee.crg.cat
+  A2: Clustal Omega: http://www.ebi.ac.uk/Tools/msa/clustalo/
+     It can align multiple seqs
+     It can generate Phylogenetic Tree of seqs   See JMJD1B/readme
+  A3. Another good site is MultAlin (good images and re-arrange proteins by similarity) for alignemnt
+     http://multalin.toulouse.inra.fr/multalin/
+     Example: ~/ITCH/readme   ~/gata2/readme  JMJD1B/readme
+     It can align multiple seqs
+       Good part of MultAlin is it will re-arrange proteins by seq identity. So good to filter identical sequences.
+        To totally rule out partially identical seqs, need to check chromosome location of each seq to see if they are same
+  A4: best aligment is from T-coffee:  http://tcoffee.crg.cat/apps/tcoffee/index.html : the best alignment generated for JMJD1B/
+    Need to remove empty lines in fasta file. Put human on first
+  A5. Another professional tools for good image is CLC Bio Main Workbench (need pay)
+
+ WebLogo can do multiple seq alignment and display it in different way (high ide with larger letter): https://weblogo.berkeley.edu/logo.cgi
+
+How to align sequence from different species?
+  Use ./clustalo_lwp.pl to access EBI Clustal alignment : 
+    https://www.ebi.ac.uk/seqdb/confluence/pages/viewpage.action?pageId=54646458
+  Or my script ./clustal_seq_align
+  Can download Clustal in local machine as well: http://www.clustal.org/omega/
+  Recommended:
+   1. Use EBI to search all sequences of a protein name (Search DNA2, then click 'Protein seqences').
+   2. Pick the interested species, such as  _HUMAN _MOUSE _BOVIN(cow) _XENTR(frog,Xenopus laevis) _XENLA(Western clawed frog) _SCHPO(yeast)
+   3. Download as CSV format with Uniprot ID
+   4. Use ./sequence_download -uniport  to download sequence from Uniport ID : https://www.uniprot.org/uniprot/UniprotID.fasta
+    For DNA2 (5642 seqs): https://www.ebi.ac.uk/ebisearch/search.ebi?db=proteinSequences&query=DNA2
+     Select 9 species as DNA2_HUMAN, DNA2_MOUSE, DNA2_CHICK
+     Download seqs: ./sequence_download -uniprot -head -ncol 2 species.csv
+   5. Use alignment tools to align the downloaded sequences (MultAlin etc.)
+      My script to do Clustal seq align: ./clustal_seq_align
+      Best align is T-coffee (need remove empty lines in fasta file. Put human in first record)
+       http://tcoffee.crg.cat/apps/tcoffee/do:regular
+      Best view is MultAlin : it changed the order of species, put best seq as first. Not good to analys
+       http://multalin.toulouse.inra.fr/multalin
+      Manage seq align file by ./seq_align_rearrange
+      Display a range of seq align: ./seq_align_check -fasta -name DNA2_HUMAN -range 215 230 species_fasta.aln.txt
+ NOTE: recommend to download Clustal aln format with consensus score (for MultAlien, save the colored text webpage)
+ Now use my code: ./NCBI_blast -species
+
+How to align several sequences by using NCBI blastp?
+   NCBI Blastp website (http://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome)
+ | check 'Align two or more sequences' | Enter Query Sequence (Single Sequence) | Enter Subject Sequences (can be multiple sequence)
+T-coffee has the best alignment for JMJD1B/ jmjc-domain!
+  http://tcoffee.crg.cat/apps/tcoffee/do:regular
+   The other way is to change balstp parameters, especially drop Drop 'Word Size' from default 6 to 3, can find more low id seqs!
+   WARNing: alignment from low seq iden may not be reliable and have many choices. See ~/ARI1 R2153
+ NOTE: To use Clustal for seq align: ./clustal_seq_align seqs.fasta.txt
+
+
+NCBI blastp cannot work on PDBs 4c8d and 2oq6 need structural alignment (pymol -CE). See JMJD1B/
+  In this case, Ref Review paper: nature reviews:genetics 2006. vol7 715
+    Clustal Omega and MultAlin cannot do it as well for whole PDB sequences: http://www.ebi.ac.uk/Tools/msa/clustalo/
+     It can only do shorter seq with jmjc-domain only in PF02373_full_hs.txt.
+     It can generate phylogenetic tree
+    MultAlin cannot do it as well: http://multalin.toulouse.inra.fr/multalin
+       Good part of MultAlin is it will re-arrange proteins by seq identity. So good to filter identical sequences.
+        To totally rule out partially identical seqs, need to check chromosome location of each seq to see if they are same
+    NCBI blastp can do PF02373_full_hs.txt aligment, but it is the worst to do multiple aligments
+  Or: download the aligned domains from PFAM domain database: But the align could be very bad
+    NOTE: SMART seqs are better than Pfam!
+WANRing: Pfam database does not include full length of jmjc-domain for JMJC1B/KDM3B in PF02373_full_hs.txt. Wrong!
+  Pfam also miss 7 jmjc proteins, while SMART only miss two: JMJD5. SMART database is better!
+ Metal binding HLD1562 is not included as Pfam starts from 1594aa. Only include GAPH1689aa.
+ Both SAMRT database jmjc_smart_hs.fasta.txt and review paper did it right
+ So both Pfam database and Multalin seq aligment are wrong for JMJC1B/KDM3B!
+
+
+Another good site is MultAlin (good images) for alignemnt
+     http://multalin.toulouse.inra.fr/multalin/
+
+Good graphics alignment (add helix/strand icons etc.): Vector NTI
+
+  A3: another good structure alignment tools for low hits low identity: TM-align
+    http://zhanglab.ccmb.med.umich.edu/TM-align/
+   Use ./TM_align
+   Example see PLOS one 8:e74477 2013
+    Downloaded binary as TMalign
+   Best could be my scaled RMSD method in ./pymol_rmsd_many
+
+
+ Usage: $0 [Options] Input(fasta or List(.txt or .csv)|PDBIDw/Chain|GI|UniprotID  "[Input2]" [Input3] [Input4] [Input5] 
+  Input is fasta seqs of several proteins, or list file w/ PDBid (with chain) or w/ UniprotID
+  Inputs[1-5] can also be UniprotID, PDBid w/ chain, or fasta files
+  Input2 can be "ID2 ID3...", a string to include many IDs
+ Options:
+  -debug : debug model on
+  -out Output : User defined output
+  -species : Use species in fasta [] as alignment name. If no [], use first name. [default]: first name
+  -less : less display
+  -force : force to recal group seq identity
+  -force2 : force to recal pairwise seq identity (may take long time)
+  -plot | -noplot : will /not plot seq id heatmap and dendogram 
+  -plotaln : will plot colorful alignment seqs from my own code
+  -nopair | [-pair] : will NOT do pair-wise seq aln to save time: but seq identity is much lower than pairwise
+  -cutshow Cutoff : display top $distop clusters at a cutoff [$cutshow]
+   -distop topNum : display top $distop clusters at a cutoff [$distop]
+   -clusterout ClusterOutput : cluster output for overall aln
+   -clusterout2 ClusterOutput2 : cluster output for pairwise seq id
+   [-nocutshow] : will not display top $distop clusters at a cutoff
+  -sort | [-nosort] : sort heatmap. Not recommended to sort heatmap. But can use -cluster if not wanna manually adjust heatmap order
+  -cluster : For heatmap: Sort cmpds based on cluster at similarity cutoff $cut. Largest cluster first, then $cut2 2nd level cluster, 
+            then sorted by largest TanScore in first pair [default] And only top topCluster (by -showcluster) will be used
+            -cut/-cut2 determine if better score is larger or smaller (backward=0/1. Default: larger score is better, e.g. Similarity)
+   -cut Cutoff : Similarity cutoff for first-level cluster. Lower cutoff will show first level cluster cmpds together in map [ $cut ]
+   -cut2 Cutoff2 : Similarity cutoff for 2nd-level cluster. Lower cutoff will show 2nd level cluster cmpds together in map [ $cut2 ]
+     For compound similarity: Cutoff > Cutoff2. For RMSD cluster: Cutoff < Cutoff2
+
+  Search best seq id of a protein to a list of proteins 
+  -search SearchFasta : fasta file to search a protein
+   -nosearchplot : will NOT display further clusters/heatmap of all proteins include search
+
+  Sequence download from NCBI by ./sequence_download:
+  -fasta : Will NOT download seq, treat input as fasta. [default]: auto-determine  
+  [-pdb] : Input is PDB ID with chain, such as 1u1lA
+  -gi : input is NCBI GI number
+  -col | -ncol ColNum : col number to find GI/PDBID in list [$ncol]
+   -head : there is headerline in list
+  -keepdup : keep duplicate sequences in output 
+  -uniprot : Use UniprotID for sequence
+  -out2 FastaOut : output of downloaded fasta
+  -top topNum : Only analysis top proteins in input
+  -range Start End : Only analysis proteins in input in range of [Start, End]
+
+  Heatmap of seq identity:
+   -zrange Zrange : zrange to display heatmap for gnuplot for similarity matrix e.g. [0.2:1]  =0: auto-determined. Default: $zrange
+   -fontcolor Color : fontcolor for heatmap as blue/black/red [$fontcolor]
+   -fontsize FontSize : user define font size
+   -nobold : font will be plain, not default bold
+   -cutname : Only display name before _, such as FEN1_HUMAN, only display FEN1 [default: will display as FEN1-HUMAN]
+
+  Dendograph:
+   -list "clusterList" : List of cluster cutoff value. Must from high to low [$lists]
+   x-range StartSeqID EndSeqID : dendography cluster range for seq id [$range]
+
+
+ Example: 
+  $0 -plot -plotaln Q17RS7 P39748 Q8IZH2 P08394 P07648   #Compare 5 Uniprot seq identity
+  $0 -plot Q17RS7 "P39748 Q8IZH2 P08394" P07648 Q01780  #Compare 6 Uniprot IDs, 2nd input can be strings for many IDs
+  $0 5t9jA 3Q8KA 4p0pA  #Compare 3 PDBs w/ chain
+  $0 A.fasta B.fasta C.fasta  #compare 3 fasta files together
+  $0 -out clustal_aln.txt seqs.fasta.txt  #Compare fastas inside one file 
+  $0 both.fasta  #Test run in ARI1/
+  $0 -species NP_006006.3_homoloGene.fasta.txt  #Use species name in [] instead of refseqID in ARI1/
+  $0 -zrange [0:45] nuclease_purepdb.fasta.txt   #In Nuclease/, change heatmap display range
+  $0 -cluster -cut1 60 -cut2 30 ...  #For heatmap display, cluster proteins by seq id
+  $0 -out2 nuclease_purepdb.fasta.txt -uniprot -col 3 nuclease_purepdb.txt
+     #download seqs by Uniprot ID first in list and saved as -out2, then analysis In Nuclease/
+  $0  -out2 jmjc_pdb2.fasta.txt jmjc_pdb2.txt
+     #download seqs by PDBid w/ chain, then analysis In JMJD1B/PDBs
+  $0 -search DHODH.fasta.txt -nosearchplot Leflunomide_fasta.txt
+     #search most similar/seq id from a list of fastas for STP/SOP. Will NOT further cluster all proteins. See Rosen/
+
+ NOTE: To get many infos/names/PDBs/IDs of a protein, run ./UniProt_get FEN1 or UniprotID or nuclease
+ NOTE: To get Uniprot information and PDBs for UniprotID, run ./UniProt_getProperty
+ NOTE: For protein similarity, use ./pymol_rmsd_many (my sRMSD), ./TM_align (TM-score) and ./clustal_seq_align (seq identity) 
+ NOTE: To cluster proteins based on pathway: ./pathway_cluster
+ NOTE: To download seq from uniprot, PDBid, etc. run ./sequence_download
+ NOTE: To run NCBI blastp (see ARI1/), use ./NCBI_blast -pdb ARI1A.fasta.txt
+ NOTE: Another multiple seq aln tools is NCBI COBALT
+ NOTE: To rearrange aligned sequence at different line length, run: ./seq_align_rearrange -keeptit -keepdot -space 3 -len 100 $output
+ NOTE: To display a specific range of alignment, run: ./seq_align_check -fasta -name DNA2_HUMAN -range 215 230 $output
+
+ Better alignment could be T-coffee and MultiAln
+   http://tcoffee.crg.cat/apps/tcoffee/do:regular
+
+ NOTE: You can run seq aln in Clustal website directly to view phylogenetic tree : https://www.ebi.ac.uk/Tools/msa/clustalo/ 
+   Or use ./phylotree_convert as in this script
+ This has been tested as same phylogenetic tree from Clustral Website as in Nuclease/: But order of proteins are different
+
+ NOTE: LisAln to get aln across species etc, run ./NCBI_blast -species -name XPNPEP3 -range 200 270 XPNPEP3.fasta.txt
+ NOTE: Use pair-wise seq id to determine protein similarity as in ./TM_align and ./pymol_rmsd_many 
+       Group seq identity matrix: it is not same as pairwise seq id as compared together in group
+ NOTE: To cluster proteins by Pathway/Function/Seqidentity/Structure, run ./protein_cluster
+
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".txt"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $infile | awk '{l=length($1)-5;a=substr($1,l,6);if(a==".fasta"){print substr($1,1,l-1)}else{print $1}}'`
+
+if [ $doout -ne 1 ] ; then
+ output=$infile'_aln'$startr'_'$endr'.fasta.txt'
+ outputpre=$infile'_aln'$startr'_'$endr
+ if [ $dosearch -eq 1 ] ; then
+  firt=`echo $search | awk '{split($1,a,".");print a[1]}'`
+  output=$firt'_'$output
+  outputpre=$firt'_'$outputpre
+ fi
+else
+ outputpre=`echo $output | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".txt"){print substr($1,1,l-1)}else{print $1}}'`
+ outputpre=`echo $outputpre | awk '{l=length($1)-5;a=substr($1,l,6);if(a==".fasta"){print substr($1,1,l-1)}else{print $1}}'`
+fi
+outpair=$outputpre'_pairid.txt' #pairwise seq id map file 
+outweb=$outputpre'_clustal_aln.txt'
+outphy=$outputpre'_phylotree.ph' #phylogenetic tree
+outmatrix=$outputpre'_pim.txt' #Percent Identity  Matrix
+outsearchplot=$outputpre'_top'$distop'.gif'  #output plot of search
+[ $doclusterout -eq 0 ] && clusterout=$outputpre'_clustal_clu.txt'
+[ $doclusterout2 -eq 0 ] && clusterout2=$outputpre'_clustal_pw_clu.txt'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+inputo=$input
+if [ $npdb -gt 1 ] ; then
+ display=0
+ [ $plot -eq 1 ] && display=1
+ isfast=1
+ [ ! -s $input ] && isfast=0
+ if [ $isfast -eq 0 ] ; then
+  echo "=> To download seq and compare $npdb IDs"
+  echo $input > $temp.list
+  n1=`echo "$input2" | wc -w | awk '{print $1}'`
+  if [ $n1 -gt 1 ] ; then
+   echo $input2 | awk '{for(i=1;i<=NF;i++){print $i}}' >> $temp.list
+   echo " There are $n1 IDs that will be aligned in 2nd input"
+  else
+   echo $input2 >> $temp.list
+  fi
+  [ $npdb -ge 3 ] && echo $input3 >> $temp.list
+  [ $npdb -ge 4 ] && echo $input4 >> $temp.list
+  [ $npdb -ge 5 ] && echo $input5 >> $temp.list
+  letters=`echo $input | wc -c | awk '{print $1}'`
+  [ $letters -eq 7 ] && led=$led' -uniprot '  #wc -c is 7 for 6 uniprot letters
+ else
+  echo "=> Compare $npdb fasta files"
+  cat $input > $temp.list
+  echo " " >> $temp.list
+  cat $input2 >> $temp.list
+  echo " " >> $temp.list
+  [ $npdb -ge 3 ] && cat $input3 >> $temp.list
+  echo " " >> $temp.list
+  [ $npdb -ge 4 ] && cat $input4 >> $temp.list
+  echo " " >> $temp.list
+  [ $npdb -ge 5 ] && cat $input5 >> $temp.list
+  echo " " >> $temp.list
+ fi
+ input=$temp.list
+fi
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/clustalo_lwp.pl $ed/clustal_identity $ed/pdb_renumber_residue $ed/seq_align_rearrange .
+ cp -f $ed/seq_align_check $ed/phylotree_convert $ed/sdf_contactmap $ed/fasta_getNth $ed/sequence_download .
+ cp -f $ed/bin_plot $ed/species_change $ed/do_gnuplot $ed/fasta_removeblank $ed/gnuplot_LisAln .
+fi
+
+notfast=`awk '{if(substr($1,1,1)!="#"&&NF>0){if(substr($1,1,1)==">"){print 0}else{print 1};exit}}' $input`
+#Need to download fasta?
+if [ $isfast -eq 0 ] && [ $notfast -eq 1 ] ; then
+ infile=`echo $inputo | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'` 
+ [ $doout2 -eq 0 ] && output2=$infile'.fasta.txt'
+ echo "Input $input is not fasta format and will download fasta seq saved to $output2. Otherwise, use -fasta"
+ ./sequence_download $led -out $output2 $input
+ input=$output2
+fi
+
+
+if [ $dospecies -eq 1 ] ; then 
+ echo "Use species name in [] for output aln instead of default first name"
+ #change to simple species names as human
+ ./species_change -out $temp.fasta $input
+ awk '{if(substr($1,1,1)==">"){m=index($_,"[");n=index($_,"]");
+  if(m==0||n==0){ name=substr($1,2,length($1)) #No [, only simple name
+  }else{
+   a=substr($_,m+1,n-m-1);k=split(a,b," ")
+   name=b[1];for(i=2;i<=k;i++){name=sprintf("%s_%s",name,b[i])}
+  }
+  printf(">%s\n",name)
+ }else{print $_}}' $temp.fasta > $temp2.fasta
+ input=$temp2.fasta 
+fi
+
+#Extract a range of fasta
+[ $startr -eq 0 ] && startr=1
+if [ $endr -ne 0 ] || [ $startr -ne 1 ] ; then
+ awk 'BEGIN{start='$startr';end='$endr';s=0;n=0}{if(substr($1,1,1)==">"){s=1;n++};if(n>=start&&n<=end){print $_};if(n>end){exit}}' $input > $temp.fastasel
+ input=$temp.fastasel
+ nprotein=`awk 'BEGIN{n=0}{if(substr($1,1,1)==">"){n++}}END{print n}' $input`
+ echo " Only use Clustal align proteins in [$startr,$endr] for $nprotein"
+fi
+nprotein=`awk 'BEGIN{n=0}{if(substr($1,1,1)==">"){n++}}END{print n}' $input`
+
+#When search, put search seq at first
+#NOTE: Clustal webserver cannot take identical seq identifier:
+#Sequence -> Duplicated ID: PYRD_HUMAN. Two sequences cannot share the same identifier at ./clustalo_lwp.pl line 267
+if [ $dosearch -eq 1 ] ; then
+ awk '{if(substr($1,1,1)==">"){print ">Target"}else{print $_}}' $search > ${temp}_all.fasta #So change search Identifier to Target
+ cat $input >> ${temp}_all.fasta
+ input=${temp}_all.fasta
+ dopair=0  #will not calculate pairwise
+fi
+
+#Remove empty entry of fasta: clustal cannot align with empty entry: 
+#http status: 400 Bad Request  Invalid parameters: 
+#Sequence -> Entry found which does not contain a sequence: thalecress. Please check the input sequences for formatting issues. at ./clustalo_lwp.pl line 267.
+./fasta_removeblank $input
+
+npro=`grep '>' $input | wc -l | awk '{print $1}'`
+npro2=`echo $npro | awk '{print ($1*$1-$1)/2}'`
+
+#access EBI Clustal server. Must enter an email
+if [ ! -s $output ] || [ $force -eq 1 ] ; then
+ echo "=> Use EBI Clustal server to Clustal seq align for $npro $inputo saved in $output:"
+ ./clustalo_lwp.pl --email liho67@yahoo.com $input >& $temp
+ #cat $temp ; echo ./clustalo_lwp.pl --email liho67@yahoo.com $input ; cp $input j ; exit
+
+ [ $less -eq 0 ] && cat $temp 
+
+ #Align file named as .clustal_num
+ ot=`ls -lrst *.clustal_num | tail -1 | awk '{print $NF}'`
+ mv $ot $output
+
+ #Phylogenetic tree is .phylotree.ph
+ ot=`ls -lrst *.phylotree.ph | tail -1 | awk '{print $NF}'`
+ mv $ot $outphy
+
+ #Percent Identity  Matrix is .pim : NOTE some seq identity is -nan value
+ ot=`ls -lrst *.pim | tail -1 | awk '{print $NF}'`
+ mv $ot $outmatrix
+
+ if [ $dopair -eq 1 ] ; then
+ echo "=> Pair-wise ($npro2) protein seq identity in $outpair : different to above Group seq id"
+ if [ $force2 -eq 0 ] && [ -s $outpair ] ; then
+  echo "WARNing: use existing pairwise seq identity map file $outpair . Otherwise use -force -force2"
+ else
+  echo -e "Rank1\tRank2\tSeqID\tName1\tName2" > $outpair
+  for (( i=1; i<$npro; i++ )) ; do
+   i2=`expr $i + 1`
+   ./fasta_getNth -get $i -out $temp.fasta1 $input > $temp
+   name1=`grep 'Simplist name is:' $temp | tail -1 | awk '{print $NF}'`  
+   echo -e "$i\t$i\t100\t$name1\t$name1" >> $outpair
+   for (( j=$i2 ; j<=$npro; j++ )) ; do
+    ./fasta_getNth -get $j -out $temp.fasta2 $input > $temp2
+    name2=`grep 'Simplist name is:' $temp2 | tail -1 | awk '{print $NF}'`
+    cp $temp.fasta1 $temp.fasta3
+    echo " " >> $temp.fasta3
+    cat $temp.fasta2 >> $temp.fasta3
+    ./clustalo_lwp.pl --email liho67@yahoo.com $temp.fasta3 >& $temp3
+    matx=`ls -lrst *.pim | tail -1 | awk '{print $NF}'`
+    if [ "$matx" != "" ] ; then
+     seqid=`awk '{if(substr($1,1,1)!="#"&&NF==4){print $NF;exit}}' $matx`
+     echo -e "$i\t$j\t$seqid\t$name1\t$name2" | tee -a  $outpair    
+     if [ $i2 -eq $npro ] && [ $j -eq $npro ] ; then
+       echo -e "$j\t$j\t100\t$name2\t$name2" >> $outpair
+     fi
+     rm $matx
+    else  #In case cannot find .pim file, try it again
+     echo -e "Retry it: $i\t$j\tNA\t$name1\t$name2"
+     j=`expr $j - 1`
+    fi
+   done
+  done  
+  echo "=> Pair-wise protein seq identity map file saved in $outpair"
+ fi #[ $force2 -eq 0 ] && [ -s $outpair ]
+ else
+  echo " Pair-wise protein seq identity is not calculated as -nopair"
+ fi #dopair 
+else
+ echo "WARNIng: use exisitng clustal aln output $output from server. To download again, use -force"
+fi
+
+
+if [ $less -ne 1 ] ; then
+ head -15 $output
+fi
+
+#Phylogenetic tree is .phylotree.ph
+#Display dendo tree:
+if [ $display -eq 1 ] ; then
+ if [ $dosearch -ne 1 ] || [ $nosearchplot -ne 1 ] ; then
+  ./phylotree_convert $ph $outphy > $temp
+ fi
+fi
+
+#Percent Identity  Symmetric Matrix is _pim.txt : NOTE some seq identity is -nan value
+#heatmap display: 1: sp|Q17RS7|GEN_HUMAN    100.00   24.93   15.80   19.60
+# Another type: 1: pdb|2OQ6|A
+# Another type from ./UniProt_get: 1: FEN1_HUMAN 
+#NOTE: Percent Identity matrix for multiple proteins together is not same as pairwise Identity 
+awk '{if(NF>0&&substr($1,1,1)!="#"){
+ n++;line[n]=$_;
+ k=split($2,a,"|")
+ ful=a[2]  #for pdb|2OQ6|A keeps 2OQ6
+ if(substr($2,1,3)=="sp|"){ful=a[k]} #For sp|Q17RS7|GEN_HUMAN keeps GEN
+ split(ful,b,"_");name[n]=b[1]  #Only keep protein name as GEN
+ if('$dospecies'==1||k<2){name[n]=a[1]} #For species name >Human
+ if('$cutname'==1){  #For FEN1_HUMAN, only display first FEN1
+  split(name[n],u,"_");name[n]=u[1]
+ }else{
+  name[n]=gensub(/_/,"-","g",name[n]) #replace _ to - for better display
+ }
+}}END{
+ printf("Rank1\tRank2\tIdentity\tName1\tName2\n")
+ for(i=1;i<=n;i++){
+  m=split(line[i],id," ")
+  for(j=3;j<=m;j++){if(index(id[j],"nan")>0){id[j]=0}}  #assign -nan value to 0
+  for(j=i;j<=n;j++){
+   printf("%d\t%d\t%3.2f\t%s\t%s\n",i,j,id[j+2],name[i],name[j])
+  }
+ }
+}' $outmatrix > $temp.matrix
+avegroup=`awk 'BEGIN{max=-999;min=999}
+  {if(NR>1&&$1!=$2&&$3>0){
+   a=a+$3;n++
+   if($3>max){max=$3}
+   if($3<min){min=$3}
+  }
+  }END{if(n>0){printf("%3.2f [%3.1f,%3.1f]",a/n,min,max)}}' $temp.matrix`
+ [ $less -eq 0 ] && echo "Ave group seq identity (excld 0%) = $avegroup"
+
+
+########## For search
+if [ $dosearch -eq 1 ] ; then
+ awk '{if(NR>0){if($1==1&&$2!=1){print $_}}}' $temp.matrix > $temp.sea
+ echo "=> Top $distop best sequence identity proteins to $search"
+ sort -nr -k 3 $temp.sea | head -$distop | awk '{n++;split($5,a,"-");printf("%s\t%s\t%s\n",$3,a[1],$2-1)}' | tee $temp.plot
+ distop1=`wc -l $temp.plot | awk '{print $1+1}'`
+ awk '{n++;printf("%s\t%s\t%s(#%s)\n",n,$1,$2,$3)}' $temp.plot > $temp.plot2
+ extra=$extra' -box  -fontsize_xtics 9 -fontsize_ytics 11 -labelXbycol 3 -ycol 2 -out '$outsearchplot' -yrange [0:100] '
+ ./do_gnuplot $extra -title "Sequence identity of top proteins" -ylabel "Percentage" -xrange [0:$distop1] -xlabel "Sequence identity" $temp.plot2 >& $temp
+ if [ $nosearchplot -eq 1 ] ; then
+  rm $temp* ; exit
+ fi
+fi
+
+
+#Display top clusters
+if [ $docutshow -eq 1 ] ; then
+ fill1='max'
+ ./gnuplot_dendogram -clusterout $clusterout $others2 -list "$lists" -less -cutshow $cutshow -distop $distop -noplot $rank  -map -fill0 max -fill1 $fill1 $temp.matrix >& $temp6
+fi
+#echo papapa $docutshow $0 $oldline 
+ 
+if [ $display -eq 1 ] ; then
+ title="Group Seq Identity Heatmap (%)"
+ fill1='max'
+ totalp=`awk '{if(NF>0&&substr($1,1,1)!="#"){n++}}END{print n}' $outmatrix`
+ mapout=$outputpre'_map'$heatmap'.xls'
+ others=$others' -out '$mapout' '$mapled
+ #./sdf_contactmap -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor  $others -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $totalp -labelName -title "$title" $temp.matrix >& $temp
+ nohup ./sdf_contactmap -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor  $others -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $totalp -labelName -title "$title" $temp.matrix &
+[ $debug -eq 1 ] && cat $temp
+fi
+
+#Heatmap and dendo of pairwise seq id
+if [ -s $outpair ] && [ $dopair -eq 1 ] ; then
+ if [ $display -eq 1 ] ; then
+ title="Pairwise Seq Identity Heatmap (%)"
+ fill1='max'
+ mapout=$outputpre'_pairwise.xls'
+ others=$others' -out '$mapout' '$mapled
+ ./sdf_contactmap -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor $others -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $npro -labelName -title "$title" $outpair >& $temp
+[ $debug -eq 1 ] && cat $temp
+ title2="Pairwise Seq Identity"
+ #clusterout2=$outputpre'_pwclu'$heatmap'.xls'
+ dendoout=$outputpre'_pw_clu'$heatmap'.png'  #dendoplot image output
+ others2=$others2' -out '$dendoout
+  ./gnuplot_dendogram -clusterout $clusterout2 -cutshow $cutshow -distop $distop -less -digit 0 -title "$title2" -list "$lists" -y $others2 $rank  -map -fill0 max -fill1 $fill1 $outpair >& $temp
+ #bin plot of pairwise seq id:
+ #./bin_plot -head -col 3 -title "Pairwise Seq Identity Distribution" -input $outpair #> $temp
+ fi
+ avepair=`awk 'BEGIN{max=-999;min=999}
+  {if(NR>1&&$1!=$2){
+   a=a+$3;n++
+   if($3>max){max=$3}
+   if($3<min){min=$3}
+  }
+  }END{if(n>0){printf("%3.2f [%3.1f,%3.1f]",a/n,min,max)}}' $outpair`
+ echo "Ave pairwise seq identity = $avepair"
+fi
+
+# Check how many identitys
+if [ $less -eq 0 ] ; then
+ ./clustal_identity -1 $output
+fi
+
+#Plot color seq aln results
+if [ $plotaln -eq 1 ] ; then
+ ./gnuplot_LisAln $output > $temp6
+fi
+
+echo "=> EBI Clustal Omega alignment saved in $output
+   Phylogenetic tree is $outphy
+   Percent Identity Matrix (group, not good for seq dentity) is $outmatrix
+    Clusters by overall sequence identity saved in $clusterout
+    Ave group seq identity (excld 0%) = $avegroup"
+[ $dopair -eq 1 ] && echo "   Pairwise seq identity map (good for identity) is $outpair"
+[ $dopair -eq 1 ] && echo "    Pairwise seq identity clusters saved in $clusterout2"
+[ $dopair -eq 1 ] && echo "    Ave pairwise seq identity = $avepair"
+
+if [ $less -eq 0 ] ; then
+echo "
+ For structural similarity of proteins: ./pymol_rmsd_many (my sRMSD) or ./TM_align (TM-score)
+ To rearrange aligned sequence at different line length, run: ./seq_align_rearrange -keeptit -keepdot -space 3 -len 100 $output
+ To display a specific range of alignment, run: ./seq_align_check -nochange -name DNA2_HUMAN -range 215 230 -plotout A.gif $output
+ Better alignment could be T-coffee and MultiAln(better display): http://tcoffee.crg.cat/apps/tcoffee/do:regular
+ NOTE: To cluster proteins by Pathway/Function/Seqidentity/Structure, run ./protein_cluster
+"
+fi
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

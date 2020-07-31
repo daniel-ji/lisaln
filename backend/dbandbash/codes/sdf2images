@@ -1,0 +1,1012 @@
+#!/bin/sh 
+# Original file saved in  /home/holi/Glide/pipeline
+
+thisfile=$0
+headerf=0
+tailf=0
+maxc=1000 #Max total number of compounds to display as in all HTML
+max=200  #maximum of cmpds to show images in one HTML page
+doall=0
+col=5  #how many images on one row
+scol=1;doscol=0;head=1;namecol=1;issmi=0;nodup=0;nosort=0;vcol="";ucol="";tcol="" #which col has SMILES for .xls
+istart=1  #start num of cmpd in SDF
+iend=$max   #end num of cmpd in SDF
+doref=0 #=1: will use Ref SDF to get structure.
+do2d=1 #=1: will force images as 2D SDF even if input is 3D
+dotrim=1  #=1: will trim SDF. Some Tags are not acceptable by Schrodinger
+doouthtml=0
+doout2=0;doout3=0
+linewidth='2.0'  #linewidth of plot. Deafult was 1.0
+lead=''
+dohtml=-1 #=1: only HTML  =0: HTML+image =-1: Only image
+font='/usr/share/fonts/msttcorefonts/arialbd.ttf'  #font to draw on image by convert -font $font -draw 'text 10,10 "Hello"'
+fontsize=15  #fontsize for title/name
+fontsmall=14  #fontsize for subscript as atom number
+
+dotitle=0
+xtitle=0.45 ; ytitle=1 #Position for title: Center-bottom
+fillcolor='red'   #color of Title/font
+pointsize=20  #size of title/font
+fullline=0  #=1: compound name is whole first line. =0: name is only $1
+noname=0  #=1: will not display cmpd name
+rankprefix='';nameprefix=''
+dotag=0;donamefile=0;namehead=0;namecol=1
+doNCI=2 #=1: will auto check if input #=2: force to convert VCN-xxx to NSC-xxx if any
+NCI_CBIS="/home/holi/database/NCI_CBIS.xls"  #Convert file for NSC and CBIS VCN- index. Cannot use as ="~/database"
+fornci=0
+
+dorank=1
+rankfile=0
+rankhead=0
+rankcol=1;rankcol2=0;rankpostfix=''
+docluster=0;ctop=5;fforce='';force=0;forcenocluster=0;doforc=0
+cut=0.6  #Similarity cutoff for first-level cluster
+cut2=0.35
+
+maxlength=15 #maxlength of name for cluster
+nohyphen=0; clusterextra=''
+
+
+cfont='/usr/share/fonts/msttcorefonts/arial.ttf'  #font for cmpd name on image by convert -font $font -draw 'text 10,10 "Hello"'
+cxtitle=0.05 ; cytitle=0.95 #Position for compound name: 0/1 for Left-bottom. Leave a little bit margin or names will be cut-buttom
+cfillcolor='blue' #color of cmpd name 
+cpointsize=12  #size of cmpd name
+
+piece=0
+fixwidth=-1  #>0: all single-cmpd image is scale/resize to this fixed width =0: Use original size 
+            #=-1: automatically determined by fullwidth/col
+fullwidth=1024 #Width of final image when fixwidth=-1
+scale=1  #scale of cmpd image
+isCID=0;heade='';leadc=''
+
+oldline=$*
+aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+while [ "$aaa" == "-" ] ; do
+ case $1 in
+  -smi)issmi=1;shift;;
+  -nodup)nodup=1;shift;;
+  -nosort)nosort=1;shift;;
+  -convert)leadc=$leadc' '$1;shift;;
+  -CID)isCID=1;leadc=$leadc' '$1;shift;;
+  -VCN)leadc=$leadc' '$1;shift;;
+  -NSC)leadc=$leadc' '$1;shift;;
+  -maxlength)clusterextra=$clusterextra' '$1' '$2;shift 2;;
+  -nohyphen)clusterextra=$clusterextra' '$1;shift;;
+  -noname)noname=1;shift;;
+  -font)font="$2";shift 2;;
+  -fontsize)fontsize=$2;cpointsize=$2;lead=$lead' '$1' '$2;shift 2;;
+  -fontsmall)lead=$lead' '$1' '$2;shift 2;;
+  -fontcolor)cfillcolor="$2";shift 2;;
+  -rankprefix)rankprefix="$2";shift 2;;
+  -nameprefix)nameprefix="$2";shift 2;;
+  -fullline)fullline=1;shift;;
+  -col) col=$2; heade=$heade' '$1' '$2; shift 2;;
+  -scol) scol=$2; doscol=1; shift 2;;
+  -vcol)vcol=$2;doscol=1;shift 2;;
+  -ucol)ucol=$2;doscol=1;shift 2;;
+  -tcol)tcol=$2;doscol=1;shift 2;;
+  -head)head=1;heade=$heade' '$1;shift;;
+  -nohead)head=0;heade=$heade' '$1;shift;;
+  -max) max=$2; iend=$2;shift 2;;
+  -start) istart=$2;  shift 2;;
+  -end) iend=$2;  shift 2;;
+  -range) istart=$2; iend=$3;  shift 3;;
+  -ref) doref=1; ref=$2; heade=$heade' '$1' '$2;shift 2;;
+  -noforce) do2d=0; shift;;
+  -f)doforc=1;shift;;
+  -no2d)do2d=0; shift;;
+   -trimTag) dotrim=1; shift;;
+   -notrimTag) dotrim=0; shift;;
+  -opt)lead=$lead' '$1' '$2;shift 2;;
+  -linewidth)lead=$lead' '$1' '$2;shift 2;;
+  -showH)lead=$lead' '$1; shift;;
+  -shownum)lead=$lead' '$1; shift;;
+  -showname)lead=$lead' '$1; shift;;
+  -scale)lead=$lead' '$1' '$2; fixwidth=0;shift 2;;
+  -s)lead=$lead' '$1' '$2; fixwidth=0;shift 2;;
+  -rotate)lead=$lead' '$1' '$2' '$3' '$4; shift 4;;
+  -html)dohtml=1;shift;;
+  -image)dohtml=0;shift;;
+  -nohtml)dohtml=-1;shift;;
+  -title)dotitle=1;title="$2";shift 2;;
+  -color)fillcolor="$2";shift 2;;
+  -size)pointsize=$2; shift 2;;
+  -xpos)xtitle=$2; shift 2;;
+  -ypos)ytitle=$2; shift 2;;
+  -piecesize)piece=$2; shift 2;;
+  -fixwidth)fixwidth=$2; shift 2;;
+  -auto)fixwidth=-1;shift;;
+  -noauto)fixwidth=0;shift;;
+  -outhtml)doouthtml=1;output_master=$2;shift 2;;
+  -out2)doout2=1;out2=$2;shift 2;;
+  -out3)doout3=1;outimage=$2;shift 2;;
+  
+  -fullwidth)fullwidth=$2; fixwidth=-1;shift 2;;
+  -rankfile)rankfile=$2; dorank=1;shift 2;;
+  -rankhead)rankhead=1;shift;;
+  -rankcol)rankcol=$2; shift 2;;
+  -rankcol2)rankcol2=$2;shift 2;;
+  -rankpostfix)rankpostfix="$2";shift 2;;
+  -namefile)namefile=$2;donamefile=1;shift 2;;
+  -namecol)namecol=$2;shift 2;;
+  -namehead)namehead=1;shift;;  
+  -maxc)maxc=$2; shift 2;;
+  -all)doall=1;shift;;
+  -tag)tag="$2";dotag=1;shift 2;;
+  -norank)dorank=0;shift;;
+  -noNCI)doNCI=0;shift;;
+  -NCI)doNCI=2;shift;;
+  -forNCI)fornci=1;shift;;
+  -cluster)docluster=1;shift;;
+  -nocluster)docluster=0;forcenocluster=1;shift;;
+  -ctop)ctop=$2;shift 2;;
+  -force)fforce=$1;force=1;doforc=1;shift;;
+  -cut)cut=$2;docut=1;shift 2;;
+  -cut2)cut2=$2;docut=1;shift 2;;
+
+ esac
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+done
+fletter=`echo $1 | awk '{if(substr($1,1,1)=="-"){print 1}else{print 0}}'`
+if [ $fletter -eq 1 ] ; then
+  echo "Fatal error! Argument $1 has - as preceding letter which is unrecoginized and forbidden for safety case!"
+  exit
+fi
+
+if [ -n "$1" ] ; then
+ infile=$1
+ if [ -n "$2" ] ; then
+   headerf=1
+   hfile=$2
+ fi 
+ if [ -n "$3" ] ; then
+   tailf=1
+   tfile=$3
+ fi
+else
+cat << ttt
+  Convert sdf/mae/smi/bld/.xls/CID/VCN/NSC/pdb/... with a series of compounds into html format (-html) or one image (-image)      
+     where strucuture images are arranged in table
+    Images are forced to convert into 2D SDF  even if input is 3D by default. Otherwise, use -noforce option.
+    Cmpds are arrange in col * row table. To geenrate HTML in rows w/ Tag info, using ./sdf2html
+    Screen copy HTML file to display structures in ppt file
+  Also show cluster of sdfs : -cluster
+  Also convert ChEMBL downloaded inhibitors SMILES .xls into sdf and cluster display
+  It can take any format that ./pdb_sdf_smi_mae_mol2_convert can convert into sdf
+
+How to find known inhibitors for a protein?
+Best in EBI ChEMBL : https://www.ebi.ac.uk/chembl/
+ Or find the ChEMBL link in Uniprot of a protein: Chemistry databases | ChEMBL
+ Type ProteinName | Click "Target" as KCNK9 or Uniprot ID | Click 'ChEMBL ID' | CHEMBL2321614 (w/ 126 cmpds)
+  | Click "Download" icon under Pie-image and select "Display all records" or in Pie-image, click both links: "1 inhibitor" and "144 IC50"
+  | To download 144 cmpds with IC50 : Click 'Please select...' | Download tab-delimited file | Sorted by 'Standard Value for IC50'
+ Also need to click Pie-image "Target Associate Assays" | Click 'Download' Button to 'Display All records' 
+  | Click 'Please select' to 'Display bioactivities' | 'Download tab-delimited file | Sorted by 'Standard Value'
+ There is SMILES string inside to get structures. Run : $0 ChEMBL_inhibitor.xls to get smi/sdf/image/clusters
+WARNing: Need download both IC50 and Ki data, then merge them to get best results. See p38/ for p38g vs CDK9
+WARNing: there are duplicate inhibitor with diff IC50s as CHEMBL2324344 in KCNK9/KCNK9_inhibitors_ChEMBL.xls
+  Duplicate ChEMBL should from different chiral center!
+NOTE: ChEMBL has good summary of literature inhibitors for a protein. Even PubChem borrows it.
+WARNing: ChEMBL failed to find literatual clinical inhibitor for SF3B1. Its analog was found as SF3B3 instead. see ~/SF3B1
+WARNing: ChEMBL failed to find literatual inhibitor for Exo1 as it is discussed as FEN1 inhibitor. See Exo1/
+But PubChem also has HTS tested results or bioassay results w/ AID xxxxx with IC50 value or Bscore etc.
+ For example, for KCNK9 inhibitor, if you search NP_057685 in NCBI and select records in bioAssay,
+  Or seach in Database "PubChem BioAssay" for "KCNK9 human" Then Click on "BioAssay Download" can get all 17 bioassays
+ AID 488922 HTS tested 305,679 cmpds with 3,799 (~1%) are active.
+ It also has AID 652211 w/ IC50 that partial are new from ChEMBL
+ But it failed to find known corrector for APOE4 see ~/APOE
+NOTE: To find known inhibitor of a protein, use ChEMBL+PubChem BioAssay, then ./pdb_sdf_smi_mae_mol2_convert -ChEMBL ChEMBL_inhibitors.xls 
+NOTE: To find common ChEMBL inhibitors and compare IC50 of two proteins:
+  ./lists_compare -chembl -out gamma_CDK9_IC50_Ki.xls gamma_IC50_Ki.xls CDK9_IC50_Ki.xls   #see p38
+  ./lists_compare -tab -name1 STANDARD_VALUE -name2 STANDARD_UNITS -add2name3 CANONICAL_SMILES -header -nameonly beta_ChEMBL_inhibitor_IC50.xls 1 0 0 SRC_IC50.xls 1 0 0 beta_SRC_IC50.xls
+
+
+  Overlap BW image and selected color image to one by ImageMagick (or gimp): composite C.png BW.png Overlap.png   (-blend 30)
+  Add watermark: composite -dissolve 50% -gravity center -quality 100 \( Watermark.png -resize 50% \) PDB.jpg PDB.jpg
+   See: http://www.xoogu.com/2013/how-to-automatically-watermark-or-batch-watermark-photos-using-imagemagick/
+
+mol2ps : convert sdf to postscript image  (psexec)
+./mol2ps --h
+mol2ps version 0.4e    mol2ps version 0.4b    N. Haider 2014
+Usage: mol2ps [options] <inputfile>
+ where <inputfile> is the file containing the molecular structure
+ (supported formats: MDL *.mol or *.sdf, Alchemy *.mol, Sybyl *.mol2)
+ if <inputfile> is "-" (without quotes), the program reads from standard input
+valid options are:
+  -R (reaction mode, for MDL rxn and rdf files)
+  --font=<Helvetica|Times>, default: Helvetica
+  --fontsize=<any number in points>, default: 14
+  --fontsizesmall=<any number in points>, default: 9 (for subscripts)
+  --linewidth=<n.n>, default: 1.0 (linewidth in points; use 1 decimal)
+  --rotate=<auto|auto3Donly|n,n,n>, default: auto (n,n,n specifies the
+    angles to rotate the molecule around the X, Y, and Z axis (in degrees)
+  --autoscale=<on|off>, default: on (scales the molecule to fit the natural
+    C-C bond length)
+  --striphydrogen=<on|off>, default: on (strips all explicit H atoms)
+  --hydrogenonhetero=<on|off>, default: on (adds H to all hetero atoms)
+  --hydrogenonmethyl=<on|off>, default: on (adds H to all methyl C atoms)
+  --hydrogenonstereo=<on|off>, default: on (shows H if bond is "up" or "down")
+  --showmolname=<on|off>, default: off (prints name above the structure)
+  --atomnumbers=<on|off>, default: off (prints atom numbers)
+  --bondnumbers=<on|off>, default: off (prints bond numbers)
+  --sgroups=<on|off>, default: on (uses Sgroup abbreviations if present)
+  --showmaps=<on|off>, default: off (prints atom-atom mapping numbers)
+  --color=</path/to/color.conf>, default: no colors for atom labels (example as mol2ps_color.conf)
+  --bgcolor=<white|gray|n,n,n> where n,n,n are the RGB values (0-255)
+  --scaling=<n.n>, default: 1.0 (any scaling factor from 0.1 to 10.0)
+  --output=<ps|eps|svg>, default depends on prog name (mol2ps, mol2eps, mol2svg)
+
+
+  Usage: $0 [Options] InputSDFfile [header file to add on html, or .mae .bld .smi, or .xls, or pdb/NSC/VCN-/CID] [tail file for html]
+   Input: .sdf  .mae .bld .smi or ChEMBL downloaded inhibitors .xls or CID list or chembl output from my ./chembl
+    .xls is tab/space-delimited with CANONICAL_SMILES col as SMILES or -scol -head to define where is SMILES 
+    Or tab-seperated .xls with header has key words: CANONICAL_SMILES STANDARD_VALUE [STANDARD_UNITS] (old ChemBL website)
+     New Chembl webiste from 2019/5 as: Standard Value	Standard Units	Canonical Smiles
+  Options:
+   -f : force to recal images even if .png exists
+    -force : force to recalculate cluster and image even if exists
+    -fullline : compound name to show is whole first line. Default: name is only first word in first line [$fullline]
+    -noname : will not display cmpd name (but still display cmpd rank)
+    -tag "TagName": Use cmpd name as value in > <TagName> tags
+     [-NCI] : will force to convert VCN- into NCI NSC number. [default]: will auto-check input SDF name whether has NCI in it
+     -noNCI : Will not assume input is NCI sdf and use NSC tag for name (same as -tag NSC) as default if there is NCI word in input name
+              and VCN- as cmpd name in SDF. 
+    -nameprefix 'Prefix for name' : Add prefix to compound name to display. -nameprefix 'NSC' will display name as NSCxxxx
+    -rankprefix 'Prefix for Rank' : Add prefix to rank for display. e.g. -rankprefix 'C' will display rank n as Cn x
+      When combined with -norank and -rankprefix 'C', compound name will be displayed as Cx, same as -nameprefix
+    -namefile NameFile : display name is from name file (same order as input SDF)
+     -namehead : NameFile has header line
+     -namecol NameCol : Names in col number of NameFile. [$namecol]
+    -rankfile RankFile : List file to rank cmpd in order of appearance in ListFile and display on image
+     Two types of RankFile: 
+       Type I:  only cmpd names, rank is as order of the cmpd names at NameCol col shown in RankFile
+       Type II: both cmpd names at NameCol col and cmpd rank to display at RankCol
+     -rankhead : there is header on RankFile
+     -rankcol NameCol : Compound name col in Rankfile
+     -rankcol2 RankCol : Compound rank col for Type II Rankfile
+     -rankpostfix "rankpostfix" : postfix to add on Rank col
+    -norank : No rank to display before compound name    
+    [-nocluster] | -cluster : Not calculate cluster of SDFs
+     -ctop TopClusters : show TopClusters number of clusters [$ctop]
+     -force : force to recalculate cluster and image even if exists
+     -cut Cutoff : Similarity cutoff for first-level cluster. Lower cutoff will show first level cluster cmpds together in map [ $cut ]
+     -cut2 Cutoff2 : Similarity cutoff for 2nd-level cluster. Lower cutoff will show 2nd level cluster cmpds together in map [ $cut2 ]
+
+   -convert : any input format that can convert into sdf by ./pdb_sdf_smi_mae_mol2_convert 
+    -CID : input is CID list instead of SDF
+     -head : CID list has header
+     -col CIDcol : CID col
+    -forNCI : input is NSC list instead of SDF for NCI DTP cmpds
+    -scol SMILEScol : Col number to have SMILES in input .xls file, must be space-delimited. scol=-1: last col
+     -nohead | [-head] : input .xls does not have header. [Default]: has header
+     -out2 DuplciateOutput : Output of duplicate cmpds in ChEMBL downloaded .xls
+     -namecol NameCol : Names in col number of input. [$namecol]
+     -issmi : force to read in input as SMILES, will not auto-check/force extension of input as .xls or .txt
+     -nodup : will not check duplicate names, which may change the order of cmpds
+     -nosort : will not sort by IC50/Ki values, which may put 0 value in front
+     -vcol ValueCol : col that has IC50/Ki values
+     -ucol UnitCol : col that has unit (nM etc.)
+     -tcol TypeCol : col that has type (IC50, Ki, Kd, ...)
+    -no2d | -noforce : will use original 2D or 3D SDF images. Not forced to convert to 2D images 
+    -linewidth linewidth : linewidth of plot. Default : $linewidth
+    -s|-scale ScaleFactor : enlarge/shrink factor of compound image [$scale] xNot recommended, use -fixwidth
+      xUse -fixwidth 600 instead to enlarge compound image
+    -rotate X Y Z : rotate degrees along X/Y/Z axis
+    -showH : show hydrogen atoms if there [default]: strips all explicit H atoms
+    -shownum : prints atom numbers    
+    -opt "mol2ps command" : mol2ps command as above. Use multiple -opt for multiple commands. Each -opt can only take one command
+     -opt --fontsizesmall=7 -opt --rotate=0,0,90"
+    -ref XXX.sdf : Use XXX.sdf as structure (i.e. 2D) to display InputSDF (i.e. 3D). In this case, SDF must have name on first line
+       2D SDF can be generated by ./sdf3d22d.spl
+    -col XXX : [ $col ] display coloumns for compounds 
+    -maxc MaxCmpd : Max number of cmpds to generate image and in output .png [$maxc]
+    -max NNN : [100] Max number of compounds to show in one html page. Other compounds shown in other html pages.
+    -all : will display all cmpds (including .png)
+    -start MMM : [1] start num of cmpd in SDF to display image
+    -end MMM : [500] end num of cmpd in SDF  to display image
+    -range MMM NNN : [ 1 500 ] range in SDF  to display image
+     -trimTag : [default] trim SDF Tags since some Tags are not accepted by Schrodinger, such as URL http://X.com when generating mae
+     -notrimTag :  will NOT trim SDF tags to generate mae
+    [-image] : Output is merged image with all compounds + HTML
+    -out3 Imageout.png : output image of all cmpds together
+    -html : Output is HTML only 
+     -outhtml MasterHTML : user defined master hrml page
+    [-nohtml] : Output is one single image with all compounds and no HTML to save space    
+    -title Title : Add Title to $piece image at bottom
+     -xpos | -ypos Relative Position : Title starting relative position [ $xtitle $ytitle ]
+     -color Color : color of the title/cmpdName [$fillcolor]
+     -size Size : size of title [ $pointsize ]
+    -piecesize Size : for -image, the maximum cmpds in each single image
+    -font Font : avalaible font in computer, such as /usr/share/fonts/gnu-free/FreeMono.ttf
+    -fontsize FontSizeForName : fontsize for CmpdName [$fontsize]
+    -fontsmall FontSizeForSubscript : fontsize for subscript as atom number
+    -fontcolor Color : color of cmpdName [$cfillcolor]
+    -fixwidth fixwidth : Each cmpd image is scaled/resized to this fixwidth points. 
+      =0: Use original size   
+      =-1: Automatically determine fixwidth=FullWidth/Col. So the final image width is as $fullwidth
+      -auto | -noauto : same as -fixwidth -1|0 : Automatically determine fixwidth=FullWidth/Col. 
+    -fullwidth FullWidth : FullWidth of final image is fixed to FullWidth [ $fullwidth ]
+  -maxlength maxNameLength : For cluster only: max length of name in case name too long to display [$maxlength]
+  -nohyphen : For cluster only: Only display the first part of name before hyphen - in case name is too long
+
+  Output: Inputfile_1.html (master HTML) together with subfolder that stores compound images at Inputfile_dir for -html or -image option
+      Or single image for -nohtml or -image option
+
+  e.g. 
+    $0 -cluster A.sdf  #also display cluster of SDF files
+    $0 -scale 2 -showH -shownum -convert ligand.pdb  #Show ligand PDB format and display atom name and atom number for xSTD compare in ./vmd_namd_distance_STD
+    $0  -html -noauto -ref fda.sdf fda_div_100.sdf  #fda_div_100.sdf is 3D SDF from ZINC, need 2D fda.sdf reference
+       #Generate HTML only, no re-scale of original images
+    $0 -nohtml -piecesize 20 -col 5 -fontsize 20 -fontcolor red A.sdf
+        #Merge each 20 cmpds into 1 image for all cmpds
+    $0 -noforce -fullwidth 1024 -rankfile ~/RLIP76/amri/rl_Site1_rl_Site1_amri_SP_2_top1000_div80_total100_XP_5_unique.rept.xls -rankcol 2 -rankhead ~/RLIP76/amri/rl_Site1_rl_Site1_amri_SP_2_top1000_div80_total100_XP_5_unique.rept_s0.6_c1.sdf
+       #Rank cluster output by original list file
+    $0 -noforce -fullwidth 1024 -nohtml -start 1 -end 20 -col 5 -title "Cluster 1" ~/RLIP76/amri/rl_Site1_rl_Site1_amri_SP_2_top1000_div80_total100_XP_5_unique.rept.sdf
+       #Merge 1-20 cmpds into one image and no HTML output. Each row has 5 images. Full width of image is $fullwidth pixels. Add title to bottom
+    $0 -fixwidth 600 -linewidth 2 A.sdf 
+       #Enlarge cmpd image to 600 pixels and linewidth thicker/darker as 2
+    $0 -maxc 200 -max 100 A.sdf 
+      #Show max 200 cmpds and each html page only 100 cmpds w/ 2 html pages. Output png has 200 cmpds in one page
+    $0 -all A.smi (A.mae A.bld) 
+      #can work on .mae , .smi .bld files as well. All cmpds will be shown in .png output
+    $0 -CID -head -col 1 CID.list  #Input is CID list
+    $0 -forNCI -head -col 1 NSC.list   #Input is NSC list for NCI DTP cmpds. xBut may missing some large NSC# as NSC_VCN_map.txt is not completed
+      This will extract from NCI_2012.sdf 265,242 3D structures. No new release as of 2017/7 2019/5
+      But missing some, e.g. NSC772286 as: The3D structures succeeded for 265,242 of the 266,151 original structure records
+    $0 -no2d -fullline A.sdf >& temp
+       #avoid shown any screen dump and show cmpd name by using whole line of names
+    $0 -rankfile bioassy_IC50.txt -rankcol 4 -rankcol2 3 -rankpostfix uM bioassy_IC50.sdf
+       #Display PubChem Bioassay with IC50 value (col3 in uM, col 4 is CID) on SDF downloaded from bioassay. See KCNK9/
+    $0 -out2 duplciate.txt -cut 0.85 -cut2 0.6  KCNK9_inhibitors_ChEMBL.xls 
+    $0 -out2 duplciate.txt -cut 0.85 -cut2 0.6 -maxlength 15 -nohyphen  KCNK9_inhibitors_ChEMBL.xls
+       #generate images and cluster of inhibitors of a protein from downloaded ChEMBL .txt or .xls . Test in KCNK9/
+       #Remember to merge both IC50 and Ki inhibitors to get best result. See p38/ for CDK9
+       # Or xls with header has key words: CANONICAL_SMILES STANDARD_VALUE [STANDARD_UNITS]
+       #If IC50 is too long, use -maxlength 15 -nohyphen to cut name so it can display the cluter images
+       #besides IC50, ChEMBL also have activity, inhibition, Ki, Other catalog to download
+    $0 -scol 5 -namecol 1 ChEMBL.xls
+       #For any xls with SMILES in col 5 and display name in col 1
+    $0 -scol 11 -namecol 4 -tcol 5 -vcol 7 -ucol 8 -issmi -nodup -nosort -nohead myCHEMBL.xls
+       #For output from my ./chembl : col#11 for SMILES, col4 for cmpdID and with header
+    $0  -tag "NSC" -norank -rankprefix NSC  NCI.sdf
+       #Display cmpd name as NSC number in > <NSC> tag in format of NSCXXXX. No rank added before cmpd name
+       #This will assume input is NCI sdf if there is NCI word in name and VCN- as cmpd name inside, unless use -noNCI option
+
+
+  NOTE: In new computer, may need re-download ./mol2ps !!! May need to check ImageMagic identify command (use /usr/bin/identify solved problem)
+   A.If error as 'file 1.sdf not found!' in ./sdf2png then may need re-download mol2ps,especially for new computer:
+    re-download mol2ps from http://merian.pch.univie.ac.at/~nhaider/cheminf/mol2ps.html and :
+    rename ./mol2ps-0.4b-linux-i386 ./mol2ps
+    chmod 0755 ./mol2ps and saved in pipeline_scripts/
+   B. ImageMagic identify command may not work to auto-sacle images: identify -format "%w %h" 1.png  (use /usr/bin/identify !!!)
+     This script will automatically disbale as -noauto options to re-run
+  NOTE: To enlarge cmpd image, use -fixwidth 600 (X-scale) option Xmodify scalingfactor=1 in ./ps2png.pl
+  NOTE: Only $maxc compounds will be displayed in by default. Use -maxc NNN to define max display compounds
+  NOTE: To search the PDBs that include a compound, goto https://pubchem.ncbi.nlm.nih.gov/compound/$CID#section=Protein-Bound-3-D-Structures
+    Or in PDB: Advanced Search|Chemical Components|InCHI Descriptor|DescriptionType->InChI Key 
+  NOTE: Linux command convert of ImageMagick  can be used to manuplate images. See http://linux.about.com/library/cmd/blcmdl1_ImageMagick.htm
+   convert -append 1.png 2.png ... Merged.png : -append merge images from top to bottom. +append merge from left-to-right
+   convert can draw shapes, text, images on images as well by -fillcolor blue -draw 'text 10,10 "Hello"' ; -draw 'circle 100,100 150,150'   
+  Use ./image_merge
+  NOTE: To get puchase info from PubChem for cmpd or its analog, run ./PubChem_convert -purchase  or -analog 
+
+ NOTE: A better one (called this) to convert other formats PubChemCID/CAS/NSC/VCN-/SMILES into cmpd image is ./pdb_sdf_smi_mae_mol2_convert
+ 
+ttt
+  exit
+fi
+
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+isScaleMP=0  #=1: runs on ScaleMP machine, need special code for Schrodinger
+if [ -d "/flower_data/" ] ; then
+ isScaleMP=1; ed='/flower_data/hongzhili/database/pipeline_script/' #Admin defined directory with scripts 
+fi
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp $ed/sdf_getNthCompound $ed/sdf2png $ed/sdf_getFromName $ed/sdf_getNthName $ed/sdf3d22d.spl $ed/sdf_getRecord  .
+ cp $ed/sdf_trimTag $ed/pdb_sdf_smi_mae_mol2_convert $ed/sdf_getTag $ed/sdf_contactmap $ed/lists_remove_duplicate .
+ cp $ed/NSC2VCN $ed/glide_rept2sdf .
+ [ ! -s lists_compare ] && cp $ed/lists_compare .
+fi
+
+temp=$0'_'$$'.tmp'  #temp file required by DVS
+temp2=$temp'2'
+temp3=$temp'3'
+temp4=$temp'4'
+
+[ ! -s $font ] && font='/usr/share/fonts/bitstream-vera/Vera.ttf'
+[ ! -s $font ] && font='/usr/share/fonts/gnu-free/FreeMono.ttf'
+if [ ! -s $font ] ; then
+ echo "Fatal error! Cannot find $font ! Go inside to modify the code for available font or -font option"
+ exit
+fi
+[ ! -s $cfont ] && cfont=$font
+
+background="BG_whitebl1-13.gif"  #background image for html
+
+########### Convert CID into SDF
+if [ "$leadc" != "" ] ; then
+ echo "Convert CID/VCN-/NSC/PDB list/file $infile into SDF:"
+ last=`echo $infile | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'` 
+ ./pdb_sdf_smi_mae_mol2_convert $heade $leadc -out $last.sdf $infile #> $temp
+ infile=$last.sdf
+ nameprefix='CID'
+fi
+
+########### Convert NSC into SDF for NCI DTP cmpds : output image same order as input list
+if [ $fornci -eq 1 ] ; then
+ echo "Convert NSC list $infile into SDF for NCI DTP cmpds:"
+ last=`echo $infile | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+ #./NSC2VCN $heade -out $temp.vcn $infile  > $temp  #convert NSC to VCN
+ #./glide_rept2sdf -out $last.sdf $temp.vcn ~/database/NCI_CBIS.sdf 
+ ./glide_rept2sdf -nodup $heade -out $last.sdf $infile ~/database/NCI_2012.sdf
+ infile=$last.sdf
+ nameprefix='NSC'
+fi
+
+#Remove .sdf extension if it is there
+infileo=$infile
+extension=`echo $infile | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`basename $infile ${extension}`
+#infile=`echo $infile | awk '{l=length($1)-3;if(substr($1,l,4)==".sdf"){print substr($1,1,l-1)}else{print $1}}'`
+last=`echo $infile | awk 'BEGIN{FS="/"}END{print $NF}'`
+issdf=`echo $infileo | awk '{l=length($1)-3;if(substr($1,l,4)==".sdf"){print 1}else{print 0}}'`
+input_sdf=$infile'.sdf'
+input_sdfo=$input_sdf
+
+isxls=`echo $infileo | awk '{l=length($1)-3;if(substr($1,l,4)==".xls"||substr($1,l,4)==".txt"){print 1}else{print 0}}'`
+
+if [ $issmi -eq 1 ] ; then  #input is forced as smile file, will not check .sdf .xls or .txt extension
+ issdf=0; isxls=1
+fi
+
+############### Work on SMILES or ChEMBL downloaded inhibitors
+if [ $issdf -ne 1 ] ; then
+ if [ $isxls -eq 1 ] ; then
+  if [ $doscol -eq 0 ] ; then  #is .xls .txt downloaded from ChEMBL w/ SMILES: Must has CANONICAL_SMILES, STANDARD_VALUE and STANDARD_UNITS
+   [ $forcenocluster -eq 0 ] && docluster=1   #will display clusters
+   nrecord=`wc -l $infileo | awk '{print $1-1}'`
+   scol=`head -1 $infileo | awk '{split($_,a,"\t");for(i=1;i<=NF;i++){if(a[i]=="CANONICAL_SMILES"||a[i]=="Canonical Smiles"){print i;exit}}}'`
+   vcol=`head -1 $infileo | awk '{split($_,a,"\t");for(i=1;i<=NF;i++){if(a[i]=="STANDARD_VALUE"||a[i]=="Standard Value"){print i;exit}}}'`
+   ucol=`head -1 $infileo | awk '{split($_,a,"\t");for(i=1;i<=NF;i++){if(a[i]=="STANDARD_UNITS"||a[i]=="Standard Units"){print i;exit}}}'`
+   [ "$ucol" == "" ] && ucol=0
+   namcol=1
+   echo "$infileo w/ $nrecord records is downloaded from ChEMBL with SMILES in col $scol at key CANONICAL_SMILES and IC50/Ki in STANDARD_VALUE [STANDARD_UNITS]"
+   echo "To compare IC50+Ki of common inhibitors from two protein, run: ./lists_compare -chembl -out out.xls $infileo B_IC50_Ki.xls"
+   echo " WARNing: better to merge Ki and IC50 together from CHEMBL for better compare two proteins. See p38/ for CDK9 vs p38g"
+  else #any other xls or txt that has SMILES
+   [ "$vcol" == "" ] && vcol=0
+   [ "$ucol" == "" ] && ucol=0
+   namcol=$namecol
+   echo "Input $infileo is xls file with SMILES in col $scol and name in col $namcol"
+  fi
+  [ "$tcol" == "" ] && tcol=0
+  awk 'BEGIN{v='$vcol';u='$ucol';s='$scol';t='$tcol';head='$head';n='$namcol'}
+  {if(NR>head){
+   if(v>0){p=split($_,a,"\t");if(u>0){uu=a[u]}
+    tt=""; if(t>0){tt=sprintf("%s=",$t)}
+    value=sprintf("%s%s%s",tt,a[v],uu); #IC50 w/ unit or other unit like % uM
+    name=a[n];
+    if(s==-1){s=p};smi=a[s]
+   }else{if(s==-1){s=NF};name=$n;smi=$s}
+   if(substr(name,1,6)=="CHEMBL"){name=substr(name,7,100)}; #Remove CHEMBL before name
+   printf("%s %s %s\n",name,smi, value)}}' $infileo > $temp.name2  #Name|SIMILES|IC50(w/UNIT) Remove CHEMBL before name
+   #Must remove duplicate records with different IC50, keep first record:
+  if [ $nodup -eq 0 ] ; then
+   ./lists_remove_duplicate -out $temp.name3 -out2 $temp.dup $temp.name2 1 > $temp
+   ndup=`grep 'Number of duplicates =' $temp | awk '{print $5}'`  #Number of duplicates = 5 ( 29.41 %)
+   if [ $ndup -gt 0 ] ; then
+    echo "WARNing: $ndup duplicate names found in $infileo as $out2 : "
+    head -20 $temp.dup
+    [ $doout2 -eq 1 ] && cp $temp.dup $out2
+   else
+    echo "No duplciate cmpd names found in $infileo"
+   fi
+  else
+   cp $temp.name2 $temp.name3
+  fi
+
+  #sort by IC50  
+  if [ $vcol -gt 0 ] && [ $nosort -eq 0 ] ; then
+   sort -k 3 -n $temp.name3 > $temp.name4
+  else
+   cp $temp.name3 $temp.name4
+  fi
+
+  #get .smi, also remove empty IC50 to last and change name as Name-IC50: SMILES Name-IC50
+  awk 'BEGIN{empty=""}{
+   if(NF<3){ #empty IC50
+    empty=sprintf("%s %s\n%s",$2,$1,empty)
+   } else { #Name as: Name-IC50
+    ic50=$3  #$3 already has IC50 unit in it as nM
+    ic50v=strtonum($3)
+    #if(ic50v<0.001){ic50="<0.001"} #rename for small IC50 < 1pM
+    if(ic50v>=100000){ic50=">100K"} #rename for large IC50 > 100uM
+    printf("%s %s-%s\n",$2,$1,ic50) 
+   }
+  }END{if(empty!=""){print empty}}' $temp.name4 >  $temp.smi2
+  awk '{if(NF>0){print $_}}' $temp.smi2 > $temp.smi  #remove last empty line
+  nsmi=`wc -l $temp.smi | awk '{print $1}'`
+  echo "  Save output w/ $nsmi cmpds for $nrecord records as $input_sdf"
+  ./pdb_sdf_smi_mae_mol2_convert $lead  $temp.smi $input_sdf > $temp
+ else
+  echo "Input $infileo is not SDF, convert it to $input_sdf"
+  ./pdb_sdf_smi_mae_mol2_convert $infileo $input_sdf
+ fi
+ input_sdfo=$input_sdf
+fi
+
+nrec=`./sdf_getRecord $infile.sdf`
+if [ $nrec -eq 0 ] ; then
+ echo "Fatal error in $0. Empty or none-exist $infile.sdf"
+ exit
+fi
+
+this_pid=$$
+[ $doouthtml -eq 0 ] && output_master=$infile'_1.html'
+#output=$infile'.html'
+relaodir=$last'_dir'
+rehtml='./'
+output_dir=$infile'_dir'
+[ $doout3 -eq 0 ] && outimage=$infile'_'$max'.png'
+
+############ Not recalculate
+if [ $doforc -ne 1 ] && [ -s $outimage ] ; then
+ echo "==> WARNing: Will use exisitng $outimage . To recalculate, run: $0 -f $oldline or rm $outimage"
+ nohup display $outimage &
+ if [ $docluster -ne 0 ] ; then
+  echo "=> Cluster of $input_sdfo at $cut $cut2 cutoffs and show top $ctop clusters. Bypass run: $0 -nocluster $oldline"
+  echo ./sdf_contactmap $fforce $clusterextra -left -less -labelName -cut $cut -cut2 $cut2 -showcluster $ctop $input_sdfo
+  ./sdf_contactmap $fforce $clusterextra -left -less -labelName -cut $cut -cut2 $cut2 -showcluster $ctop $input_sdfo
+ fi
+ rm -rf $temp $temp2 $temp3 $temp4 $temp.* $temp2.sdf $temp.png $temp2.png
+ exit
+fi
+
+#################For NCI sdf, will use NSC as cmpd name
+if [ $doNCI -ge 1 ] ; then
+ isNCI=`echo $input_sdf | grep 'NCI' | wc -l | awk '{print $1}'`  #check input sdf name whether has NCI in it
+ [ $doNCI -eq 2 ] && isNCI=1
+ if [ $isNCI -eq 1 ] ; then
+  isCBIS=`grep 'VCN-' $input_sdf | wc -l | awk '{print $1}'`
+  if [ $isCBIS -ge 1 ] ; then
+   if [ -s $NCI_CBIS ] ; then
+    hasNSC=`grep '<NSC' $input_sdf | grep '>' | wc -l | awk '{print $1}' `
+    if [ $hasNSC -gt 0 ] ; then
+     echo "There is NSC tag in $input_sdf, will use NSC number to replace original cmpd name which could be CBIS index VCN-"
+    else
+     echo "WARNing: there is no NSC tag in NCI SDF $input_sdf with $isCBIS VCN#, will add this tag based on $NCI_CBIS . If it has no NSC, use its name in <NSC> tag"
+     cp $input_sdf $infile'_ori.sdf'
+     awk 'BEGIN{file="'$NCI_CBIS'";  n=0;isnew=1
+      while ((getline line < file) > 0) {
+      n++; nf=split(line,d," "); a[n]=d[1];b[n]=d[2]
+     }
+     close(file)}{
+      if(isnew==1){vcn=$1}
+      if($1=="$$$$"){
+       nsc="NA";hasit=0
+       for(i=1;i<=n;i++){
+        if(b[i]==vcn){nsc=a[i];hasit=1;break}
+       }
+       nsc=sprintf("NSC%s",nsc)  #add NSC as prefix
+       if(hasit==0){nsc=vcn}  #use its name when no NSC#
+       print ""
+       print "> <NSC>"
+       print nsc
+       print ""
+       isnew=1
+      }else{isnew=0}
+      print $_
+     }' $input_sdf > $temp
+     mv $temp $input_sdf
+    fi
+    dotag=1;tag='NSC';nameprefix='';
+    #dorank=1;  #Still add RankNumber in front of NSCXXX, set dorank=0 if want to eliminate RankNumber
+   else
+    echo "WARNing: No $NCI_CBIS exists to convert VCN- name to NSC name for this NCI sdf. Try ~/database/NCI_2012.sdf"
+    echo "  You can make a copy of this file, so as to convert CBIS VCN- name to NSC name"
+   fi
+  fi
+ fi
+fi
+
+if [ $doall -eq 1 ] ; then
+ maxc=$nrec;istart=1;iend=$maxc
+ outimage=$infile'_'$maxc'.png'
+ echo "All $nrec cmpds will shown in $outimage and HTML $output_master"
+fi
+
+[ -d $output_dir ] || mkdir $output_dir
+
+if [ $fixwidth -eq -1 ] ; then
+ fixwidth=`echo $fullwidth $col | awk '{printf("%d",$1/$2)}'`
+fi
+
+#forced to convert SDF into 2D sdf:
+if [ $do2d -eq 1 ] ; then
+
+  if [ $dotrim -eq 1 ] ; then
+   ./sdf_trimTag $infile $temp2.sdf > $temp4
+   echo "Trim tags in $infile to $temp2.sdf"
+  else
+   cp $infile $temp2'.sdf'
+  fi
+
+ echo "Converting SDF into 2D SDF"
+ rm -f $temp.sdf
+ ./sdf3d22d.spl $temp2.sdf $temp.sdf > $temp4
+ if [ -s  "${temp}.sdf" ] ; then
+  input_sdf=$temp.sdf
+  echo "=> SDF is forced to converted into 2D"
+ else
+  echo "WARNing : failed to convert $input_sdf into 2D SDF. Use original SDF instead"
+ fi
+fi
+
+cat << title
+ Generate html with structure images for  $input_sdf or single image as $outimage
+  Cmpds to be displayed in range from $istart to $iend
+ Output master html is in output dir as  $output_master
+  At most $max compounds will show in each HTML page
+  At most $maxc compounds will show in all HTML pages
+title
+[ $headerf -eq 1 ] && echo "Header file is added to html body: $hfile"
+[ $tailf -eq 1 ]  && echo "Tail file is added to html body: $tfile" 
+
+num1=`grep '$$$$' $input_sdf | wc -l | awk '{print $1}'`  #Original sdf file, records seperated by $$$$
+#remove carriage return sign ^M from dos/win format file
+if [ $num1 -eq 0 ] ; then
+ echo 'Can not run grep $$$$ to the original sdf file ' $sdf
+ echo "   Now will remove carriage return sign ^M from dos/win format file"
+ cp $input_sdf $temp
+ #RS is the line delimiter (record separator) in the input file;
+ #RS is the line delimiter in the output file.
+ #Use \n for newline and \r for return. Use whatever you need for the RS and use nothing for the ORS.
+ awk -v RS="\r" -v ORS="" {print} $temp > $input_sdf  
+ num1=`grep '$$$$' $input_sdf | wc -l | awk '{print $1}'`
+ [ $num1 -eq 0 ] && echo "Error! Can not find sdf record. Is this a merged sdf?"
+ [ $num1 -eq 0 ] && exit
+fi
+num1o=$num1
+
+if [ $num1 -gt $maxc ] ; then
+ echo "WARNing: $num1o cmpds in SDF but only display $maxc in HTML. Use -maxc to enlarge display or -all"
+ num1=$maxc
+fi
+
+if [ $num1 -le $iend ] ; then
+ iend=$num1
+ echo "Only $num1 cmpds in SDF while $iend requested. Change ending range to $iend"
+fi
+
+
+num2=`awk 'BEGIN{print '$iend'-'$istart'+1}'`
+page=1
+if [ $num2 -gt $max ] ; then
+  echo "$num2 compounds ($istart, $iend) to be displayed, but will only show $max at each page"
+  iend=`echo $istart $num2 | awk '{print $1+$2-1}'`
+  #page=`awk 'BEGIN{n='$max';m='$istart';mm='$iend';s=int((mm-m+1)/n);a=(mm-m+1)/n;if(a>s){s++};print s}'` #html pages
+  page=`awk 'BEGIN{n='$max';m='$istart';mm='$num2';s=int((mm-m+1)/n);a=(mm-m+1)/n;if(a>s){s++};print s}'` #html pages
+  echo A total of $page HTML pages with each shown $max compounds for total $num2 cmpds
+fi
+
+################################# Loop for each html page and cmpds
+cp $ed/$background $output_dir
+nimage=0
+for (( p = 1 ; p <= $page ; p++ )) ; do   #loop for each html pages
+
+output=$infile'_'$p'.html'
+
+cat << head > $output
+<html><head>
+<title>COH Virtual Screening pipeline</title></head>
+<body bgcolor="#FFFFFF"  text="black" topmargin="0" leftmargin="0" marginheight="0" marginwidth="0" background="$relaodir/$background" link="darkgreen" vlink="darkgreen">
+<center>
+<br>
+$last.sdf<br>
+head
+
+
+if [ $headerf -eq 1 ] ; then
+  cat $hfile | awk '{print $_,"<br>"}'>> $output
+fi
+
+pnstart=`awk 'BEGIN{p='$p';m='$max';pst='$istart';t=(p-1)*m+pst;print t}'`
+pnend=`awk 'BEGIN{p='$p';m='$max';pst='$istart';b='$iend';t=p*m+pst-1;if(t>b){t=b};print t}'`
+echo "****Generate HTML page # $p : Compounds of $pnstart to $pnend "
+
+#page bar
+if [ $page -gt 1 ] ; then
+  prepage=`echo $p | awk '{p=$1-1;if(p<1){p=1};print p}'`
+  prep=$last'_'$prepage'.html'
+  firstp=$last'_1.html'
+  lastp=$last'_'$page'.html'
+  echo "Page&nbsp;$p&nbsp;&nbsp;Compound&nbsp;$pnstart - $pnend&nbsp;&nbsp;" >> $output
+  [ $p -eq 1 ] && echo "First&nbsp;&nbsp;Pre&nbsp;" >> $output
+  [ $p -eq 1 ] || echo "<a href=$firstp>First&nbsp;</a>&nbsp;<a href=$prep>Pre&nbsp;</a>" >> $output
+  for (( pp = 1 ; pp <= $page ; pp ++ )) ; do
+   if [ $pp -eq $p ] ; then
+    echo ">$pp&nbsp;" >> $output
+   else
+    pn=$last'_'$pp'.html'
+    echo "<a href=$pn>$pp&nbsp;</a>" >> $output
+   fi
+  done
+  prepage=`echo $p | awk '{pa='$page';p=$1+1;if(p>pa){p=pa};print p}'`
+  prep=$last'_'$prepage'.html'
+  if [ $page -eq $p ] ; then
+    echo "Next&nbsp;&nbsp;" >> $output
+    echo "Last&nbsp;" >> $output
+  else
+    echo "<a href=$prep>Next&nbsp;</a>&nbsp;" >> $output
+    echo "<a href=$lastp>Last&nbsp;</a>" >> $output
+  fi
+  echo "" >> $output
+fi
+
+##############Table title
+
+echo "<table BORDER=2 CELLSPACING=0 CELLPADDING=0 COLS=$col WIDTH=500> <H6>" >> $output
+echo "Start image Number: "
+for (( i = $pnstart ; i <= $pnend ; i ++ )) ; do   #loop for cmpds at each HTML page
+
+   echo -n " $i"
+
+ nimage=`expr $nimage + 1`
+
+if [ $nimage -le $maxc ] ; then 
+ if [ $doref -ne 1 ] ; then
+  ./sdf_getNthCompound $input_sdf $i > $temp
+  if [ $fullline -eq 1 ] ; then
+   cname=`head -1 $temp | awk '{if(NF>=1){print $_}else{print "'$i'"}}'`  #get SDF name, use whole first line as name
+  else
+   cname=`head -1 $temp | awk '{if(NF>=1){print $1}else{print "'$i'"}}'`  #get SDF name, use first word in  first line as name
+  fi
+  #if [ $isxls -eq 1 ] ; then
+  # cname=`head -$i $temp.name | tail -1`
+  #fi
+ else
+   cname=`./sdf_getNthName $input_.sdf $i `
+   ./sdf_getFromName $ref $cname > $temp 
+   #echo $cname
+ fi
+
+ #In case use Tag name
+ if [ $dotag -eq 1 ] ; then
+  cname=`./sdf_getTag $input_sdfo $tag | head -$i | tail -1`
+  #echo hahaha $cname
+ fi
+
+ #In case name is from namefile
+ if [ $donamefile -eq 1 ] ; then
+  cname=`awk 'BEGIN{head='$namehead';i='$i';c='$namecol'}{if(NR>head){n++;if(n==i){print $c}}}' $namefile`
+ fi
+
+ #In case no cmpd name to display:
+ if [ $noname -eq 1 ] ; then
+  cname=''
+ fi
+
+ #Add cmpd rank based on RankFile
+ if [ "$rankfile" != "0" ] ; then
+  if [ $rankcol2 -eq 0 ] ; then  #Type I rank file: only cmpd names
+   cname=`awk -v name="$cname" -v post="$rankpostfix" '{c=NR-'$rankhead';if(c>0){a='$rankcol';if($a==name){rank=c;exit}}}END{printf("%d%s %s",rank,post,name)}' $rankfile`
+  else #Type II rank file : Both cmpd names and ranks to display
+   cname=`awk -v name="$cname" -v post="$rankpostfix" '{c=NR-'$rankhead';if(c>0){a='$rankcol';x='$rankcol2';if($a==name){rank=$x;exit}}}END{printf("%s%s %s",rank,post,name)}' $rankfile`
+  fi
+ else
+  if [ $dorank -ne 0 ] ; then
+   cname=$rankprefix$i' '$nameprefix$cname   #Add rank before name
+  else
+   cname=$rankprefix$nameprefix$cname
+  fi
+ fi
+ #echo $i $cname $fixwidth
+
+ # generate image
+ osdf=$output_dir'/'$i'.sdf'
+ ops=$output_dir'/'$i'.ps'
+ opng=$output_dir'/'$i'.png'
+ relapng=$relaodir'/'$i'.png'
+ cp $temp $osdf
+ if [ $fixwidth -eq 0 ] ; then
+  ./sdf2png -fontsize $fontsize $lead -name "$cname" $osdf > $temp2    #Add name to image
+  #echo ./sdf2png $lead -name "$cname" $osdf
+ else
+  ./sdf2png -fontsize $fontsize $lead $osdf > $temp2  #Add name to image later since will rescale image
+  #echo ./sdf2png $lead $osdf
+ fi
+
+ #rescale/resize images
+ csize=`/usr/bin/identify -format "%w %h" $opng`
+ if [ $fixwidth -gt 0 ] ; then
+  cwidth=`echo $csize | awk '{print $1}'`  #get width of image
+  nerrors=`echo $csize | grep usage | wc -l | awk '{print $1}'`
+  if [ $nerrors -gt 0 ] ; then
+   echo "Error to run identify command: /usr/bin/identify -format "%w %h" $opng"
+   echo " Cannot auto-rescale images, now use original images by $0 -noauto $oldline"
+   $0 -noauto $oldline
+   rm -rf $temp $temp2 $temp3 $temp4 $temp.* $temp2.sdf $temp.png $temp2.png
+   exit
+  fi 
+  if [ $cwidth -gt $fixwidth ] ; then  #Shrink large image and Keep original size for small image
+   convert -scale ${fixwidth}x $opng $temp.png     #see http://linux.about.com/library/cmd/blcmdl1_ImageMagick.htm
+   mv $temp.png $opng
+  fi
+ #Add name to image
+  csize=`/usr/bin/identify -format "%w %h" $opng`
+  ctitleposition=`echo $cxtitle $cytitle $csize | awk '{printf("%d,%d",$1*$3,$2*$4)}'`
+  convert -font $cfont -fill $cfillcolor -pointsize $cpointsize -draw 'text '$ctitleposition' "'"$cname"'"' $opng $temp.png
+  mv $temp.png $opng
+ fi
+
+ #./sdf2png $lead -name "$i $cname" $osdf > $temp2   #Add rank to image
+ rm $osdf $ops
+
+ mod=`echo $i $col $pnstart | awk '{s=sprintf("%d",($1-$3+1)/$2);mod=$1-$3+1-s*$2;printf("%d",mod)}'`
+
+ if [ $mod -eq 1 ] ; then
+   echo "<tr>" >> $output
+ fi
+ echo "<td align="center" bgcolor="white">$i&nbsp<img src=$relapng></td>" >> $output   # #Add cmpd rank to HTML
+ #echo "<td align="center" bgcolor="white"><img src=$relapng></td>" >> $output
+ if [ $mod -eq $col ] ; then
+   echo "</tr>" >> $output
+ fi
+
+fi #nimage  
+done  #i
+echo
+echo "</H6></table>" >> $output
+
+#page bar
+if [ $page -gt 1 ] ; then
+  prepage=`echo $p | awk '{p=$1-1;if(p<1){p=1};print p}'`
+  prep=$last'_'$prepage'.html'
+  firstp=$last'_1.html'
+  lastp=$last'_'$page'.html'
+  echo "Page&nbsp;$p&nbsp;&nbsp;Compound&nbsp;$pnstart - $pnend&nbsp;&nbsp;" >> $output
+  [ $p -eq 1 ] && echo "First&nbsp;&nbsp;Pre&nbsp;" >> $output
+  [ $p -eq 1 ] || echo "<a href=$firstp>First&nbsp;</a>&nbsp;<a href=$prep>Pre&nbsp;</a>" >> $output
+  for (( pp = 1 ; pp <= $page ; pp ++ )) ; do
+   if [ $pp -eq $p ] ; then
+    echo ">$pp&nbsp;" >> $output
+   else
+    pn=$last'_'$pp'.html'
+    echo "<a href=$pn>$pp&nbsp;</a>" >> $output
+   fi
+  done
+  prepage=`echo $p | awk '{pa='$page';p=$1+1;if(p>pa){p=pa};print p}'`
+  prep=$last'_'$prepage'.html'
+  if [ $page -eq $p ] ; then
+    echo "Next&nbsp;&nbsp;" >> $output
+    echo "Last&nbsp;" >> $output
+  else
+    echo "<a href=$prep>Next&nbsp;</a>&nbsp;" >> $output
+    echo "<a href=$lastp>Last&nbsp;</a>" >> $output
+  fi
+  echo "" >> $output
+fi
+
+if [ $tailf -eq 1 ] ; then
+  echo "<br><br>" >> $output
+  cat $tfile  | awk '{print $_,"<br>"}' >> $output
+fi
+cat << tail  >> $output
+<br>Generated at $ttime Copy is all Right COH 2020 by using $0 from Dr. Hongzhi Li &copy<br>
+</body>
+</html>
+tail
+
+done #p
+
+[ $doref -eq 1 ] && echo "Ref SDF for structure is $ref" 
+
+if [ $dohtml -ge 0 ] ; then
+ echo "  Output master html is in output dir as " $output_master
+ echo "  A total of $page html files for cmpds $istart to $iend"
+ echo " Associated image files saved in " $output_dir
+ echo " To view: firefox $output_master"
+ firefox $output_master &
+fi
+
+if [ $dohtml -lt 1 ] ; then
+ #num2=$num1  #Total number of cmpds to show in .png
+ pages=1; num2n=$num2
+ [ $piece -eq 0 ] && piece=$num2
+ if [ $piece -gt 0 ] ; then
+  pages=`echo $num2 $piece | awk '{a=$1/$2; if(a>int(a)){a=int(a)+1};printf("%d",a)}'`
+  [ $piece -lt $num2 ] && num2n=$piece
+  dotitle=1  
+ fi
+ #echo $pages $num2 $piece
+ for (( k=1 ; k<=$pages ; k++ )) ; do
+  if [ $pages -gt 1 ] ; then
+   outimage=$infile'_'$piece'_'$k'.png'
+   title=$title" Page $k of #$pages"
+  fi
+  nrows=`echo $col $num2n | awk '{a=$2/$1; if(a>int(a)){a=int(a)+1};printf("%d",a)}'`
+  nhere=0
+ for (( i=1 ; i<=$nrows ; i++ )) ; do
+  mt='';rm -f $temp.png
+  for (( j=1 ; j<=$col; j++)) ; do
+   n=`echo $i $j $col $k $piece | awk '{print ($4-1)*$5+($1-1)*$3+$2}'`
+   if [ $n -le $num2 ] ; then
+    mt=$mt' '$output_dir'/'$n'.png'
+    nhere=`expr $nhere + 1`
+    #convert -background "#FFFFFF" -extend 100x 
+   fi
+  done
+  #echo $i : $mt
+  #-append merge images from top to bottom. +append merge from left-to-right. 
+  #convert see http://stackoverflow.com/questions/12076293/combine-2-images-side-by-side-into-1-with-imagemagick-php
+  #To put images of different size in center when merging, first need to determine height size (not working yet)
+  #h1=`/usr/bin/identify $mt | awk '{split($3,s,"x");print s[2]}'`
+  #h2=`/usr/bin/identify $temp.png | awk '{split($3,s,"x");print s[2]}'`
+  #if [ $h1 -ge $h2 ] ; then
+  # hoff=`echo $h1 $h2 | awk '{a=sprintf("%d",($1-$2)/2);if(a>=0){printf("+%d",a)}else{print a}}'`
+  # convert -background "#FFFFFF" $mt -page +0$hoff +append $temp.png
+  #fi
+  #convert -background "#FFFFFF" +append $mt -border 1x1 -bordercolor black $temp.png
+  convert -background "#FFFFFF" +append $mt  $temp.png
+  if [ $i -eq 1 ] ; then
+   cp $temp.png $temp2.png
+   cp $temp.png $outimage
+  else
+   #Add horizental border for each row
+   convert -background "#FFFFFF" -append -border 0x1 -bordercolor grey  $temp2.png $temp.png $outimage
+   cp $outimage $temp2.png
+  fi
+ done #i
+ if [ $dotitle -eq 1 ] ; then  #Add cmpd name
+  #Get image size:
+  size=`/usr/bin/identify -format "%w %h" $outimage`
+  titleposition=`echo $xtitle $ytitle $size | awk '{printf("%d,%d",$1*$3,$2*$4)}'`
+  ctitle=`echo -e "text ${titleposition} \"${title}\""`
+  convert -font $font -fill $fillcolor -pointsize $pointsize -draw 'text '$titleposition' "'"$title"'"' $outimage $temp2.png 
+  mv $temp2.png $outimage
+ fi
+ echo " ===> Output Image w/ $nhere compounds # $k for $input_sdfo : display $outimage "
+ nohup display $outimage &
+ done #k
+fi
+
+if [ $docluster -ne 0 ] ; then
+ echo "=> Cluster of $input_sdfo at $cut $cut2 cutoffs and show top $ctop clusters. Bypass run: $0 -nocluster $oldline"
+ echo ./sdf_contactmap $fforce $clusterextra -left -less -labelName -cut $cut -cut2 $cut2 -showcluster $ctop $input_sdfo
+ ./sdf_contactmap $fforce $clusterextra -left -less -labelName -cut $cut -cut2 $cut2 -showcluster $ctop $input_sdfo
+else
+ echo "To show clusters of cmpds, run: $0 -cluster $oldline"
+fi
+
+cat << nnot
+
+ Merge images: ./image_merge
+ Overlap images: composite C.png BW.png Overlap.png   (-blend 30)
+ Add watermark: ./watermark or: composite -dissolve 50% -gravity center -quality 100 \( Watermark.png -resize 50% \) PDB.jpg PDB.jpg
+nnot
+
+if [ $num1o -gt $maxc ] ; then
+ echo "*** WARNing: $num1o cmpds in SDF but only display $maxc images. To display all:  $0 -maxc $num1o $oldline"
+fi
+
+if [ $isxls -eq 1 ] && [ $doscol -eq 0 ] ; then
+  echo "=> ChEMBL downloaded $infileo has $nsmi unique cmpds for $nrecord records saved as $input_sdf"
+fi
+
+#Clean images files and html to save space
+if [ $dohtml -lt 0 ] ; then
+ rm -rf $output_dir $output_master
+fi
+
+echo "Use ./pdb_sdf_smi_mae_mol2_convert -image to convert any format (CID/CAS/smi/...) into images"  
+rm -rf $temp $temp2 $temp3 $temp4 $temp.* $temp2.sdf $temp.png $temp2.png
+
+exit
+

@@ -1,0 +1,26 @@
+#!/bin/sh 
+
+thisfile=$0
+if [ -n "$1" ] ; then
+     infile=$1
+     T=$2
+else
+  echo " Readme in /home/holi/database/diversity_workflow.txt" 
+cat << ttt
+    Get Names (at first line) from input sdfs. Output is screen-dump
+    Usage: $0 SDF(full name) 
+    e.g. $0  /home/tripos/hongzhi/database/stat3/48.sdf 
+ttt
+  exit
+fi
+
+
+awk 'BEGIN{new=1;n=0;;doit=0;
+}
+{
+   if(new==1){print $1; new=0}
+   if($1=="$$$$"){new=1}  #break out at empty line
+}' $infile
+
+
+exit

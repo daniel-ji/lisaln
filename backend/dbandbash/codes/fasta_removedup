@@ -1,0 +1,136 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+keeptitle=1
+fuzzy=1
+line=100
+keepold=0
+
+oldline=$*   #all argvs
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -nokeeptitle)keeptitle=0;shift;;
+   -keeptitle)keeptitle=1;shift;;
+   -line)line=$2;shift 2;;
+   -keepold)keepold=1;shift;;
+   -debug) debug=1; shift;;
+   -nofuzzy)fuzzy=0;shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then
+ input=$1
+else
+cat << ttt
+   This is a script to remove duplicate sequences inside one multiple sequence fasta file 
+   Usage: $0 FASTAfile
+   Options:
+    -out output
+    -nokeeptitle | [-keeptitle ] : Title of duplicate record will be discarded 
+    -line Linenum : Line number for output sequence [$line]
+    -keepold : Keep old sequence to display. Not the default more complete sequence to display
+      More Complete Sequence: minimum missing residues
+    -nofuzzy : will do exact string match. Faster but not good for fasta converted from PDBs 
+      Default: . or - in sequence will count as any residue to do match. Good for fasta converted from PDB: chains may have silightly missing residues
+
+   Example: $0 -out clean.fasta.txt PDB.list-metal_PPI_contact.fasta.txt
+
+   NOTE: ./sequence_download to download NCBI fasta (same as fasta download from PDB site) sequences for PDBs
+   NOTE: ./fasta_fromPDB to convert PDB into sequence fasta
+   NOTE: ./fasta_byPDB to extract fasta from multiple sequence file based on PDB IDs
+   NOTE: ./fasta_identity to find the indetical residues of two sequence file
+   NOTE: ./fasta_removedup to remove duplicate sequences
+   NOTE: To download pdb, run: ./pdb_download
+
+ttt
+  exit
+fi
+
+
+temp=$thisfile'_'$$'.tmp'  #temp file
+temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'
+
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".txt"){print substr($1,1,l-1)}else{print $1}}'`
+[ $doout -ne 1 ] && output=$infile'_nodup.txt'
+
+nr=`awk 'BEGIN{s=0;n=0}{if(s==1&&NF==0){s=0};if(substr($1,1,1)==">"&&s==0){s=1;n++}}END{print n}' $input`
+
+awk 'BEGIN{keep='$keeptitle';n=0;s=0;fuzzy='$fuzzy';keepold='$keepold';linenum='$line'}{
+ if(s==1&&substr($1,1,1)!="#"&&substr($1,1,1)!=">"&&NF>=1){
+  m[n]++;content[n,m[n]]=$_
+  kk=split($_,aa," ")  #remove space in sequence
+  for(i=1;i<=kk;i++){str[n]=sprintf("%s%s",str[n],aa[i])}
+ }
+ if(substr($1,1,1)==">"){s=1;n++;t[n]=$_;did[n]=0;str[n]="";m[n]=0;used[n]=0}
+}END{
+ for(i=1;i<=n;i++){  #loop each sequence
+  if(used[i]==0){ #only for no-dup
+   ttt=t[i];len1=length(str[i])
+   for(j=(i+1);j<=n;j++){ #loop other sequences to check dup
+    len2=length(str[j])
+    if(fuzzy==0){
+     if(str[i]==str[j]){
+      used[j]=1
+      if(keep==1){ttt=sprintf("%s\n%s",ttt,t[j])}
+     }
+    } else {     
+     didi=0;ostr="";ll=len2;if(len2>len1){ll=len1}
+     for(k=1;k<=ll;k++){
+      x1=substr(str[i],k,1);x2=substr(str[j],k,1);
+      oio=x1;if(x1=="-"||x1=="."){oio=x2}
+      ostr=sprintf("%s%s",ostr,oio)
+      if(x1!=x2&&(x1!="-"&&x1!="."&&x2!="-"&&x2!=".")){
+       didi=1;break
+      }
+     }
+     if(didi==0){
+      str[i]=ostr   #Use more complete sequence to display
+      for(k=1;k<=(len2-len1);k++){
+       str[i]=sprintf("%s%s",str[i],substr(str[j],k+ll,1))
+      }
+      used[j]=1
+      if(keep==1){ttt=sprintf("%s\n%s",ttt,t[j])}
+     }
+    }
+   } #j
+   printf("%s\n",ttt)  #print title
+   if(keepold == 1) {   #print old sequence
+    for(j=1;j<=m[i];j++){  #for rows of sequence
+     print content[i,j]
+    }
+   } else {  #print new complete sequence
+    len1=length(str[i])
+    nrow=int(len1/linenum+0.99999)
+    for(j=1;j<=nrow;j++){
+     for(k=1;k<=linenum;k++){
+      nnn=(j-1)*linenum+k
+      if(nnn<=len1){
+       printf("%s",substr(str[i],nnn,1))
+      } 
+     }
+     printf("\n")
+    }    
+   }
+   print " "
+  } #used[i]
+ } #i
+}' $input > $output
+
+nrr=`awk 'BEGIN{s=0;n=0}{if(s==1&&NF==0){s=0};if(substr($1,1,1)==">"&&s==0){s=1;n++}}END{print n}' $output`
+
+echo "Remove duplicate sequences in $input of $nr to save $nrr sequences (fuzzy=$fuzzy) in $output"
+
+rm -rf $temp $temp2 ; exit

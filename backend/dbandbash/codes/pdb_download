@@ -1,0 +1,485 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+
+oldline=$*   #all argvs
+#echo $0 $oldline
+isid=0 #list file or PDB ID?
+idauto=1
+header=0;header2='-noheader';  #header in list file?
+col=1 #col of PDB IDs in list file
+try=1 #try times when failed fetch file
+PDBserver='ftp://ftp.wwpdb.org/pub/pdb/data/structures/divided/pdb/'   #PDB server for PDB format
+out='./'  #output directory
+nohet='-noHETATM' #will not count HETATM for a chain.  default: will count HETATM and output its as ATOM
+nowater='-nowater'
+noligand='-noligand'
+nodownload=0
+force=0
+top=0
+getProperty=1 #=1: will extract properties of downloaded PDBs
+silence=0;less=0
+doexclude=0
+map=0
+dofull=0
+doconvert=0;doall=0
+isuni=0
+
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -uni)isuni=1;shift;;
+   -id) isid=1;idauto=0; shift;;
+   -f) isid=0;idauto=0;shift;;
+   -header) header=1; header2='-header';shift;;
+   -noheader) header=0; header2='-noheader'; shift;;
+   -t) try=$2;shift 2;;
+   -col) col=$2;shift 2;;
+   -out) out=$2;shift 2;;
+   -server)PDBserver=$2;shift 2;;
+   -HETATM) nohet='';shift;;
+   -water)nowater='-water';shift;;
+   -ligand)noligand='-ligand';shift;;
+   -nodownload) nodownload=1;shift;;
+   -force)force=1;shift;;
+   -top)top=$2;shift 2;;
+   -noProperty) getProperty=0;shift;;
+   -map)map=1;shift;;
+   -nomap)map=0;shift;;
+   -silence)silence=1;shift;;
+   -less)less=1;shift;;
+   -exclude)doexclude=$2;shift 2;;
+   -full)dofull=1;shift;;
+   -name)idauto=0;doconvert=1;itype="name";shift;;
+   -fullname)idauto=0;doconvert=1;itype="fullname";shift;;
+   -all)doall=1;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!"; exit;;
+  esac
+  aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+ done
+fi
+
+if [ -n "$1" ] ; then
+ input="$1"
+ #[ -n "$2" ] && output=$2
+else
+cat << ttt
+ Download a list of PDB IDs, or uniprotID, or protein name/fullname, or single PDB ID from PDB server
+  To extract a chain from the downloaded PDBs, water/ligand/HETATM will be removed by default
+  TITLE, CMP, species, protein name, etc. info will also be extracted for the PDBs
+  Also check and build polymer based on BIOMT info by ./pdb_polymer
+  For uniprotID, will download representive or all (-all) PDBs listed in current Uniprot website from ./UniProt_getProperty
+ NOTE: download PDBs from NCBI blast, run ./NCBI_blast_PDBs
+
+Download one PDB file from PDB server: See https://www.rcsb.org/pdb/static.do?p=download/http/index.html
+wget -t 2 ftp://ftp.wwpdb.org/pub/pdb/data/structures/divided/pdb/m7/pdb3m7m.ent.gz 
+  #-t 2 : try twice when failed
+  #-o XXX : Output log file name
+  #PDB folder m7/ : take the middle two letters of PDB ID
+gunzip pdb3m7m.ent.gz
+mv pdb3m7m.ent 3m7m.pdb
+
+To check PDB public folder: ftp ftp.wwpdb.org ; cd /pub/pdb/data/structures/divided/pdb/
+
+Culled PDBs list: PISCES at http://dunbrack.fccc.edu/Guoli/PISCES_OptionPage.php
+
+ Usage: [Options] $0 InputPDBList|PDB ID (may has chain name or chain 0 means whole PDB if no chain 0 in PDB)|UniprotID
+    Note: 1vtz.pdb named chain as 0-7, so 1vtz0.pdb is for chain 0, not whole protein
+ Options:
+  -uni : Input is Uniprot ID. Script can determine automatically
+  -id: Input is PDB ID. Script can determine automatically
+  -f : Input is PDB list file. Script can determine automatically
+  -header | [-noheader] : Header line to bypass in InputPDBList? [$header]
+  -col ColNumber : col of PDB IDs in list file. Default: $col
+  -try TryTimes : try times when failed fetch file from PDN server. Default: $try
+  -out OutputDirectory : Output folder. Default: $out
+  -server PDBserver : PDB server. Default: $PDBserver
+  -HETATM : will count HETATM and output its as ATOM for a chain. Default: will not count HETATM for a chain.  
+  -water : will output HOH water of that chain. Default: will NOT output water
+  -ligand : will output none-standard amino acid (ligand). Default: will NOT output none-standard residue (ligand)
+  -nodownload : will NOT access PDB server to download PDBs. Use exisitng PDBs to extract chains
+  -top topN : Only proceeding topN PDBs in list
+  -noProperty : will NOT extract properties (such as TITLE, CMP, species, protein name, etc.) of downloaded PDBs
+  -map | [-nomap] : will/not calculate sequence identity, dendogram and contact map of download proteins
+  -force : force to download even if PDB exists. Default: Use previous downloaded PDBs
+  -silence : less screen dump
+  -less : less screen dump but will show PDB property
+  -exclude excludeFile : Exclude PDBs in excludeFIle
+  -full : Download full record of PDB without any modification
+  -all : for human protein name, fullname or uniportID, download all PDBs related to it. [default]: only download a few represented PDBs
+    XNow when -all, will use ./UniProt_get to download all PDBs (but need update data inside ./UniProt_get
+  -name : input is human protein name, such as FEN1  (Must be human!)
+  -fullname : "input" is human full protein name, such as "flap structure-specific endonuclease 1" (Must be human!)
+
+ Example: 
+  $0  -out ../PDB/c2083 c2083.list
+     #Download PDBs for a list of culled PDB IDs from PISCES. Save the PDBs in folder ../PDB/cullpdb
+     #In each output chain, water/ligand/HETATM will be removed by default
+  $0 -exclude h4035.list -out e9048 e9048.list
+    #Download PDBs in e9048.list but exclude PDBs in h4035.list
+  $0 -header -out cancer3437 cancer3437.list
+    #since default list w/o header. Remember -header for list with header!
+  $0 1UBGA
+     #download chain A of PDB 1UBG, saved as 1ubga.pdb (lower cap)
+  $0 -full 1ubg
+     #download whole PDB 1UBG, saved as 1ubg.pdb
+  $0 -all P39748
+    #download all 11 (-all: not only represented 3) PDBs for uniprot P39748 (FEN1) that listed in current Uniprot website
+  $0 -name Fen1
+    #Download 3 represented PDBs for 11 PDBs related to protein Fen1 (can only work on human protein!)
+
+   NOTE: To get Uniprot information and PDBs for UniprotID, run ./UniProt_getProperty
+   NOTE: ./sequence_download to download NCBI fasta (same as fasta download from PDB site) sequences for PDBs
+   NOTE: ./fasta_fromPDB to convert PDB into sequence fasta
+   NOTE: ./fasta_byPDB to extract fasta from multiple sequence file based on PDB IDs
+   NOTE: ./fasta_identity to find the indetical residues of two sequence file
+   NOTE: ./fasta_removedup to remove duplicate sequences
+   NOTE: To download pdb, run: ./pdb_download
+  NOTE: got error to download/process 4dx5.pdb since the downloaded .gz file cannot unzip by gunzip!!! Manually downloaded it!
+  NOTE: May need goto PDB website to manually download some failed proteins
+  NOTE: download homology models on UniProt ID at SWISS-MODEL Respository: ./pdb_model_download
+  NOTE: download all PDBs or homology PDBs of a sequence and do protein-protein interaction PPI analysis: ./NCBI_blast_PDBs
+  NOTE: To extract ligands from downloaded PDBs: See DHODH/readme: ./pdb_getligand -range 20 50 -exclude "FMN ATP" "*.pdb"
+  NOTE: To find CHEMBL inhibitors and PDBs for any protein or analyze chembl database, run ./chembl
+
+  NOTE: download PDBs from NCBI blast, run ./NCBI_blast_PDBs
+  Next step: ./pdb_glide_prepare to prepare proteins for Glide Docking 
+  NOTE: A replace to download all PDBs of a protein, run: ./UniProt_get -getPDB UniprotID/Name
+        ./UniProt_get get more proteins than this! (why?)
+        but need update data inside ./UniProt_get , this script download PDBs listed in current Uniprot website 
+ 
+ttt
+  exit
+fi
+
+#infile=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'
+
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+isScaleMP=0  #=1: runs on ScaleMP machine, need special code for Schrodinger
+if [ -d "/flower_data/" ] ; then
+ isScaleMP=1; ed='/flower_data/hongzhili/database/pipeline_script/' #Admin defined directory with scripts
+fi
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp $ed/back  $ed/pdb_getChainResn $ed/pdb_getProperty $ed/lists_compare_different $ed/pdb_seq_align_PISCES .
+ cp $ed/pdb_polymer $ed/UniProt_getProperty $ed/IDs_gene_uniprot_convert $ed/UniProt_get $ed/pymol_all .
+fi
+
+if [ ! -d $out ] ; then
+ mkdir $out
+ if [ ! -d $out ] ; then
+  echo "Error! Output folder $out does not exist! Create it first!" 1>&2
+  exit
+ fi
+fi
+
+#automatically determine if input is a list file or PDB ID
+isuniprot=0
+if [ $isuni -eq 1 ] ; then
+ isuniprot=1
+ idauto=0
+fi
+if [ $idauto -eq 1 ] ; then
+ if [ -s $input ] ; then
+  [ $less -ne 1 ] && echo "Input $input is taken as List file with PDB IDs inside"
+  cp -f $input $temp
+  [ "$out" != "./" ] && cp -f $input $out
+  isid=0
+ else
+  length=`echo $input | awk '{print length($1)}'`
+  lok=`echo $input | awk '{l=length($1); if(l==4||l==5){print 1}else{print 0}}'`
+  if [ $lok -eq 1 ] ; then
+   echo "Input $input is a PDB ID name"
+   if [ $header -eq 1 ] ; then
+    echo "Header" > $temp
+    echo $input >> $temp
+   else
+    echo $input > $temp
+   fi
+   col=1
+   isid=1
+  else
+   if [ $length -eq 6 ] ; then
+    echo "Input $input is treated as Uniprot ID"
+    isuniprot=1
+   else
+    echo "Fatal Error! $input is not an existing list file, or a 4-/5-letters PDB ID, or 6 letter UniprotID!" 1>&2
+    exit
+   fi
+  fi
+ fi 
+fi
+
+###Input is human protein name or fullname, get it UniprotID
+if [ $doconvert -eq 1 ] ; then
+ inputo=$input
+ ./IDs_gene_uniprot_convert -i $itype "$input" | tee $temp2
+ input=`grep 'UniprotID:' $temp2 | tail -1 | awk '{print $2}'`
+ echo "=> Download PDBs for $inputo (Uniprot $input)"
+ isuniprot=1
+fi
+
+#######Check all PDBs for a Uniprot ID from uniprot website
+#=> PDBs and chain related to P39748 are 11: 1u7b 1ul1 3q8k 3q8l 3q8m 3uvu 5e0v 5fv7 5k97 5kse 5um9 
+#  Total 3 resid-range of proteins, represented by: 1u7b 5k97 1ul1
+#NOTE: ./UniProt_getProperty -getPDB Q96EB6 get less proteins than ./UniProt_get SIRT1 
+if [ $isuniprot -eq 1 ] ; then
+ ./UniProt_getProperty -getPDB $input | tee $temp2   #Download PDBs listed in current Uniprot website
+ grep '=> PDBs and chain related to' $temp2 | head -1 | awk '{for(i=10;i<=NF;i++){print $i}}' > $temp
+ nall=`wc -w $temp | awk '{print $1}'`
+ if [ $doall -eq 1 ] ; then
+  echo " Will download the following $nall PDBs for all PDBs related Uniprot $input : for only represented PDBs, do not use -all"
+ else
+  grep 'resid-range of proteins,' $temp2 | head -1 | awk '{for(i=8;i<=NF;i++){print $i}}' > $temp
+  nrep=`wc -w $temp | awk '{print $1}'`
+  echo " Will download the following $nrep represented PDBs for $nall PDBs related Uniprot $input : to download all PDBs, use -all"
+ fi
+ header=0;idauto=1;col=1;isid=1
+ cat $temp | awk '{printf("%s saved as %s.pdb\n",$1,tolower($1))}'
+ if [ $nall -eq 0 ] ; then
+  echo "Fatal error! No PDBs found related to Uniprot $input. Double-check on: https://www.uniprot.org/uniprot/$input#structure"
+ fi
+fi
+
+#User defined input type
+if [ $idauto -ne 1 ] ; then
+ if [ $isid -eq 1 ] ; then
+   if [ $header -eq 1 ] ; then
+    echo "Header" > $temp
+    echo $input >> $temp
+   else
+    echo $input > $temp
+   fi
+   col=1
+   isid=1
+   echo "Input $input is a PDB ID name"
+ else
+  echo "Input $input is a List file with PDB IDs inside at col $col"
+  cp $input $temp
+  cp -f $input $out
+ fi
+fi
+
+if [ $isid -eq 1 ] ; then
+ getProperty=0
+else
+ last=`basename $input .txt`
+ last=`basename $last .xls`
+ last=`basename $last .list`
+ lastinput=`basename $last .csv`
+fi
+
+#Only find common compounds
+if [ $doexclude != '0' ] ; then
+ echo "Excluding PDBs in $doexclude"
+ ./lists_compare_different -nameonly $header2 $doexclude $col 0 0 $temp $col 0 0 $temp2 
+ cp $temp2 $temp
+fi
+
+#remove '-' records and sort by PDB names
+awk '{if(NR>'$header'){s='$col';if($s!="-"){print $_}}else{print $_}}' $temp | sort -k $col > $temp2
+mv $temp2 $temp
+
+
+num=`wc -l $temp | awk '{print $1-'$header'}'`
+[ $less -ne 1 ] && echo "Total number of PDBs to download = $num"
+if [ $header -eq 1 ] ; then
+ if [ $isid -ne 1 ] ; then
+  echo "Header inside list file $input"
+ fi
+fi
+
+nerr=0;fails='';nright=0
+[ $top -le 0 ] && top=$num
+[ $num -gt $top ] && num=$top
+for (( i=1; i<=$num ; i++ )); do
+ line=`expr $i + $header`
+ name=`head -$line $temp | tail -1 | awk '{s='$col';print tolower($s)}'`
+ pdbn=`echo $name | awk '{print substr($1,1,4)}'`
+ chain=`echo $name | awk '{l=length($1);if(l==4){c=0}else{if(l==5){c=substr($1,5,1)}else{c=-1}};print c}'`
+ if [ $chain == "-1" ] ; then
+  echo "Fatal error! Invalid PDB ID for # $i $name " 1>&2
+ fi
+ fd=`echo $name | awk '{print substr($1,2,2)}'`
+ otp=$pdbn.pdb
+ otp2=$name.pdb
+ ot=$otp.gz
+ pdbsn='pdb'$pdbn'.ent'
+ pdbsname=$pdbsn'.gz'
+ if [ $chain == "0" ] && [ -s $out'/'$otp ] ; then
+   otp2=$pdbn'0.pdb'
+   has0=`cat $out'/'$otp | awk '{has=0}{if($1=="ATOM"){ch=substr($_,22,1);if(ch=="0"){has=1}}}END{print has}'`
+   [ $has0 -eq 0 ] && chain='+'
+ fi
+ [ $chain != "0" ] && dofull=0
+ #echo "PDB:" $name
+ noexist=0
+
+ did=0
+ if [ $force -ne 1 ] ; then
+  if [ -s $out'/'$otp2 ] && [ -s $out'/'$otp ]; then
+   did=1;nright=`expr $nright + 1`
+   if [ $silence -ne 1 ] && [ $less -ne 1 ] ; then
+    echo "#$i of $num : $name to $otp  $otp2 chain $chain Using exisited PDB"
+   fi
+  fi 
+ fi
+
+ if [ $did -eq 0 ] ; then
+ if [ $nodownload -ne 1 ] ; then
+
+ succeed=0;nfaild=0
+ while [ $succeed -eq 0 ] ; do
+  wget -t $try $PDBserver'/'$fd'/'$pdbsname >& $temp4
+  err=`grep 'No such file' $temp4 | wc -l | awk '{if($1>0){print 1}else{print 0}}'`
+  if [ $err -eq 1 ] ; then
+   echo "Failed to download PDB: $name (PDB entry may removed)" 1>&2
+   nerr=`expr $nerr + 1`
+   fails=`echo -e $name'\n'$fails`
+   nfaild=`expr $nfaild + 1`
+   noexist=1
+  else
+   gunzip -f $pdbsname
+   mv -f $pdbsn $out'/'$otp
+   if [ ! -s $out'/'$otp ] ; then
+    echo "Failed to extract PDB: $name" 1>&2
+    nerr=`expr $nerr + 1`
+    fails=`echo -e $name'\n'$fails`
+    nfaild=`expr $nfaild + 1` 
+    noexist=1
+   else
+    noATOM=`grep ATOM ${out}/${otp} | awk '{if($1=="ATOM"){print $1}}' | wc -l | awk '{print $1}'`
+    if [ $noATOM -le 10 ] ; then  #Make sure has ATOMs inside. XSometimes error download 5t9j : No ATOM inside
+     echo "Only $noATOM ATOM in $out/$otp :  re-try to download"
+    else
+     nright=`expr $nright + 1`
+     succeed=1
+    fi
+   fi
+  fi
+  [ $nfaild -eq 2 ] && succeed=1   #bypass download if failed twice
+ done
+
+ else #nodownload
+   nright=`expr $nright + 1`
+   echo "Use existing $otp"
+ fi #nodownload
+
+
+ if [ $noexist -eq 0 ] ; then
+ #extract chain from PDB. water/ligand/HETATM will be removed by default
+ if [ $dofull -ne 1 ] && [ "$otp" != "$otp2" ] ; then 
+  ./pdb_getChainResn -renum -keeptitle $noligand $nohet $nowater $out'/'$otp $chain $out'/'$otp2 > $temp4
+ fi
+
+ #check and build polymer based on BIOMT info
+ ./pdb_polymer $out'/'$otp > $temp4
+ npoly=`grep 'THis Is' $temp4 | tail -1 | awk '{print $3}'`
+ npolyn=`grep 'THis Is' $temp4 | tail -1 | awk '{print $4}'`
+ if [ $npoly -ge 2 ] ; then
+  npolyp=`grep 'OUTput of' $temp4 | tail -1 | awk '{print $NF}'`
+ fi
+ fi #noexist
+
+ if [ $silence -ne 1 ] && [ $less -ne 1 ] ; then
+  echo "#"$i" of "$num" : "$name " to " $otp  $otp2 chain $chain
+  [ $npoly -ge 2 ] && echo "  WARNing: THis Is $npolyn built and saved as $npolyp"
+ fi
+
+ fi #did
+
+ [ $silence -ne 1 ] && ./pdb_getProperty -newquick $out'/'$otp
+#2ybg : struc of lys120-acetylated p53 core domain  : 2011 X-ray 1.9A human
+# ABCD:96-288aa cellular tumor antigen p53;
+# Lig: ALY ZN
+
+
+done
+
+if [ $num -ne $nright ] ; then
+  echo "Error! Required to download $num PDBs but actually dowloaded $nright PDBs"
+  getProperty=0  #bypass getProperty
+fi
+if [ $nerr -gt 0 ] ; then
+  echo "WARNing: Failed $nerr times to download PDBs (May need manually download from PDB website):" 1>&2
+  echo $fails 1>&2
+fi
+
+if [ $less -ne 1 ] ; then
+ echo "==> Total downloaded PDBs = $nright"
+ echo "Saved in folder $out"
+ echo "Each PDB entry has two output: Full PDB w/ 4-letter name. A chain of PDB w/ 5-letter name. Chain 0 for whole PDB"
+ echo "Another way to download more PDBs is ./UniProt_get -getPDB"
+fi
+
+doall=1 #Calculate all properties including individule files
+if [ $getProperty -ne 0 ] ; then
+ echo "Calculate PDBs properties:"
+ pout6=$lastinput'_all.xls'
+ ./pdb_getProperty -infolder $out -out $pout6 $temp > $temp2
+ echo "  =>All info of PDBs saved in $pout6"
+if [ $doall -ne 1 ] ; then
+ echo " Run ./pdb_getProperty to get TITLES, Protein Names etc. of the PDBs"
+ pout1=$lastinput'_TITLE.xls'
+ ./pdb_getProperty  -infolder $out -key TITLE -out $pout1 $temp > $temp2
+ echo "  =>TITLE info of PDBs saved in $pout1"
+
+ pout2=$lastinput'_range.xls'
+ ./pdb_getProperty  -infolder $out -range -out $pout2 $temp > $temp2
+ echo "  =>Residue range of a chain info of PDBs saved in $pout2"
+
+ pout3=$lastinput'_COMPND.xls'
+ ./pdb_getProperty  -infolder $out -key COMPND -out $pout3 $temp > $temp2
+ echo "  =>COMPND info (incld protein name) of PDBs saved in $pout3"
+
+ pout4=$lastinput'_protein.xls'
+ ./pdb_getProperty  -infolder $out -protein -out $pout4 $temp > $temp2
+ echo "  =>TITLE info of PDBs saved in $pout4"
+
+ pout5=$lastinput'_species.xls'
+ ./pdb_getProperty  -infolder $out -species -out $pout5 $temp > $temp2
+ echo "  =>Species info of PDBs saved in $pout5"
+
+ pout7=$lastinput'_EC.xls'
+ ./pdb_getProperty -infolder $out -byweb -webkey "EC" -out $pout7 $temp > $temp2
+ echo "  =>EC info of PDBs saved in $pout7"
+
+fi #doall
+fi #getProperty
+
+if [ $map -eq 1 ] ; then
+ ./pdb_seq_align_PISCES -header 0 -col 1 $temp
+fi
+
+echo "==> Total downloaded PDBs = $nright"
+echo "Saved in folder $out Display: ./pymol_all -nodetail '????.pdb'"
+echo "Each PDB entry has two output: Full PDB w/ 4-letter name. A chain of PDB w/ 5-letter name. Chain 0 for whole PDB"
+if [ $num -ne $nright ] ; then
+  echo "Error! Required to download $num PDBs but actually dowloaded $nright PDBs"
+fi
+if [ $nerr -gt 0 ] ; then
+  echo "WARNing: Failed $nerr times to download PDBs (May need manually download from PDB website):" 1>&2
+  echo $fails 1>&2
+  echo "Try rerun this several times, then manually download the missing PDBs: $0 $oldline"
+fi
+if [ $isid -ne 0 ] ; then
+ if [ $header -eq 1 ] ; then
+   echo "NOTE: header is in input list $input"
+ fi
+fi
+
+
+rm -f $temp $temp2 $temp3 $temp4 ; exit
+

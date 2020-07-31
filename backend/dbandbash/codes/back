@@ -1,0 +1,287 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+help=0
+#rootdir='holi@p-ngs2:/isi-dcnl/flower_data/hongzhi/'
+#rootdir='holi@scalemp1:/flower_data/hongzhili/'
+#outdir=$rootoutdir'backup'
+rootout="holi@br11159.coh.org:/home/holi/"  #root dir for $infile
+filen=0
+doget=0
+same=0
+
+IP=`/sbin/ifconfig | grep "inet addr" | awk -F: '{print $2}' | head -1 | awk '{print $1}'`  #IP address of this machine
+if [ "$IP" == "" ] ; then 
+ IP=`/sbin/ifconfig | grep "inet " | awk '{print $2}' | head -1 | awk '{print $1}'` #IP address of this machine for new 32-CPU machine
+fi
+
+oldline=$*   #all argvs
+echo $0 "$oldline"
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+  --help) help=1;shift;;
+  -get)doget=1;shift;;
+  -same)same=1;shift;;
+  -rootout) rootout=$2;shift 2 ;;
+  -1) rootout="holi@scalemp1:/flower_data/hongzhili/"; shift;;
+  -s) rootout="holi@scalemp1:/flower_data/hongzhili/"; shift;;
+  -g) rootout="holi@p-gpu1:/isi-flower/flower_data/hongzhili/"; shift;;
+  #-new) rootout="holi@br11159:/home/holi/"; shift;;
+  -new) rootout="holi@br11159.coh.org:/home/holi/"; shift;;
+  #-n) rootout="holi@br11159.coh.org:/home/holi/"; shift;;  #NOTE: script cannot have -n options!  May because -n "$1" 
+  -o) rootout="holi@10.138.18.45:/home/holi/"; shift;;
+  -old) rootout="holi@10.138.18.45:/home/holi/";shift;;
+  #-o) rootout="hongzhili@10.138.18.45:/home/hongzhili/"; shift;;
+  #-old) rootout="hongzhili@10.138.18.45:/home/hongzhili/";shift;;
+  -gpu) rootout="holi@p-gpu1:/isi-flower/flower_data/hongzhili/"; shift;;
+  -sun) rootout="holi@hpc-access1.coh.org:/net/isi-dcnl/ifs/user_data/hongzhi/"; shift;;
+  -ta)rootout="holi@stampede.tacc.utexas.edu:/work/03205/holi/"; shift;;
+  -tax)rootout="holi@stampede.tacc.utexas.edu:/work/03205/holi/"; shift;;
+  -wu)rootout="hongzhi@pharmcluster.westernu.edu:/shared2/work/hongzhi/"; shift;;
+  #-a)rootout="holi@apollo-acc.coh.org:/net/isi-dcnl/ifs/user_data/hongzhi/"; shift;;
+  #-apo)rootout="holi@apollo-acc.coh.org:/net/isi-dcnl/ifs/user_data/hongzhi/"; shift;;
+  -a)rootout="holi@apollo-acc.coh.org:/home/holi/data/flower_data/"; shift;;
+  -apo)rootout="holi@apollo-acc.coh.org:/home/holi/data/flower_data/"; shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $newline!"; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+
+if [ -n "$1" ] ; then
+ infile="$1";filen=1
+ if [ -n "$2" ] ; then
+  infile2=$2;filen=2
+ fi
+ if [ -n "$3" ] ; then
+  infile3=$3;filen=3
+ fi
+ if [ -n "$4" ] ; then
+  infile4=$4;filen=4
+ fi
+ if [ -n "$5" ] ; then
+  infile5=$5;filen=5
+ fi
+
+else
+ help=1
+fi
+
+if [ $help -eq 1 ] ; then  #no argv or --help
+cat << ttt
+  This is to back copy files to the same folder structure to another computer (default: my new home workstation)
+   Or get files from same level of remote computer to this one if -get
+
+    It will make one-level directory in remote machine if it is not exisiting
+
+  Usage $0 [OPTIONs] File/SubFolder [File2/SubFolder2 .. File5/SubFolder5]
+    --help : help
+    -rootout : root dir for remote machine (my work station). e.g. "holi@10.138.18.45:/home/holi/"
+    -1 | -s | -gpu | -g : remote machine is scalemp1 "holi@scalemp1:/flower_data/hongzhili" or idetical "holi@p-gpu2:/isi-flower/flower_data/hongzhili/"
+    -sun : suncluster "holi@hpc-access2.coh.org:/net/isi-dcnl/ifs/user_data/hongzhi/"
+       X-new : My new workstation hongzhili@10.138.18.45:/home/hongzhili/ 
+       X-o | -old : My old workstation hongzhili@10.138.18.45:/home/hongzhili/ (This machine is dead due to hard drive failed). 
+       (Data backed up in from hongzhili@BR07685 : ssh holi@br07685   cd /workstation_backup/br09646_data/holi)
+    -new : My new 32 CPU workstation holi@br11159.coh.org:/home/holi (holi@br11159)
+     NOTE: script cannot have -n options!
+    -o | -old : My old 16 CPU workstation holi@10.138.18.45:/home/holi/  (still works, holi@br07685) 
+    -a | -apo : COH Apollo cluster (holi@apollo-acc.coh.org:/home/holi/data/flower_data/). Same folder as scalemp /flower_data
+
+    -ta | -tax : TACC U of Texas super computer 
+    -wu : Lyna Luo at Western University
+
+    -get : get files from remote computer to this. Can be regular expression as well.
+
+    -same : ignore the sub folder of input files, save all files in current folder.
+      [default]: remote and local computers use same subfolders for all files (not regular expression, which all saved in current folder.
+
+    File: input file to be copied back from current directory. e.g. '*.rept'  or '*/*.rept'
+       Could be up to 5 files appended
+      Must be folder or sub-folder of currnt dir  
+      For regular expression, must use ' ' to quote files
+
+     Output files are in the same folder-structure from root (from hongzhili/)
+
+  Example:  
+     copy files to remote computer: can use regular expression
+            $0 'MD/A????.rept'    #cp back to my newest workstation in same subfolder MD/ for files such as Axxxx.rept
+            $0 -1 '*dcd'   #cp back to scalemp1 in same current folder for all *.dcd files
+            $0 -s 'a.sdf c.xls ...'  #Use '' to scp more files
+            $0 -s PCNA.*        #no ' ' needed sometimes
+            $0 -ta '*.dcd'  #cp back to Texas TACC
+            $0 ../folder/B.sdf    #Back file ../A/B.sdf to ../A/B.sdf in my workstation 
+            $0 SubFolder   #Back whole subfolder 
+            $0 -o A/sdf_check back   #back two files to my old workstation. A/sdf_check saved in A/, back saved in .
+            $0 -same -o A/sdf_check back   #back two files. Both A/sdf_check and back all saved in .
+
+     copy from remote machine to current computer, use -get  (can use regular expression as well):
+           $0 -get -s '*.pdb'  #get all *.pdb from scalemp1 and saved in current folder
+           $0 -get -sun A.sdf B.report  #get two files from suncluster
+           $0 -get -wu MD/A.dcd B.report  #get from remote Western U PCs: A.dcd saved in MD/ and B.report saved in current folder
+           $0 -get -same -wu MD/A.dcd B.report  #get from remote Western U PCs: A.dcd and B.report all saved in current folder
+         
+
+  NOTE: Since scp needs password, to bypass password:
+    1. In local machine (if no ~/.ssh/id_rsa.pub):
+        ssh-keygen -t dsa   [3 enters. Don't overwrite if already there]
+       To generate /home/holi/.ssh/id_rsa.pub
+    2. Copy or append contants in .ssh/id_rsa.pub to remote machine: ~/.ssh/authorized_keys
+    3. May need to change permission: chmod 700 .ssh ; chmod 0644 authorized_keys
+
+ NOTE: To find the connections/calls of two scripts in my scripts, run ./find_script
+ NOTE: To find all scripts called in a script, run ./check_script
+ NOTE: To Change all home directory in this folder, IPs, etc., run ./sed_allhome
+ NOTE: ./replace_allhome can replace a chunk of code for all scripts
+ NOTE: To zip all scripts and readmes, run ./zip_all
+ NOTE: To backup or copy files to another machine, run ./backup or ./back
+
+  XNOTE: ./back and ./send are identical code. When modified, inform each other
+ttt
+  exit
+fi
+
+temp=$0'_'$$'.tmp' 
+temp2=$temp'2'; temp3=$temp'3'
+
+rIP=`echo $rootout | awk '{a=index($1,"@");b=index($1,":");print substr($1,a+1,b-a-1)}'`
+if [ "$rIP" == "$IP" ] ; then
+  echo "Error! Cannot back to same machine $IP. Try other destinations"
+  exit
+fi
+
+curdir=`pwd`
+curdiro=`pwd`
+curdir3=`awk -v aa="$curdir" 'BEGIN{n=split(aa,a,"/");for(i=4;i<=n;i++){printf("%s/",a[i])}}'`  #remove first two folders
+PC=`echo $rootout | awk '{split($_,a,":");print a[1]}'`
+PCfolder=`echo $rootout | awk '{split($_,a,":");print a[2]}'`
+
+
+################# get files from remote to local
+if [ $doget -eq 1 ] ; then
+ echo "$infile" > $temp
+ [ $filen -ge 2 ] && echo "$infile2" >> $temp
+ [ $filen -ge 3 ] && echo "$infile3" >> $temp
+ [ $filen -ge 4 ] && echo "$infile4" >> $temp
+ [ $filen -ge 5 ] && echo "$infile5" >> $temp
+ nf=`wc -l $temp | awk '{print $1}'`
+ echo "Copy $nf of $infile from $rootout/$curdir3 to current folder"
+ if [ $same -eq 1 ] ; then
+  echo "WARNing: All remote files will all save in current folder, subfolder will ignore!"
+ else
+  echo "Both remote and local machine share same subfolder structures"
+ fi
+ for (( i = 1 ; i <= $nf ; i++ )) ; do
+  fil=`head -$i $temp | tail -1`
+  isreg=`echo "$fil" | awk '{if($1 ~/[\*\?]/ ){print 1}else{print 0}}'`
+  if [ $isreg -eq 0 ] ; then  #Input is NOT regular expression?
+   if [ $same -eq 0 ] ; then
+    folder=`dirname $fil`
+    [ ! -d $folder ] && mkdir $folder
+    scp $rootout/$curdir3"$fil" $folder  
+   else
+    scp $rootout/$curdir3"$fil" .
+   fi
+  else #input is regular expression?
+   echo scp $rootout/$curdir3"$fil" .
+   scp $rootout/$curdir3"$fil" .
+  fi
+ done
+ echo "=> Copy from remote to current: scp $rootout/$curdir3/* ."
+ rm $temp*
+ exit
+fi
+
+
+################# copy files from local to remote
+[ -d $infile ] && curdir=$curdiro'/'$infile
+ls -l $infile | awk '{printf("%s/%s\n","'$curdir'",$NF)}' > $temp
+ls -l $infile | awk '{printf("%s/%s\n","'$curdir'",$NF)}' > $temp2
+if [ $filen -ge 2 ] ; then
+ [ -d $infile2 ] && curdir=$curdiro'/'$infile2
+ ls -l $infile2 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ ls -l $infile2 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+fi
+if [ $filen -ge 3 ] ; then
+ [ -d $infile3 ] && curdir=$curdiro'/'$infile3
+ ls -l $infile3 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ ls -l $infile3 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+fi
+if [ $filen -ge 4 ] ; then
+ [ -d $infile4 ] && curdir=$curdiro'/'$infile4
+ ls -l $infile4 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ ls -l $infile4 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+fi
+if [ $filen -ge 5 ] ; then
+ [ -d $infile5 ] && curdir=$curdiro'/'$infile5
+ ls -l $infile5 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ ls -l $infile5 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+fi
+
+nf=`wc -l $temp | awk '{print $1}'`
+echo "Copy $nf of $infile to $rootout"
+nerr=0
+if [ $same -eq 1 ] ; then
+ echo "WARNing: all files will copy to remote PC at same folder $PCfolder'/'$curdir3 , ignoring subfolders in current PC"
+else
+ echo "Both current PC and remote PC will keep same subfolder structures"
+fi
+
+for (( i = 1 ; i <= $nf ; i++ )) ; do
+
+cur=`head -$i $temp | tail -1`
+file=`head -$i $temp2 | tail -1`
+
+checkfolder=1  #check if remote has the folder
+if [ $same -eq 1 ] && [ $i -gt 1 ] ; then
+ checkfolder=0
+fi
+if [ $checkfolder -eq 1 ] ; then
+# Get folder name after /hongzhi/ or /hongzhili
+ folder=`echo $cur | awk 'BEGIN{FS="/";k=0}
+ {for(i=1;i<NF;i++){
+  if(substr($i,1,7)=="hongzhi"||substr($i,1,4)=="holi"){k=i;break}
+ }
+ folder=""
+ if(k==0){print "/ERRORnoHONGZHIfolder/"}
+ else{
+  for(i=k+1;i<NF;i++){folder=sprintf("%s/%s",folder,$i)}
+  print folder
+ }}'`
+ remotefd=$PCfolder'/'$folder
+ [ $same -eq 1 ] && remotefd=$PCfolder'/'$curdir3
+ ssh $PC " ls $remotefd" >& $temp3
+ err=`grep 'No such file or directory' $temp3 | wc -l | awk '{print $1}'`
+ if [ $err -eq 1 ] ; then
+  echo "==>No $remotefd in remote machine. Will generate one"
+  ssh $PC  "mkdir $remotefd"
+  ssh $PC " ls $remotefd" >& $temp3
+  err=`grep 'No such file or directory' $temp3 | wc -l | awk '{print $1}'`
+  if [ $err -eq 1 ] ; then
+   echo "FATAL ERROR! Cannot find $remotefd in remote machine! Failed to scp $file"
+   nerr=`expr $nerr + 1`
+  fi
+ fi
+fi
+
+
+echo " #$i of $nf: scp $file $rootout$folder"
+if [ $same -ne 1 ] ; then
+ scp $file $rootout$folder
+else 
+ scp $file $rootout'/'$curdir3
+fi
+
+done
+echo "Done. Upload more files to remote PC, try: scp * $rootout$folder"
+#cat << eee
+# If no folder exist in remote machine, run:
+#  ssh $PC  "mkdir $folder"
+#eee
+if [ $nerr -gt 0 ] ; then
+ echo "******* FATAL error happens $nerr times *******"
+fi
+
+rm $temp $temp2 $temp3
+exit

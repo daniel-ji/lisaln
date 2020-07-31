@@ -1,0 +1,133 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+sfile='species_mapping.txt'  #no folder prefix
+onlyname=1
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -keepall)onlyname=0;shift;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******  Debugged on 8/8/2019
+
+ Change input file with scientific species name defined in []  to daily-use name, such as human, mouse for fasta
+  based on convert file species_mapping.txt
+ It is case-insensitive and can recognize name seperated by _ or - or . or one space, and can do all the change for any type of file
+  Such Homo-sapien, HOMO_SAPIEN, homo.sapien will all convert to Human
+ For new species, add names in $sfile
+
+ Usage: $0 [Options] Input
+ Options:
+  -debug : debug model on
+  -out Output : User defined output
+  -keepall : keep all other > lines, but only replace scientific names inside []
+   [default]: fasta header will be replaced as >human
+
+ Example: $0 XPNPEP3_homoloGene.fasta.txt    #In ~/XPNPEP3
+
+ Called by ./seq_align_check -species -nopair XPNPEP3_homoloGene.fasta.txt
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+#infile=`basename $input ${extension}`
+[ $doout -ne 1 ] && output=$infile'_.xls'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/$sfile .
+fi
+
+ #echo "Change species name to simple ones as human, mouse"
+ awk 'BEGIN{
+  file="'$sfile'";  n=0; onlyname='$onlyname'
+  while ((getline line < file) > 0) {
+   if (substr(line,1,1)!="#"){
+    n++; nf=split(line,d,"\t"); a[n]=d[1];    
+    b[n]=tolower(d[2])
+    k=split(b[n],z," ")
+    b1[n]=z[1];for(i=2;i<=k;i++){b1[n]=sprintf("%s_%s",b1[n],z[i])}  #add _
+    b2[n]=z[1];for(i=2;i<=k;i++){b2[n]=sprintf("%s-%s",b2[n],z[i])}  #add -
+    b3[n]=z[1];for(i=2;i<=k;i++){b3[n]=sprintf("%s.%s",b3[n],z[i])}  #add -
+   }
+  }
+  close(file)
+ }{
+ if(substr($1,1,1)==">"){
+  did=0;idx=0;len=0
+  nf=split($_,d,"[");split(d[nf],v,"]");spe=tolower(v[1])
+  for (i=1;i<=n;i++){
+   if(spe==b[i]){did=i;idx=index($_,spe);len=length(spec);break}
+   if(spe==b1[i]){did=i;idx=index($_,spe);len=length(spec);break}
+   if(spe==b2[i]){did=i;idx=index($_,spe);len=length(spec);break}
+   if(spe==b3[i]){did=i;idx=index($_,spe);len=length(spec);break}
+  #gsub(b[i],a[i],lin)  #gsub may not work on some computer! Modified on 2019/8/8
+  #gsub(b1[i],a[i],lin)
+  #gsub(b2[i],a[i],lin)
+  #gsub(b3[i],a[i],lin)
+  }
+  if(did>=1){
+   if(onlyname==1){printf(">%s\n",a[i])
+   }else{
+    pre=substr($_,idx-1)
+    printf("%s%s]\n",pre,a[i])
+   }
+  }else{
+   print $_
+  }
+ } else {
+  print $_
+ }
+}' $input > $temp
+
+if [ $doout -eq 1 ] ; then
+ echo "=> Change species name to simple ones as human, mouse saved as $output"
+ echo " Can add more species names in $sfile"
+ mv $temp $output
+else
+ cat $temp
+fi
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

@@ -1,0 +1,861 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+cd "$parent_path"
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+blast='blastp'
+db='pdb'
+force=0;fforce=''
+dospecies=0
+snum=10 #Max number of species to display from both landmark db and homoloGene 
+dodomain=0;dohomo=1;doname=0;dorefseq=0;change='-change';docent=0
+predict=0;doaln=1;rstart=1;rend=60;rhalf=30;center=30
+doless=0;lless="";onlyshort=1;nohuman=0;quite=0
+docdd=1;noshort=1
+noalna=0 #=1: will not seq aln Landmark+Homolo, just merge alignments together. Not recommended 
+plot='' 
+fast='-fast';dofast=1 
+speciesfile='species_mapping.txt'  #mapping file of species from scientific name to normal name. NO folder prefix!
+dolis=0 #=1: LisAln
+landmarkaln=1  #=1: do seq aln of Landmark DB
+homoloaln='' 
+domid=1 #=1: if no range selection, show the middle part of protein
+getpdb=0
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -getPDB)getpdb=1;shift;;
+   -getpdb)getpdb=1;shift;;
+   -quite)quite=1;doless=1;shift;;
+   -noquite)quite=0;shift;;
+   -LisAln)dolis=1;docdd=0;nohuman=0;dohomo=0;landmarkaln=0;homoloaln='-noaln';doless=1;plot='-nosearchplot -nocutshow -noplot';db='SMARTBLAST%2Flandmark';dospecies=1;quite=1;shift;;
+   -li)dolis=1;docdd=0;nohuman=0;dohomo=0;landmarkaln=0;homoloaln='-noaln';doless=1;plot='-nosearchplot -nocutshow -noplot';db='SMARTBLAST%2Flandmark';dospecies=1;quite=1;shift;;
+   -slow)fast='';dofast=0;shift;;
+   -fast)fast=$1;dofast=1;shift;;
+   -noplot)plot=$plot' -nosearchplot -nocutshow '$1;shift;;
+   -pdb)db='pdb';shift;;
+   -PDB)db='pdb';shift;;
+   -refseq)db='refseq_protein';dorefseq=1;shift;;
+   -nr)db='nr';shift;;
+   -cdd)db='cdd';dodomain=1;shift;;
+   -DNA)blast='megablast';db='nt';shift;;
+   -rpsblast)blast='rpsblast';shift;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -force)force=1;fforce=$1;shift;;
+   -species)db='SMARTBLAST%2Flandmark';dospecies=1;shift;;   #Need use %2F for / in SMARTBLAST/landmark NCBI database
+   -snum)snum=$2;dospecies=1;db='SMARTBLAST%2Flandmark';shift 2;;
+   -nopredict)predict=1;shift;;
+   -noaln)doaln=0;shift;;
+   -mid)domid=1;shift;;
+   -range)docent=1;rstart=$2;rend=$3;center=`expr $2 + $3`;center=`expr $center / 2`;shift 3;;
+   -center)docent=1;center=$2;rstart=`expr $2 - $rhalf`; [ $rstart -le 0 ] && rstart=1; rend=`expr $2 + $rhalf`;shift 2;;
+   -half)rhalf=$2;shift 2;;
+   -domain)db='cdd';dodomain=1;shift;;   
+   -nohomo)dohomo=0;shift;;
+   -name)doname=1;hname=$2;shift 2;;
+   -change)change=$1;shift;;
+   -nochange)change='';shift;;
+   -less)doless=1;lless=$1;shift;;
+   -all)onlyshort=0;shift;;
+   -nohuman)nohuman=1;shift;;
+   -nopara)nohuman=1;shift;;
+   -para)nohuman=0;shift;;   
+   -nocdd)docdd=0;shift;;
+   -noshort)noshort=1;shift;;
+   -short)noshort=0;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******  Fully debuged and polished on 2019/8
+
+ Do NCBI blast/blastp/megablast/rpsblast by using NCBI script ./web_blast.pl
+ Can do alignment across species (also NCBI HomoloGene seqs) and among human homologies when -species
+ Can also do domain anotation of a seq by using CDD database : -cdd
+  To get pfam domain of a protein run: ./Pfam_domain UniProtID
+  To find domains in SMART : 
+    perl sequence_search_SMART.pl --input $input --output Out --includePfam --includeSchnipsel --includeDISEMBL --includeSignalP --includeRepeats 
+
+ LisAln : LIberal Sequence ALigNment (LisAln) as website name. Debugged to run on 8/6/2019  See summer_student/
+  0. Input can be fasta, short/full protein name (download seq from Uniprot)
+  1. Search NCBI Landmark DB to get orthologue seqs : only for significiant aligment. Each species only return one most close to input fasta   
+  2. If less than 10 ($snum) seqs, use HomoloGene DB to add more homolgies
+  3. Align picked seqs (sorted by species_mapping.txt) from Clustal web-server
+  4. Can show a specific region of alignment by -range
+  5. Can show simple name instead of scientific name for species
+  6. Can show seq identity heatmap and clustal pty tree
+  7. can show paralogues of human with short protein names
+  8. My own code to show seq aln plot with different colors for residues in ./gnuplot_LisAln
+  9. Future: show 2ndary structures in aln plot
+  10. Future: will show 3-D pocket residues conservation (give a center residue and radius, search neighbor residues has SAS)
+ 
+ Can also download homolog/orthologue from summer_student/  (not implemented in LisAln yet)
+Ensembl download of orthologues/paralogues:
+Links:
+http://www.ensembl.org/info/docs/api/api_installation.html
+Special Instructions: Replace src/ensembl-compara/modules/Bio/EnsEMBL/Compara/AlignedMember.pm with this modified file AlignedMember.pm
+Code to download Ensembl orthologues/paralogues and modified by Daniel : sampleCode.pl
+  perl sampleCode.pl ENSG00000138346  (for DNA2)
+     
+
+./web_blast.pl :
+https://ncbi.github.io/blast-cloud/dev/api.html
+https://ncbi.github.io/blast-cloud/blastdb/available-blastdbs.html 
+#  https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=DeveloperInfo
+#
+#MODULES needed: URI::Escape LWP::UserAgent HTTP::Request::Common qw(POST)
+#It works after installation of modules on 2018/6 at ARI1/ as:
+#  ./web_blast.pl blastp pdb ARI1A.fasta 
+# This is a public resource, so usage limitations apply
+#My old downloaded one ./remote_blast_client.pl may not work any more
+#
+# e.g. ./web_blast.pl blastp nr protein.fasta
+#      ./web_blast.pl blastp pdb protein.fasta.txt
+#      ./web_blast.pl rpsblast cdd protein.fasta.txt
+#      ./web_blast.pl megablast nt dna1.fasta dna2.fasta
+#      ./web_blast.pl blastp SMARTBLAST%2Flandmark protein.fasta  #Need use %2F for / in SMARTBLAST/landmark NCBI database works as 2019/8
+#         When NCBI web-server is busy, Landmark may wait extrem long time to get results as of 2019/8
+#
+# nr: All non-redundant GenBank CDS translations+PDB+SwissProt+PIR+PRF excluding environmental samples from WGS projects
+#
+# refseq_protein : The Reference Sequence (RefSeq) database is an open access, annotated and curated collection of publicly available 
+# nucleotide sequences (DNA, RNA) and their protein products. ... DNA, RNA or protein) for major organisms ranging from 
+# viruses to bacteria to eukaryotes. 
+#  ID named as NP_xxxx (better, human curated), XP_xxx
+#
+# swissprot : Non-redundant UniProtKB/SwissProt sequences.
+
+Which database to use to align seq across species (Orthologs)?
+ refseq_protein is still too many returns. Most of them seq id >97%, not good to find other species
+ Use landmark database for 27 diverse species!
+  If too less, add more homology from NCBI HomoloGene
+ NOTE: SMARTblast is good to search species BUT underdevelopment: 
+     https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+
+One way to find sequences across species (Orthologs) is from Gene Tree:
+Gene tree: https://uswest.ensembl.org/Homo_sapiens/Gene/Compara_Tree?g=ENSG00000171105;r=19:7112266-7294045
+ Click on Orthologues to show all genes with same protein/gene name across species
+  1-to-1 is exact same, 1-to-many is with isomers
+  https://uswest.ensembl.org/Homo_sapiens/Gene/Compara_Ortholog?db=core;g=ENSG00000188130
+ Then click Download to download the Orthologues : select format as FASTA download aligned protein sequences (CLUSTRAL for DNA seq)
+ Use ./PDB_geneID_Uniprot_convert -i 1 -o 5 UniprotID  to convert Uniprot ID to Ensembl_gene_identifier(ENSG00000125084)
+Download Gene/Protein Tree by perl:
+ https://www.biostars.org/p/203266/
+ http://uswest.ensembl.org/info/docs/api/compara/compara_tutorial.html
+Use summer student Daniel in ~/summer_student/Daniel :
+http://www.ensembl.org/info/docs/api/api_installation.html
+Special Instructions: Replace src/ensembl-compara/modules/Bio/EnsEMBL/Compara/AlignedMember.pm with this modified file AlignedMember.pm
+Code to download Ensembl orthologues/paralogues: sampleCode.pl
+
+
+Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -species or ./NCBI_homoloGene
+ Genecard has limited (4 species) Orthologs : https://www.genecards.org/cgi-bin/carddisp.pl?gene=ARID1B#paralogs
+ 
+  Use ./clustalo_lwp.pl to access EBI Clustral alignment :
+    https://www.ebi.ac.uk/seqdb/confluence/pages/viewpage.action?pageId=54646458
+  Or my script ./clustal_seq_align
+  Can download Clustral in local machine as well: http://www.clustal.org/omega/
+  Recommended:
+   1. Use EBI to search all sequences of a protein name (Search DNA2, then click 'Protein seqences').
+   2. Pick the interested species, such as  _HUMAN _MOUSE _BOVIN(cow) _XENTR(frog,Xenopus laevis) _XENLA(Western clawed frog) _SCHPO(yeast)
+   3. Download as CSV format with Uniprot ID
+   4. Use ./sequence_download -uniport  to download sequence from Uniport ID : https://www.uniprot.org/uniprot/UniprotID.fasta
+    For DNA2 (5642 seqs): https://www.ebi.ac.uk/ebisearch/search.ebi?db=proteinSequences&query=DNA2
+     Select 9 species as DNA2_HUMAN, DNA2_MOUSE, DNA2_CHICK
+     Download seqs: ./sequence_download -uniprot -head -ncol 2 species.csv
+   5. Use alignment tools to align the downloaded sequences (MultAlin etc.)
+      My script to do Clustal seq align: ./clustal_seq_align
+      Best align is T-coffee (need remove empty lines in fasta file. Put human in first record)
+       http://tcoffee.crg.cat/apps/tcoffee/do:regular
+      Best view is MultAlin : it changed the order of species, put best seq as first. Not good to analys
+       http://multalin.toulouse.inra.fr/multalin
+      Manage seq align file by ./seq_align_rearrange
+      Display a range of seq align: ./seq_align_check -cd -fasta -name DNA2_HUMAN -range 215 230 species_fasta.aln.txt
+ NOTE: recommend to download Clustral aln format with consensus score (for MultAlien, save the colored text webpage)
+
+  Other way use Uniprot blastp:
+  A: Use Uniprot to BLAST search sequences first. Then select the intersted species. Then re-align them
+    http://www.uniprot.org/blast/
+   Better to select target database as UniProtKB/Swiss-Prot : guaratee aligned seq <90% to reduce too many sequences from species
+     But not true. it has duplicate as well but better. It can also sort by identity
+   Then 'sort by identity'
+    For DNA2 (P51530): UniRef90 returns 227 records. include 3 humans (100% id) and two mouses (78.7%).
+                       Swiss-Prot returns 228 records. include 28 humans (100% id) and 18 mouses. It cannot sort by identity
+                          Then map to UniRef90 : 135 records with id 90%
+
+ WebLogo can do multiple seq alignment and display it in different way (high ide with larger letter): https://weblogo.berkeley.edu/logo.cgi
+
+ Usage: $0 [Options] Fasta|shortName|refseqID|NCBIGeneID|UniprotID|FullName(some not work)|GeneName
+  
+ Options:
+  -LisAln | -li : do LisAln
+  -getPDB | -getpdb : download homology PDBs from ./NCBI_blast_PDBs
+  -debug : debug model on
+  -less : less display
+  -quite | [-noquite] : very little display
+  -noplot : no dendo-plots for intermediate seqs
+  -force : force to run NCBI seq blast even if output exists
+  -out Output : User defined output
+  -pdb | -PDB : database is PDB for structures
+  -nr : database is nr : All non-redundant GenBank CDS translations+PDB+SwissProt+PIR+PRF excluding environmental samples from WGS projects
+  -refseq : database is refseq_protein : annotated and curated collection of DNA/RNA/protein. Also do species alignment
+  -domain | -cdd : database is Conserved Domain Database (CDD) : https://www.ncbi.nlm.nih.gov/Structure/cdd/cdd_help.shtml#CDRepresentative
+    CDD can be used to show domain of input fasta
+    Can also run ./domain_cluster to get Pfam/SMART/InterPro domains
+  -species : Orthologues: will pick seq across species by using Landmark database for SmartBLAST (includes seqs from 27 genomes spanning a wide taxonomic range)
+     Also show NCBI HomoloGene which has more high identity seqs
+   -snum SpeciesNum : Max number of species to align, from Landmark first, then add from HomoloGene [$snum]    
+    NOTE: SMARTblast is good to search species BUT underdevelopment: 
+     https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+    27 species see: https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+     Animal: human, mouse, zebrafish, fruitfly, worm(C. elegans)
+     Plant: soybean, thale cress, slime mold
+     Unicells: malaria, Leishmania
+     Yeast: baker's, fission 
+     13 Bacteria ; 2 Archaea
+   -nohomo : will NOT include NCBI HomoloGene seqs across species
+     NCBI HomoloGene has more mammals as monkey and chimpanzee. Should use both together
+     When -species for LisAln, -nohomo will still use HomoloGene DB when there is not enough species from Landmark 
+    -name ProteinName/RefseqID : protein short name or refseq ID (NP_xxx, XP_xxx) to find HomoloGene
+   -all : for human homology proteins, display all landmark one even if the protein does not have short name in HomoloGene
+     [default] : only display proteins that has meaningful short name.
+   -nohuman | -nopara | [-para] : will not show human homology proteins (paralogue), which may not complete, to increase speed
+    -short | [-noshort] : will convert human homology proteins into shortname. Most case would not work
+   -noaln : will not do seqeunce alignment
+   [-mid] : if no range selection for seq display, will show the middle part of first protein
+   -range StartResid EndResid : display seq align resid range for alignment. [default] ${rstart}-${rend}aa
+   -half halfResidues : residue number around CenterResid. Must use before -center  [$rhalf]
+   -center CenterResid : display seq align range from CenterResid-$rhalf to CenterResid+$rhalf
+   -nochange | [-change] : will not change species name to simply one as human, mouse. Mapping file saved in species_mapping.txt 
+   -nocdd : will not check CDD for domains
+   -nopredict : Exclude PREDICTED seq in output named as XP_xxxxx. NP_ is currated 
+    [default] : PREDICTED seq will keep as they are also reliable and can give longer sequence
+   x-slow : use slow version when input is full/long protein name. Now can all use fast version
+    [-fast] : use fast version when input is geneName/UniprotID/Refseq/ENSG, but not full protein name
+
+  -rpsblast : use rpsblast : Reverse PSI-BLAST http://nebc.nox.ac.uk/bioinformatics/docs/rpsblast.html
+  -DNA : use megablast on nt database for DNA fasta
+
+ Example:   
+   $0 -pdb ARI1A    #input is protein name
+   $0 -pdb ARI1A.fasta.txt
+     #Find structures or homology from PDB. Run in ~/ARI1
+   $0 -getPDB nsp1.fasta.txt
+     #Download homology PDBs
+   $0 -species -nocdd -nohuman -noplot -name ARID1A -range 1010 1060 ARI1A.fasta   
+     #Recommended to find seqs across species: LisAln 
+      -name ARID1A : give short name for homoloGene seqs. If use refseq NP_xxx, may not return homoloGene results
+      -noshort : seldom can get protein short names. No worth try
+      Use fasta ARI1A.fasta for sequence, as if refseq is DNA/RNA NM_xxx, the autodownload seq is RNA, not protein!
+   $0 -species -snum 10 -less -range 1020 1060 NM_139135  #input is refseqID
+   $0 -species -snum 10 -less -half 20 -center 1047 ARI1A.fasta  
+     #generate across total 10 species, first from diverse landmark db, then added from homoloGene db.
+     #Find homology proteins across species and among human homologies. Also display seq aln centered at S1047. Run in ~/ARI1
+     #also include HomoloGene proteins for first protein
+   $0 -name ARID1A(or: NP_006006.3) -species -range 1010 1060 ARI1A.fasta
+     #also include HomoloGene proteins for ARID1A(or: NP_006006.3). But recommended to use shortname to guarantee get homoloGene data (But failed on DNA2)
+   $0 -cdd protein.fasta
+     #Find domains in a protein
+   $0 -refseq ARI1A.fasta
+     #Find best match protein's name, refseq ID
+
+   ########## Standard LisAln calls: Input can be fasta or geneName or long name. It is included in ./UniProt_get 
+  $0 -li -range 1 60 RhoA  #Input is protein gene name     
+  $0 -LisAln -range 1010 1060 ARI1A.fasta  #Input is fasta
+  $0 -LisAln -range 200 250 "Flap structure-specific endonuclease 1"   #Input is full protein name
+  $0 -LisAln -noquite -name ARID1A -range 1010 1060 ARI1A.fasta   
+     #Recommended to find seqs across species: LisAln 
+      -name ARID1A : give short name for homoloGene seqs. If use refseq NP_xxx, may not return homoloGene results. May auto-determine this shortname
+      -noshort : seldom can get protein short names. No worth try
+      -nohomo : when got enough Lankmark species, will not check HomoloGene DB
+      Use fasta ARI1A.fasta for sequence, as if refseq is DNA/RNA NM_xxx, the autodownload seq is RNA, not protein!
+
+ NOTE: To obtain purchase info or SDF from a NCBI CID list file or XML CSV file downloaded or SDF downloaded from NCBI, run ./PubChem_search
+ NOTE: To download seq of virus(COVID-19) from different patient: https://www.gisaid.org/ EpiFluTM database has more cases than NCBI 
+ NOTE: To download fasta seq from NCBI Refseq# : ./sequence_download -gi -o o.fasta NP_006006.3,XP_009292406.1
+ NOTE: To download PDBs from Uniprot: ./UniProt_get -getPDB or ./pdb_download
+ NOTE: To find GO annotations of a protein : ./GO_annotation
+ NOTE: To run Clustal multiple seq alignments : ./clustal_seq_align seqs.fasta.txt
+ NOTE: To rearrange aligned sequence at different line length, run: ./seq_align_rearrange -keeptit -keepdot -space 3 -len 100 $output
+ NOTE: To display a specific range of alignment, run: ./seq_align_check -cd -range 215 230 $output
+ NOTE: To convert between PDB IDs, UniProtID (Q9BVA2), HUGO_gene_symbol(PCNA), NCBI_Refseq_Protein_ID(NP_001005745), 
+   Ensembl_gene_identifier(ENSG00000125084), run ./IDs_gene_uniprot_convert ./PDB_geneID_Uniprot_convert 
+ NOTE: To convert between protein name, fasta file and NCBI refseq ID (NP_xxx, XP_xxx), uniprot, geneID  use ./protein_fasta_refseq_convert
+   The best is ./UniProt_get
+ NOTE: To find homology sequences across species from NCBI homoloGene, run ./NCBI_homoloGene
+ NOTE: To check if a mutation is SNP/DNP/TNP, run ./mutation_check D152Y
+ NOTE: In Uniprot, each gene for one UniprotID as protein. But fusion proteins are still counted.
+   e.g. BCR/ABL1 fusion gene at https://www.uniprot.org/uniprot/Q8NF93
+
+ NOTE: can re-run this script as will use most of previous results
+ WARNing: NCBI gives Wrong seq aln for M254 in ACTL6A against 4EFH in ACTL6A/. Do not trust it easily. Check strcuture instead!
+ WARNing: If this program waiting to long to get results from NCBI, you can manually blastp at NCBI and save output as txt file
+ WARNing: remember to check SWISS-MODEL repository as well as PubChem may miss short peptide as in FANCJ/ for D1138 or wrong aln as in Exo5/
+ XNOTE: ./UniProt_get -getPDB missed PDB 2psq 3cly for FGFR1. Also missed in Uniprot website for P11362. Found from NCBI blastp in FGFR1/. 
+ NOTE: Can also run ./domain_cluster to get Pfam/SMART/InterPro domains
+ NOTE: To find all interactions (hbond/hydrophobic/pi/halogen) with a residue, run ./pymol_pdb_contacts -hydro -sel "resid 159 and resn ASN" A.pdb
+ NOTE: To cluster proteins by Pathway/Function/Domain/Seqidentity/Structure, run ./protein_cluster
+ NOTE: My AAD (All-Around Docking), DSP (Drugable Site Prediction), STP/SOP (Structure-based Target/Offtarget Prediction), SAG(Side-chain Auto-Grow) 
+ NOTE: LiVS (ligand virtual screening pipeline):
+ NOTE: LibaPipe (Library Analysis Pipeline): ./library_sdf_report
+ NOTE: LisAln (LIberal Sequence ALigNment): ./NCBI_blast -LisAln
+ NOTE: Lian (Legion Interfaces Analysis) : ./namd_analysis  
+ NOTE: LiPav (Ligand information of Patent/Analog/Vendor): ./PubChem_convert 
+ NOTE: My sRMSD to cluster protein structures: ./protein_cluster
+ NOTE: My UDscore (Universal diversity score) to determine Library diversity: ./diversity_DScore
+ NOTE: My normalized mutation-rate to predict cancer driver/passenger genes: ./cluster_Pickmutation -length -cancer -col 3 human_uniprot.xls 
+
+ NOTE: To download homology PDBs, run: $0 -getPDB Fasta or same as: ./NCBI_blast_PDBs Fasta
+
+ttt
+  exit
+fi
+
+inputo=$input
+inputname=0
+if [ -s "$input" ] ; then
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ #infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+ #infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+ infile=`basename $input ${extension}`
+else
+ infile=`echo $input | awk '{print $1}'`
+ inputname=1
+fi
+#use lower case output to avoid double-download:
+infile=`echo $infile | awk '{print tolower($_)}'`
+dbo=$db ; [ $dospecies -eq 1 ] && dbo='landmark'
+[ $doout -ne 1 ] && output=$infile'_'$blast'_'$dbo'.txt'
+outfasta=$infile'_'$blast'_'$dbo'.fasta.txt'
+outfastaspec=$infile'_'$blast'_'$dbo'_spec.fasta.txt'
+outallspec=$infile'_landmark_homolo.fasta.txt'
+outallaln=$infile'_landmark_homolo_aln.txt'
+outalns=$infile'_'$blast'_'$dbo'_alns.txt'
+outalnh=$infile'_'$blast'_'$dbo'_alnh.txt'
+outfastalnh=$infile'_'$blast'_'$dbo'_human.fasta.txt'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/symbol.txt $ed/web_blast.pl $ed/clustal_seq_align $ed/seq_align_rearrange $ed/seq_align_check $ed/mutation_check .
+ cp -f $ed/sequence_search_SMART.pl $ed/Pfam_domain $ed/sequence_download $ed/NCBI_homoloGene $ed/protein_fasta_refseq_convert .
+ cp -f $ed/blastp_display $ed/blast_trim $ed/$speciesfile $ed/blast_merge $ed/NCBI_blast_PDBs $ed/pymol_all $ed/list_mergeTwo .
+ cp -f $ed/UniProt_get $ed/fasta_getNth $ed/fasta_counts $ed/blastp_display_more $ed/fasta_merge_species $ed/gnuplot_LisAln .
+fi
+
+
+#get fasta seq of input:
+if [ ! -s "$input" ] ; then
+ #First try ./UniProt_get to get best fasta, but input need to be gene name or uniprotID
+ echo "Trying to get fasta seq for human $input from Uniprot as isoform 1"
+ ./UniProt_get -fast -noaln -outfasta $temp.fasta.txt "$input" > $temp6
+ [ $quite -ne 1 ] && cat $temp6
+ if [ -s $temp.fasta.txt ] ; then 
+  awk '{if(s==1&&$1!="No"){print $_;exit};if($1=="Rank"&&$2=="ID"){s=1}}' $temp6 > $temp
+   #Rank    ID      Gene    UniprotID       Refseq  ENSG    HGNC    Length  Isoforms        PDBs    LongPDBs        Names   UniprotURL	FullName
+  genename=`cat $temp | awk '{n=split($_,a,"\t");print a[3]}'`
+  enid=`cat $temp | awk '{n=split($_,a,"\t");print a[6]}'`
+  fullname=`cat $temp | awk '{n=split($_,a,"\t");print a[n]}'`
+ else  #xcannot find Uniprot in fast version for 'Flap structure-specific endonuclease 1'. Use -slow version. No need now
+  ./UniProt_get -noaln -outfasta $temp.fasta.txt "$input" > $temp6
+  genename=`grep 'GeneName at GeneCards:' $temp6 | head -1 | awk '{n=split($_,a,"=");print a[n]}'`
+  enid=`grep 'Ensembl ID for' $temp6 | head -1 | awk '{n=split($_,a,"=");print a[n]}'`
+   #GeneName at GeneCards: https://www.genecards.org/cgi-bin/carddisp.pl?gene=ARID1A
+   #Ensembl ID for GeneTree: https://uswest.ensembl.org/Homo_sapiens/Gene/Compara_Tree?g=ENSG00000168496
+ fi
+ inputfasta=$genename.fasta.txt
+ echo " GeneName is $genename for $input . Download fasta for isomer1 is saved as $inputfasta"
+ mv $temp.fasta.txt $inputfasta
+ hname=$genename
+ if [ $doname -ne 1 ] ; then  #get GeneName
+  doname=1
+  [ $quite -ne 1 ] && echo " Will add Homogene DB seqs for $hname if needed"
+ fi
+
+ if [ ! -s $inputfasta ] ; then
+  ./protein_fasta_refseq_convert -out $inputfasta  "$input"  | tee $temp6
+  NP=`grep 'Best matching protein' $temp6 | tail -1 | awk '{print $NF}'`
+  input=$inputfasta
+  ./protein_fasta_refseq_convert -out $input  "$inputo"  > $temp6   #get fasta
+ fi
+ input=$inputfasta
+ #Only keep first fasta:
+ cp $inputfasta $temp.fasta
+ ./fasta_getNth -get 1 -out $inputfasta $temp.fasta > $temp6
+ [ $quite -ne 1 ] && cat $temp6
+ echo "=> One fasta of $inputo saved as $input"
+ if [ ! -s $input ] ; then
+  echo "Fatal error! Cannot find fasta for $inputo @$0 $oldline" 1>&2
+  exit
+ fi
+fi
+
+if [ ! -s "$input" ] ; then
+ echo "Fatal error @$0 $oldline : No fasta $input found. Tried:"
+ ./protein_fasta_refseq_convert -out $input  "$inputo" 
+ rm -f $temp* ; exit
+fi
+
+#download homology PDBs
+if [ $getpdb -eq 1 ] ; then
+ ./NCBI_blast_PDBs $input
+ rm -f $temp* ; exit
+fi
+
+naa=`awk 'BEGIN{n=0}{if(substr($1,1,1)!=">"){n=n+length($_)}}END{print n}' $input`  
+if [ $docent -ne 1 ] && [ $domid -eq 1 ] ; then  #show middle part of seq
+ mid=`expr $naa / 2`
+ rstart=`expr $mid - $rhalf`
+ rend=`expr $mid + $rhalf`
+ docent=1
+fi
+[ $rstart -lt 1 ] && rstart=1
+[ $rend -gt $naa ] && rend=$naa
+
+# NCBI blastp :
+echo "=> Use NCBI $blast on $db database for fasta $input (${naa}a.a.) saved in $output"
+if [ $force -ne 1 ] && [ -s $output ] ; then
+ echo " WARNing : use existing NCBI blast output $output on $db"
+else 
+ #echo ./web_blast.pl $blast $db $input
+ if [ $doless -ne 1 ] ; then
+  echo " WARNing: If this part too long to result when NCBI server is busy, you can manually blastp at NCBI for $db and save as text Format $output"
+  ./web_blast.pl $blast $db $input | tee $output 
+ else
+  ./web_blast.pl $blast $db $input > $output
+ fi
+fi
+echo "=> NCBI blast output is $output"
+notl=`wc -l $output | awk '{print $1}'`
+#if [ ! -s $output ] ; then
+if [ $notl -le 2 ] ; then
+ head -2 $input
+ echo "Fatal error: No balstp output $output. Is $input protein seq? Check it!"
+ echo " Could be NCBI server is busy. Try to run again at none-busy time"
+ echo " Or: re-save protein (not RNA) fasta by click Related Info|Protein of https://www.ncbi.nlm.nih.gov/nuccore/$NP "
+ echo "  Then run as $0 $oldline $input" 
+ exit
+fi
+
+
+###################################################
+#seq align from sepecies and protein homology:
+#WANRing: some protein has two pieces of alignment
+if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.txt
+
+ ########### Domains of protein
+ if [ $docdd -eq 1 ] ; then
+  echo "=> Domains of protein from NCBI CDD database:"
+  $0 -cdd -less $input | tee $temp6
+  if [ $docent -eq 1 ] ; then
+   echo "=> Domains that include $center aa are:"
+   awk '{if(s==1&&NF==0){exit};
+    if(s==1&&$1<='$center'&&$2>='$center'){print $_}
+    if($1=="StartResd"&&$2=="End"){s=1;print $_}}' $temp6
+  fi
+ else
+  [ $quite -ne 1 ] && echo "=> To check domains: run $0 -cdd  $input"
+ fi
+
+ #WARNing: there are more than 100 seqs in PBRM1/PBRM1.fasta_blastp_landmark.txt. But only 53 (human and mouse) has > alignments
+ #$output: XP_016862233.1 protein polybromo-1 isoform X13 [Homo sapiens]      3509       0.0     100%
+ #$temp: XP_016862233.1	1	1689	1689	100.0%	Human	 protein polybromo-1 isoform X13
+ #May not only check > w/ alned, but also NP_, XP_ at beginning
+ #debugged for PBRM1 which has too many paralogues on 2019/8 by using ./blastp_display_more
+ ntot=`grep '>' $output | wc -l | awk '{print $1}'`
+ npredict=`grep '>' $output | grep PREDICTED | wc -l | awk '{print $1}'`
+ echo "Found $ntot alned seq ($npredict PREDICTED) by using 27 Landmark diverse species for SmartBLAST: "
+ [ $doless -ne 1 ] && echo -e "NP\tStartResd\tEnd(firstPiece)\tIdentity\tPercent\tSpecies\tName"
+ ./blastp_display $change -nohead -nodisplay -out $temp2 $output  
+ if [ $doless -ne 1 ] ; then
+  cat $temp2 | sort -nr -k 4 | tee $temp
+ else
+  cat $temp2 | sort -nr -k 4 > $temp
+ fi
+
+ #All Sequences producing significant alignments from landmark $output:
+ awk '{
+       if(s>0&&NF==0){s++}
+       if(s==3||(s>0&&$1=="ALIGNMENTS")){s=0;exit}
+       if(s>0&&NF>0){print $1}
+       if($1=="Sequences"&&$2=="producing"&&$3=="significant"&&$4=="alignments:"){s=1}
+      }' $output > $temp.more
+ ntotf=`wc -l $temp.more | awk '{print $1}'`
+
+ #add more seqs w/o aln
+ if [ $ntotf -ne $ntot ] ; then
+  cp $temp $temp.fin
+  #remove duplicate NP_ XP_
+  awk 'BEGIN{file="'$temp'";  n=0
+  while ((getline line < file) > 0) {
+  n++; nf=split(line,d," "); a[n]=d[1]
+  }close(file)}
+  {did=0;for(i=1;i<=n;i++){if(a[i]==$1){did=1;break}};if(did==0){print $1}}' $temp.more > $temp.fin2
+  cat $temp.fin2 >> $temp.fin
+  nfinal=`wc -l $temp.fin | awk '{print $1}'`
+  echo " WARNing: Total Sequences producing significant alignments from landmark is $ntotf . Will download all $nfinal seqs in $outfasta" 
+ else
+  cp $temp $temp.fin 
+ fi
+
+ #download all sequences
+ if [ $force -eq 1 ] || [ ! -s $outfasta ] ; then
+  naln=`wc -l $temp.fin | awk '{print $1}'`
+  ./sequence_download -less -gi -out $outfasta $temp.fin
+  ndown=`awk 'BEGIN{n=0}{if(substr($_,1,1)==">"){n++}}END{print n}' $outfasta`
+  echo "=> Download $ndown seqs for $naln Refseq saved in $outfasta "
+  [ "$ndown" != "$naln" ] && echo "WARNing: Not all Refseq are downloaded fasta : Required $naln but only $ndown" 
+ else
+  ndown=`awk 'BEGIN{n=0}{if(substr($_,1,1)==">"){n++}}END{print n}' $outfasta`
+  echo " WARNing: Using exisiting $ndown fasta $outfasta"
+ fi
+ if [ $ndown -eq 0 ] ; then
+  echo "Fatal error: No fasta downloaded for $naln sequences in $outfasta for $db ! Check ./sequence_download -gi -out $outfasta i"
+  mv $temp.fin i ; exit
+ fi
+
+ #Add species names to $temp based on fasta in case not done by ./blastp_display for many seqs
+ ./blastp_display_more $change $temp $outfasta
+ grep -i error $temp
+
+ if [ $predict -eq 1 ] ; then
+  echo ""
+  echo "=> Without PREDICTED seqs (XP_xxxx) are (NOT recommended as predicted are usually reliable and longer sequence:"
+  awk '{if(index($_,"PREDICTED:")==0){print $_}}' $temp | sort -k 6 | tee $temp2
+  mv $temp2 $temp
+ fi
+ cp $temp $temp.allaln
+ 
+ #best matching protein from landmark DB: #NP_006006.3	1	2285	2285	100.0%	Human	 AT-rich interactive domain-containing protein 1A isoform a
+ bestNP=`head -1 $temp.allaln | awk '{print $1}'`
+ bestFullName=`head -1 $temp.allaln | awk '{n=split($_,a,"\t");print a[n]}'`
+ bestPer=`head -1 $temp.allaln | awk '{print $5}'`
+ bestSpecies=`head -1 $temp.allaln | awk '{print $6}'`
+ ./UniProt_get -noiso -noaln -fast "$bestFullName" > $temp6
+ awk '{if(s==1&&$1!="No"){print $_;exit};if($1=="Rank"&&$2=="ID"){s=1}}' $temp6 > $temp
+ bestShortName=`cat $temp | awk '{n=split($_,a,"\t");print a[3]}'`
+ echo " Best matching protein from Landmark DB is $bestSpecies $bestShortName $bestNP @$bestPer"
+ if [ $dolis -eq 1 ] || [ $doname -ne 1 ] ; then
+  if [ "$bestShortName" != "" ] ; then
+   hname=$bestShortName
+   doname=1
+   [ $quite -ne 1 ] && echo " will use $hname to search for HomoloGene DB"
+  fi
+ fi
+
+  ################################################## For human homology proteins: Paralogues
+ if [ $nohuman -ne 1 ] ; then
+  echo ""
+  echo "=> Paralogues: Human homology proteins saved in $outalnh $outfastalnh"
+  #$temp.allaln: NP_476473.1     NA      9999    9899    99%     Rat      transforming protein RhoA precursor  (or: isoform X1)
+  sort -k 6 $temp.allaln | grep H.sapiens > $temp6  #find human genes
+  #remove isoforms and precursor in names: Only keep one record for all isoforms
+  echo " Will only keep first one of all isoforms. Also remove precursor or isoform from protein full name for clean display"
+  awk 'BEGIN{n=0}{k=split($_,a,"\t");name=a[k]
+   v=split(name,y," ");name=y[1];for(j=2;j<=v;j++){name=sprintf("%s %s",name,y[j])} #trim name
+   u=index(name," isoform ")
+   if(u>1){name=substr(name,1,u-1)}  #remove isoform X1
+   u=index(name," precursor")
+   if(u>1){name=substr(name,1,u-1)}  #remove precursor from full name
+   did=0
+   for(i=1;i<=n;i++){
+    if(nam[i]==name){did=1;break}   #each full name only show onces
+   }
+   if(did==0){n++;nam[n]=name;np[n]=a[1];per[n]=a[5]}
+  }END{for(i=1;i<=n;i++){printf("%s\t%s\t%s\n",np[i],nam[i],per[i])}}' $temp6 > $temp3
+  [ $doless -ne 1 ] && cat $temp3
+  nhomo=`wc -l $temp3 | awk '{print $1}'`
+  cat $outfasta | awk 'BEGIN{  #extract fastas
+   file="'$temp3'";  n=0;doit=0
+   while ((getline line < file) > 0) {n++; nf=split(line,d,"\t"); a[n]=d[1];b[n]=d[2]}
+   close(file)
+   }{id=substr($1,2,30);first=substr($1,1,1);if(first==">"){doit=0}
+   for(i=1;i<=n;i++){if(a[i]==id){doit=1;break}}
+   if(doit>0){print $_}
+   }' > $outfastalnh
+   ./clustal_seq_align $fforce -less  -nopair -out $outalnh $outfastalnh > $temp6
+  [ $quite -ne 1 ] && cat $temp6
+  nhomo2=`grep '>' $outfastalnh | wc -l | awk '{print $1}'`
+
+ #convert Paralogues protein to short name instead of refseq ID. Now works for most cases from 2019/8
+ if [ $noshort -eq 1 ] ; then  #This is new version from 2019/8 that works
+  onlyshort=0
+  echo " Convert human proteins into short name:"
+  awk '{print $1}' $temp3 > $temp3.1
+  awk '{split($_,a,"\t");print a[2]}' $temp3 > $temp3.2
+  awk '{split($_,a,"\t");print a[3]}' $temp3 > $temp3.4
+  nna=`wc -l $temp3.2 | awk '{print $1}'`
+  echo -n > $temp3.3
+  for (( j=1; j<=$nna ; j++ )) ; do
+   fullna=`head -$j $temp3.2 | tail -1`
+   ./UniProt_get -fast -noaln "$fullna" > $temp6
+   #14776	RND3_HUMAN	RND3	P61587	NP_001241667.1	ENSG00000115963	671 244 2 3 1 uniprot/P61587 Rho-related GTP-binding protein RhoE
+   #or: No Uniprot info found
+   awk '{if(s==1&&$1!="No"){print $_;exit};if($1=="Rank"&&$2=="ID"){s=1}}' $temp6 > $temp  #also check when No Uniprot info found
+   uniid=`awk '{split($2,a,"_");print a[1]}' $temp`  #RND3_HUMAN
+   genena=`cat $temp | awk '{n=split($_,a,"\t");print a[3]}'`
+   if [ "$genena" == "" ] ; then  #in case No geneName for RHOJ_HUMAN
+    if [ "$uniid" != "" ] ; then
+     genena=$uniid  #Use Uniprot Name
+    else
+     genena=`echo $fullna | awk '{printf("%s",$1);for(i=2;i<=NF;i++){printf("_%s",$i)}}'` #space replaced by _
+    fi
+   fi
+   echo $genena >> $temp3.3
+  done #j
+  paste $temp3.1 $temp3.3 > $temp5
+  #display Paralogues:
+  paste $temp3.1 $temp3.3 $temp3.4 $temp3.2 | sort -k 3 -nr
+ 
+ else  #old version to convert full name into short name, usually does not work
+  echo -n > $temp5
+  ncon=0
+  [ $doless -ne 1 ] && echo "=> Convert refseq ID into short protein names: sometimes website does not work to convert short names!!! Use -noshort to bypass"
+  for (( i=1; i<=$nhomo2 ; i++ )) ; do
+   NP=`grep '>' $outfastalnh | head -$i | tail -1 | awk '{print substr($1,2,50)}'`
+   #echo ./protein_fasta_refseq_convert -less $NP
+   ./protein_fasta_refseq_convert -less  $NP >& $temp2
+   sname=`grep 'Its name is:' $temp2 | tail -1 | awk '{print $4}'`
+   if [ "$sname" == "" ] ; then
+    sname=$NP
+   else
+    ncon=`expr $ncon + 1`
+   fi
+   echo $NP $sname >> $temp5
+   if [ $doless -ne 1 ] && [ "$sname" != "$NP" ] ; then
+    echo "  $NP $sname"
+   fi
+  done
+  if [ $ncon -eq 0 ] ; then
+   echo "WARNing: No shortname found for refseqs. Maybe website does not work at this moment. try later"
+   onlyshort=0
+  fi
+ fi #noshort
+
+  echo "=> LisAln Paralogue: Seq aln across human homology at range $rstart-$rend a.a. Use -range/-center to change:"
+  if [ $onlyshort -eq 1 ] ; then
+   echo "  Only display human proteins that have shortnames. Otherwise run $0 -all $oldline"
+    ./seq_align_check -plotout ${outalnh}.gif -replace $temp5 -less -cd -range $rstart $rend $outalnh | awk '{a=substr($1,1,3);if(a!="XP_"&&a!="NP_"){print $_}}'
+  else
+    #display all human proteins even if no meaningfull shortname
+   ./seq_align_check -plotout ${outalnh}.gif -nochange -replace $temp5 -less -cd -range $rstart $rend $outalnh | tee $temp.aln
+  fi
+ else #nohuman
+  echo "WARNing: to show paralogue human homology proteins, do not use -nohuman option"
+ fi #nohuman
+
+ ############################# Proteins across species: Orthologues
+ ############## get across species proteins from diverse landmark db : outfasta has fasta for both species and homologies
+  echo ""
+  echo "=> Landmark DB: Best match protein (max indentical residues at col 4) for each species are:"
+  sort -k 6 $temp.allaln | awk '{n++;a[n]=$_;  #XP_016862214.1	1	1689	1689	98.6%	Human	 PREDICTED: protein polybromo-1 isoform X1
+    if(n==1){pre=$6;vmax=$4;nmax=1}
+    if(pre==$6&&$4>vmax){vmax=$4;nmax=n}
+    if(NR>1&&pre!=$6){
+     print a[nmax] 
+     nmax=n;vmax=$4
+    }
+    pre=$6;pre4=$4
+   }END{print a[nmax]}' | sort -nr -k 4 | tee $temp2
+  #nspec=`wc -l $temp2 | awk '{print $1}'`
+  #$temp2: XP_016862230.1  NA      9999    9999    100%    Human    protein polybromo-1 isoform X11
+  cat $outfasta | awk 'BEGIN{  #extract fastas
+   file="'$temp2'";  n=0
+   while ((getline line < file) > 0) {n++; nf=split(line,d," "); a[n]=d[1];b[n]=d[6]}
+   close(file)}{id=substr($1,2,30);first=substr($1,1,1);if(first==">"){doit=0}
+   for(i=1;i<=n;i++){if(a[i]==id){doit=1;species=b[i];break}}
+   #if(doit>0){if(first==">"){printf(">%s\n",species)}else{print $1}}  #fasta header as: >human
+   if(doit>0){print $_} #keep original fasta header as: >XP_016862232.1 protein polybromo-1 isoform X12 [Homo sapiens]
+  }' > $temp2.fasta
+  cp $temp2.fasta $outfastaspec
+  if [ $landmarkaln -eq 1 ] ; then
+   ./clustal_seq_align $fforce $plot -less -species -nopair -out $outalns $temp2.fasta > $temp6
+   [ $quite -ne 1 ] && cat $temp6
+   [ $quite -ne 1 ] && echo "=> Landmark Orthologues ($outalns): Seq aln across species at range $rstart-$rend a.a. Use -range/-center to change:"
+   ./seq_align_check  -less -cd -range $rstart $rend -out $temp.out $outalns > $temp6
+   [ $quite -ne 1 ] && cat $temp6
+  fi
+  nspec=`./fasta_counts $temp2.fasta | tail -1 | awk '{print $NF}'`
+  if [ $dolis -eq 1 ] && [ $nspec -lt $snum ] ; then
+   dohomo=1  #Use HomoloGene DB to add extra species
+  fi
+  
+  #get across species proteins from NCBI HomoloGene: Need protein short name or refseqID
+  hasnomo=0;homofasta="NA"
+  if [ $dohomo -eq 1 ] ; then
+   echo ""
+   if [ $doname -eq 0 ] ; then    
+    ./protein_fasta_refseq_convert -less $input > $temp4
+    hname=`grep 'Best matching protein' $temp4 | tail -1 | awk '{print $NF}'`
+    best1=`grep 'Best matching protein' $temp4`
+    best2=`grep 'Its name is:' $temp4`
+    best3=`grep 'Its full name is:' $temp4`
+    echo $best1 ; echo $best2 ; echo $best3
+   fi
+   if [ $inputname -eq 1 ] ; then
+    #Use input protein short name or refseq id to search homoloGene db
+    hname=$inputo
+    [ $doless -ne 1 ] && echo "WARNing: Best use protein short name to search for NCBI homoloGene"
+   fi
+   ./NCBI_homoloGene $homoloaln $plot $change $lless -range $rstart $rend -out2 $temp3.homoout $hname | tee $temp3
+   homofasta=`grep 'Protein across species from NCBI HomoloGene saved as' $temp3 | awk '{print $NF}'`
+   homoaln=`grep 'Clustal aln of HomoloGene seqs saved' $temp3 | awk '{print $NF}'`
+   homoout=`grep 'HomoloGene output saved' $temp3 | awk '{print $NF}'`
+   if [ "$homofasta" != "" ] ; then
+    hasnomo=1
+    echo "=> NCBI HomoloGene Orthologues: Protein across species saved as $homoout $homoaln $homofasta "
+   else
+    echo "WARNing: No NCBI homoloGene data found for $hname at https://www.ncbi.nlm.nih.gov/homologene/?term=$hname"
+   fi
+  fi #$dohomo -eq 1
+
+ #Merge $snum species to show seq aln from species
+ if [ $nspec -ge $snum ] ; then
+  echo "As required to align at most $snum species but got $nspec, so can use above diverse landmark db results and will not add HomoloGene DB"
+ else #snum
+  if [ $dohomo -eq 1 ] ; then
+   nadd=`expr $snum - $nspec`
+   if [ $hasnomo -eq 1 ] ; then
+    echo "As required to align at most $snum species but only $nspec landmark db seqs. Will try to add $nadd species from HomoloGene DB"
+   else
+    echo "No HomoloGene DB found to add $nadd more species to $nspec landmark db seqs. Leave it as it is"
+   fi
+  fi #dohomo
+ fi #$nspec -ge $snum
+
+ #Display final seqs from orthologue across species (LisAln)
+  # NOTE: suppose to add 8 new species but only add 7 for ./NCBI_blast  -name PBRM1 -species -range 280 350 PBRM1.fasta.txt in ~/PBRM1
+  #  This is because $temp3 has extra clawedFrog which does not exist for PBRM1.fasta_landmark_homolo.fasta.txt  Now all debugged on 8/2019
+ #if need merge HomoloGene, will do it; otherwise, sort fasta by order in species_mapping.txt
+  #echo ./fasta_merge_species -num $snum -out $outallspec $outfastaspec $homofasta ; exit
+  ./fasta_merge_species -num $snum -out $outallspec $outfastaspec $homofasta > $temp6
+  [ $quite -ne 1 ] && cat $temp6 
+  nlisa=`./fasta_counts $outallspec | tail -1 | awk '{print $NF}'`
+  ./clustal_seq_align $fforce -less -species -nopair -out $outallaln $outallspec > $temp6
+  [ $quite -ne 1 ] && cat $temp6
+  echo "=> LisAln Final Orthologues ($outallaln): $nlisa proteins ($nspec from Landmark DB) across species are:"
+  ./seq_align_check -plotout ${outallaln}.gif -less -cd -range $rstart $rend -out $temp.out $outallaln | tee $temp.aln
+  echo ""
+  ./clustal_identity -1 -nohead  $temp.out 
+  [ $quite -ne 1 ] && echo "  If new species shown without simple name, put it in $ed/$speciesfile"
+fi  #$dospecies -eq 1
+
+######################################################
+#find domains from CDD
+#>CDD:314843 pfam12031, BAF250_C, SWI/SNF-like complex subunit BAF250/Osa.
+#Identities = 174/257 (68%), Positives = 209/257 (81%), Gaps = 2/257 (1%)
+if [ $dodomain -eq 1 ] ; then
+ dnum=`grep '>CDD:' $output | wc -l | awk '{print $1}'`
+ echo "Found $dnum domains from CDD database at $output: " 
+ echo -e "StartResd\tEnd\tIdentity\tPercent\tName"
+ #out as StartResid EndResid SeqIdentity (Percent) Domain info 
+ cat $output | awk '{
+  if(s==1&&$1=="Query"){if(dostart==0){start=$2;dostart=1};end=$NF}
+  if(s==1&&$1=="Identities"){split($3,dd,"/");iden=dd[1];piden=substr($4,2,length($4)-3)}
+  if(substr($1,1,5)==">CDD:"){n++;s=1;dostart=0;doend=0;name=substr($_,6,100)
+   if(n>1){printf("%s\t%s\t%s\t%s\t%s\n",start,end,iden,piden,name)}
+  }
+ }END{if(n>0){printf("%s\t%s\t%s\t%s\t%s\n",start,end,iden,piden,name)}}' | sort -n -k 1
+fi
+
+
+##########################################################
+#find best match protein name and refseq ID
+if [ $dorefseq -eq 1 ] ; then
+
+ echo -e "NP\tStartResd\tEnd(firstPiece)\tIdentity\tPercent\tSpecies\tName"
+ ./blastp_display $change -nohead -nodisplay -out $temp2 $output
+ #sort by $4 ident length first, then by percentage in col 5 :
+ cat $temp2 | sort -nr -k 4 > $temp 
+ cat $temp | awk '{if(NR==1){pre=$4};if($4==pre){n=split($_,a,"\t");
+  printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",a[1],a[2],a[3],a[4],substr(a[5],1,length(a[5])-1),a[6],a[7])}}' | sort -nr -k 5 > $temp3
+ cat $temp3  #sorted by col 5
+ cat $temp | awk '{if(NR==1){pre=$4};if($4!=pre){print $_}}' #others are not sorted by col 5
+
+ bestnp=`head -1 $temp3 | awk '{print $1}'`
+ bestnpp=`head -1 $temp3 | awk '{print $5}'`
+ bestrange=`head -1 $temp3 | awk '{printf("%s-%sa.a",$2,$3)}'`
+ bestsp=`head -1 $temp3 | awk '{split($_,a,"\t");print a[6]}'`
+ bestlong=`head -1 $temp3 | awk '{n=split($_,a,"\t");print a[n]}'`
+
+ #get short protein name for $bestnp
+ echo ./protein_fasta_refseq_convert -less $bestnp
+ ./protein_fasta_refseq_convert -less $bestnp > $temp
+ sname=`grep 'Its name is:' $temp | tail -1 | awk '{print $4}'` 
+ 
+ [ $quite -ne 1 ] && echo "  
+=> Best matching protein is from Blastp Refseq [$bestsp] $bestrange and $bestnpp identity with refseq ID = $bestnp
+   Its full name is: $bestlong
+   Its name is: $sname" 
+fi  #dorefseq 
+
+echo ""
+echo "=> NCBI blast results for $input (${naa}a.a.) saved in $output"
+[ -s $outfasta ] && echo " $ndown Fasta saved in $outfasta"
+[ "$homofasta" != "" ] && echo "Protein across species from NCBI HomoloGene saved as $homoout $homoaln $homofasta "
+[ -s $outalns ] && echo " Seq aln across species saved in $outalns"
+[ -s $outalnh ] && echo " LisAln paralogue for human homologies saved in $outalnh $outfastalnh"
+[ -s $outallspec ] && echo " LisAln orthologue for species saved in  $outallaln $outallspec"
+if [ "$best1" != "" ] ; then
+ [ $quite -ne 1 ] && echo $best1 ; echo $best2; echo $best3
+fi
+if [ $doless -ne 1 ] ; then
+echo "
+  To download homology PDBs, run ./NCBI_blast_PDBs $input
+  To find all interactions (hbond/hydrophobic/pi/halogen) with a residue, run ./pymol_pdb_contacts -hydro -sel "resid 159 and resn ASN" A.pdb
+  To find domains from CDD database run: $0 -cdd $input
+  To get pfam domain of a protein run: ./Pfam_domain UniProtID
+  To find domains in SMART : 
+    perl sequence_search_SMART.pl --input $input --output Out --includePfam --includeSchnipsel --includeDISEMBL --includeSignalP --includeRepeats 
+  To find alignment across species and proteins: $0 -species -center 1050 $input  
+   Another way is ./NCBI_homoloGene RefseqID
+    NOTE: SMARTblast is good to search species BUT underdevelopment: 
+     https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+
+  To cluster proteins by Pathway/Function/Domain/Seqidentity/Structure, run ./protein_cluster
+  To download fasta seq from NCBI Refseq# : ./sequence_download -gi -o o.fasta NP_006006.3,XP_009292406.1  
+  To run Clustal multiple seq alignments : ./clustal_seq_align seqs.fasta.txt
+  To rearrange aligned sequence at different line length, run: ./seq_align_rearrange -keeptit -keepdot -space 3 -len 100 $output
+  To display a specific range of alignment, run: ./seq_align_check -cd -range 215 230 $output
+
+  WARNing: remember to check SWISS-MODEL repository as well as PubChem may miss short peptide as in FANCJ/ for D1138 
+   or wrong aln to kinase for nuclease as in Exo5/
+
+"
+fi #doless
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

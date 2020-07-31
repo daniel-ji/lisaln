@@ -1,0 +1,179 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+help=0
+#rootdir='holi@p-ngs2:/isi-dcnl/flower_data/hongzhi/'
+#rootdir='holi@scalemp1:/flower_data/hongzhili/'
+#outdir=$rootoutdir'backup'
+rootout="holi@br11159.coh.org:/home/holi/"  #root dir for $infile
+filen=0
+tofolder='.'
+
+IP=`/sbin/ifconfig | grep "inet addr" | awk -F: '{print $2}' | head -1 | awk '{print $1}'`  #IP address of this machine for old 16-CPU machine
+if [ "$IP" == "" ] ; then 
+ IP=`/sbin/ifconfig | grep "inet " | awk '{print $2}' | head -1 | awk '{print $1}'` #IP address of this machine for new 32-CPU machine
+fi
+
+oldline=$*   #all argvs
+echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+  --help) help=1;shift;;
+  -rootout) rootout=$2;shift 2 ;;
+  -1) rootout="holi@scalemp1:/flower_data/hongzhili/";shift;;
+  -s) rootout="holi@scalemp1:/flower_data/hongzhili/";shift;;
+  -g) rootout="holi@p-gpu1:/isi-flower/flower_data/hongzhili/";shift;;
+  #-n) rootout="holi@br11159.coh.org:/home/holi/";shift;;  #NOTE: script cannot have -n options! May because -n "$1" 
+  -new) rootout="holi@br11159.coh.org:/home/holi/";shift;;
+  -o) rootout="holi@10.138.18.45:/home/holi/";shift;;
+  -old) rootout="holi@10.138.18.45:/home/holi/";shift;;
+  -gpu) rootout="holi@p-gpu1:/isi-flower/flower_data/hongzhili/";shift;;
+  -sun) rootout="holi@hpc-access1.coh.org:/net/isi-dcnl/ifs/user_data/hongzhi/";shift;;
+  -ta)rootout="holi@stampede.tacc.utexas.edu:/work/03205/holi/";shift;;
+  -tax)rootout="holi@stampede.tacc.utexas.edu:/work/03205/holi/";shift;;
+  -to)tofolder=$2;shift 2;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+
+if [ -n "$1" ] ; then
+ infile="$1";filen=1
+ if [ -n "$2" ] ; then
+  infile2=$2;filen=2
+ fi
+ if [ -n "$3" ] ; then
+  infile3=$3;filen=3
+ fi
+ if [ -n "$4" ] ; then
+  infile4=$4;filen=4
+ fi
+ if [ -n "$5" ] ; then
+  infile5=$5;filen=5
+ fi
+
+else
+ help=1
+fi
+
+if [ $help -eq 1 ] ; then  #no argv or --help
+cat << ttt
+  This is to get files to the same folder structure from another computer (default: my new home workstation)
+    It will make one-level directory in remote machine if it is not exisiting
+  Usage $0 [OPTIONs] File [File2 .. File5]
+    --help : help
+    -rootout : root dir for remote machine (my work station). e.g. "holi@br11159.coh.org:/home/holi/"
+    -1 | -s | -gpu | -g : remote machine is scalemp1 "holi@scalemp1:/flower_data/hongzhili" or idetical "holi@p-gpu2:/isi-flower/flower_data/hongzhili/"
+    -sun : suncluster "holi@hpc-access2.coh.org:/net/isi-dcnl/ifs/user_data/hongzhi/"
+    -new : My new 32 CPU workstation holi@br11159.coh.org:/home/holi (holi@br11159)  
+       NOTE: script cannot have -n options!  May because -n "$1"
+    -o | -old : My old 16 CPU workstation holi@10.138.18.45:/home/holi/  (still works, hongzhili@br07685) 
+    -ta | -tax : TACC U of Texas super computer 
+    -to Folder : Folder in local machine to receive the file. Default: Current folder
+
+       X-new : My new workstation holi@br11159.coh.org:/home/holi/ 
+       X-o | -old : My old workstation holi@br11159.coh.org:/home/holi/ (This machine is dead due to hard drive failed). 
+        (Data backed up in from hongzhili@BR07685 : ssh holi@br07685   cd /workstation_backup/br09646_data/holi)
+
+
+    File: input file to be copied back from current directory. e.g. '*.rept'  or '*/*.rept'
+       Could be up to 5 files appended
+      Must be folder or sub-folder of currnt dir  
+      For regular expression, must use ' ' to quote files
+
+     Output files are in the same folder-structure from root (from hongzhili/)
+
+  Example:  $0 to ~/PCNA/ '*.rept'    #get files from my newest workstation to folder ~/PCNA/
+            $0 -sun '*dcd'   #get from scalemp1
+            $0 -1 /flower_data/hongzhi/BRCA1/PCNA*     #no '' quotes needed. scp folder files to current directory
+            $0 -s 'a.sdf c.xls ...'  #Use '' to scp more files
+            $0 -sun 'test/0/A.log'   #remote machine can have relative path
+            $0 -new A.pdb  #get one file from new workstation
+            $0 -o sdf_check back   #get two files from my old workstation 
+
+  NOTE: Since scp needs password, to bypass password:
+    1. In local machine (if no ~/.ssh/id_rsa.pub):
+        ssh-keygen -t dsa   [3 enters. Don't overwrite if already there]
+       To generate /home/holi/.ssh/id_rsa.pub
+    2. Copy or append contants in .ssh/id_rsa.pub to remote machine: ~/.ssh/authorized_keys
+    3. May need to change permission: chmod 700 .ssh ; chmod 0644 authorized_keys
+
+  NOTE: ./back and ./send are identical code. When modified, inform each other
+ttt
+  exit
+fi
+
+temp=$0'_'$$'.tmp' 
+temp2=$temp'2'; temp3=$temp'3'
+
+rIP=`echo $rootout | awk '{a=index($1,"@");b=index($1,":");print substr($1,a+1,b-a-1)}'`
+if [ "$rIP" == "$IP" ] ; then
+  echo "Error! Cannot back to same machine $IP. Try other destinations"
+  exit
+fi
+
+
+curdir=`pwd`
+folder=`echo $curdir | awk 'BEGIN{FS="/";k=0}
+{for(i=1;i<=NF;i++){
+  if(substr($i,1,7)=="hongzhi"||substr($i,1,4)=="holi"){k=i;break}
+ }
+ folder=""
+ if(k==0){print "/ERRORnoHONGZHIfolder/"}
+ else{
+  for(i=k+1;i<=NF;i++){folder=sprintf("%s/%s",folder,$i)}
+  print folder
+ }
+}'`
+
+
+echo $infile > $temp2
+if [ $filen -ge 2 ] ; then
+ echo $infile2 >> $temp2
+fi
+if [ $filen -ge 3 ] ; then
+ echo $infile3 >> $temp2 
+fi
+if [ $filen -ge 4 ] ; then
+ echo $infile4 >> $temp2
+fi
+if [ $filen -ge 5 ] ; then
+ echo $infile5 >> $temp2
+fi
+
+nf=`wc -l $temp2 | awk '{print $1}'`
+echo "Copy $nf of $infile from $rootout to $tofolder"
+nerr=0
+
+PC=`echo $rootout | awk '{split($_,a,":");print a[1]}'`
+PCfolder=`echo $rootout | awk '{split($_,a,":");print a[2]}'`
+
+for (( i = 1 ; i <= $nf ; i++ )) ; do
+
+file=`head -$i $temp2 | tail -1`
+# Get folder name after /hongzhi/ or /hongzhili
+isfullpath=`echo $file | awk '{if(substr($1,1,1)=="/"){print 1}else{print 0}}'`
+remotefd=`dirname $file`
+[ $isfullpath -eq 0 ] && remotefd=$PCfolder'/'$folder'/'$remotefd
+filena=`basename $file`
+ssh $PC " ls $remotefd" >& $temp3
+err=`grep 'No such file or directory' $temp3 | wc -l | awk '{print $1}'`
+if [ $err -ge 1 ] ; then
+ echo "==> Error! No $remotefd in remote machine $PC"
+fi
+
+echo " #$i of $nf: scp $PC:$remotefd/$filena $tofolder"
+scp $PC:$remotefd/$filena $tofolder
+
+done
+echo "Done. Get more files, try: scp $PC:$remotefd/* ."
+#cat << eee
+# If no folder exist in remote machine, run:
+#  ssh $PC  "mkdir $folder"
+#eee
+
+rm -f $temp $temp2 $temp3
+exit

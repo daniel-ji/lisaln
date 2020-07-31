@@ -1,0 +1,251 @@
+#!/bin/sh 
+        # Setup SYBYL environment prior to running script
+
+thisfile='similarity.spl'
+doout=0 #=1: use user defined output name
+tripos_dir='/opt/tripos/sybylx/'  #dir to find tripos exe file
+maxnn=200000 #max number for output similar cmpds
+similarity=0.6  #similarity cutoff radius
+force=0
+trim=1
+
+oldline=$*   #all argvs
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -o) output=$2;doout=1; shift 2;;
+   -out) output=$2;doout=1; shift 2;;
+   -tripos) tripos_dir=$2; shift 2;;
+   -max) maxnn=$2; shift 2;;
+   -sim) similarity=$2; shift 2;;
+   -force)force=1;shift;;
+   -trim)trim=1;shift;;
+   -notrim)trim=0;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!"; exit;;
+  esac
+  aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+ done
+fi
+
+
+if [ -n "$1" ] ; then
+         input=$1
+         #output=$2
+         active=$2
+   if [ -n "$3" ] ; then
+         similarity=$3
+   fi
+   if [ -n "$4" ] ; then
+      maxnn=$4
+   fi
+else
+cat << ttt
+
+  Find similar cmpds for ActiveFile
+  Usage $0 [Options] inputFile(UNITY DB or SDF file, full name)  TargetCmpd(SDF file)  [Similarity [0.6]] [MaxOutput]
+    OutputFile=inputFile_ActiveFile_simi_Similarity.sdf  Directory same as ActiveFile
+    Output.hits: SLN of output cmpds
+    Output.map : a list of output cmpds with Tanimoto score seperated by ',', CSV format : "ZINC03775140",ZINC03775140, 1.000,0
+     format: "OutputCmpd", TargetCmpd, TanimotoScore, CmpdIndexOfOutput
+    MaxOutput: Maximum of output for each drug cmpds
+    Similarity: [0.6] in range of [0,1]. Less value, more output cmpds
+
+   -o | -out Output : User defined output name. No extension. Map file output is Output.map. Also Output.sdf and Output.hits
+   -tripos Tripos_dir : folder to find tripos exec
+   -max NNN : Maximum of output for each drug cmpds. Default: 10000
+   -sim SSS : Similarity: [0.6] in range of [0,1]. Less value, more output cmpds
+   -force : force to generate .tdb from .sdf even if exisitng .tdb for InputFile. For SDF format InputFile
+   [-trim] | -notrim : trim | No TargetCmpd SDF file to avoid errors for SDF with many tags 
+
+  e.g. 
+    $0 /home/tripos/hongzhi/database/bri_div_seq.tdb NSC 0.6 [1000]
+     #Found similar cmpds in bri_div_seq.tdb to NSC.sdf
+       $0 t3.sdf t3.sdf 0.01
+     #Calculate tanimoto score of 3 cmpds with each other in output t3_t3_sim_0.01.map file
+    
+    Should also run ./sdf3d22d after to convert 3D sdf to 2D sdf
+    Tanimoto Score of output similar cmpd is saved in Output.map
+
+   For pairwise similarity scores in .map output: must compare a single SDF to a TB, cannot compare a list of SDFs
+
+   XNote: May need to trim SDF by ./sdf_trimTag if -notrim option
+    NOTE: The best script to replace/use this one is ./pipe_similarity_many
+
+ttt
+  exit
+fi
+
+#The maximum nearest neighbors to report per compound from the file designated by -actives.
+#By default the nearest 20 neighbors above -radius are reported.
+#maxnn=0  #=0: all cpmds will be reported
+         #=[20]: Only top 20 cmpds reported
+
+
+
+#get the simplified name
+inputdir=`dirname $input`
+last=`echo $input | awk 'BEGIN{FS="/"}END{print $NF}'`
+lastinput=`echo $last | awk 'BEGIN{FS="."}{l=length($_);n=NF;if($n=="tdb"||$n=="TDB"||$n=="sdf"){l=l-4};print substr($_,1,l)}'`
+istdb=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".tdb"){print 1}else{print 0}}'`
+last=`echo $active | awk 'BEGIN{FS="/"}END{print $NF}'`
+lastactive=`echo $last | awk 'BEGIN{FS="."}{l=length($_);n=NF;if($n=="sdf"||$n=="SDF"){l=l-4};print substr($_,1,l)}'`
+
+if [ $doout -ne 1 ] ; then
+ outdir=`echo $active | awk 'BEGIN{FS="/"}{a=$NF;l=length($_)-length(a);print substr($_,1,l)}'`
+ output=$outdir$lastinput'_'$lastactive'_simi_'$similarity
+fi
+
+### Translate sdf to SLN hitlist
+#tmp=$input'.hits'
+other1=' -maccs_regname EXTREG '  #other parameters.
+input_file=$input
+#input_file=$input'.tdb'
+#input_file='/home/tripos/hongzhi/database/chemdiv/chemdiv'  #for test purpose!!!
+infile=`echo $active | awk '{l=length($1)-3;if(substr($1,l,4)==".sdf"){print substr($1,1,l-1)}else{print $1}}'`
+active_sdf=$infile'.sdf'
+active_sln=$infile'.sln'
+active_trimsdf=$infile'_trim.sdf'
+#UseConcord=0  #=1: Use concord to generate 3D =others: no 3D
+#[ $UseConcord -eq 1 ] && echo "Use concord to generate 3D structure"
+#[ $UseConcord -ne 1 ] && echo "No 3D structure generated"
+#[ $UseConcord -eq 1 ] && other1=$other1'+concord '
+echo " Input DB is " $input_file
+echo " Active file is " $active_sdf
+echo "   It is converted to SLN hitlist file as " $active_sln
+
+### Convert SLN hitlist to UNITY database
+#other2=' -2 -r '  #other parameters.  -2: Generate 2D screens -r: Replace existing database 
+#echo 2D screens is generated
+#echo Convert $input to UNITY DB $output
+
+### Filter DB by rule of 3 or Ro5
+#other3=''
+#input_file=$input'.tdb'   
+#filter_file=$filter'.filt'
+#output_sln=$input'_'$filter'.hits'
+#output_sdf=$input'_'$filter'.sdf'
+#output_sln_exclude=$input'_'$filter'_ex.hits'
+#output_sdf_exclude=$input'_'$filter'_ex.sdf'
+#echo Filter file is $filter_file
+#echo "Input file (UNITY DB) is " $input_file
+#echo "  Passed SLN hitlist file is " $output_sln
+#echo "  Passed sdf file is " $output_sdf
+#echo "  Excluded SLN hitlist file is " $output_sln_exclude
+#echo "  Excluded sdf file is " $output_sdf_exclude
+
+### Smilarity: Finds and reports compounds from a UNITY database similar to a list of compounds.
+###  file:///home/tripos/sybyl7.3/TriposBookshelf/docs/sybyl/selector/selector_tools15.html#14877
+###  Default similarity value 0.6 (60% similarity)
+#similarity="0.6" #Default similarity value 0.6 (60% similarity)
+#output=$lastinput'_'$lastactive
+#output='chemdiv_'$active  #for test only
+output_sln=$output'.hits'
+output_sdf=$output'.sdf'
+output_map=$output'.map'  #map file with T-score in
+echo " Similarity result saved in " $output_sln and $output_sdf
+echo "   similarity value = " $similarity
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/sdf2unity_3d.spl $ed/sdf_trimTag .
+fi
+
+did=1
+if [ $istdb -eq 0 ] ; then
+ did=0
+ inputsdf=$input
+ input=$inputdir'/'$lastinput.tdb 
+ input_file=$input
+fi
+if [ $istdb -eq 1 ] && [ ! -d $input ] ; then
+ did=0
+ inputsdf=$inputdir'/'$lastinput.sdf 
+ echo "WARNing: $input not exists. Use $inputsdf to generate it"
+fi
+
+if [ $force -eq 0 ] && [ -d $input ] ; then
+ echo "Warning: Use exisiting $input"
+ did=1
+fi
+if [ $did -eq 0 ] ; then
+ echo "===> Generate $input"
+ ./sdf2unity_3d.spl $inputsdf
+fi
+
+if [ $trim -eq 1 ] ; then
+ echo "===> Trim $active_sdf to $active_trimsdf"
+ ./sdf_trimTag $active_sdf $active_trimsdf
+ active_sdf=$active_trimsdf
+fi
+
+echo "===> Find similar cmpds in Tripos:"
+
+#            Insert other shell script commands here.
+
+
+ 
+        # Run SYBYL 
+         $tripos_dir/bin/linux/sybyl  <<@  
+
+### Translate sdf to SLN hitlist            
+            dcl dbtranslate -type maccs -translate sln -output  $active_sln  $other1 $active_sdf
+
+### Convert SLN hitlist to UNITY database
+###            dcl dbload -t sln  -d  $output  $other2 $tmp 
+
+### Show analysising result of UNITY DB
+###            dcl dbanalyze -database  $output
+
+### Filter DB by rule of 3 or Ro5
+###  firefox  file:///home/tripos/sybyl7.3/TriposBookshelf/docs/sybyl/selector/selector_tools17.html#26043
+###            dcl dbslnfilter -database $input_file -configfile $filter_file \
+###                -hitlist $output_sln  -omitted $output_sln_exclude
+###            dcl dbtranslate -type sln -translate maccs \
+###               -output  $output_sdf  $other1 $output_sln
+###            dcl dbtranslate -type sln -translate maccs \
+###               -output  $output_sdf_exclude  $other1 $output_sln_exclude
+###           echo Filter $input_file by  $filter_file  done. Press enter
+###           echo Filter file is $filter_file
+###           echo "Input file (UNITY DB) is " $input_file
+###           echo "  Passed SLN hitlist file is " $output_sln
+###           echo "  Passed sdf file is " $output_sdf
+###           echo "  Excluded SLN hitlist file is " $output_sln_exclude
+###           echo "  Excluded sdf file is " $output_sdf_exclude
+
+### Smilarity: Finds and reports compounds from a UNITY database similar to a list of compounds.
+###  file:///home/tripos/sybyl7.3/TriposBookshelf/docs/sybyl/selector/selector_tools15.html#14877
+###  Default similarity value 0.6 (60% similarity)
+        dcl dbsimilar -database $input_file -maxnn $maxnn \
+          -actives $active_sln -radius $similarity  +echo -output $output_sln -mapfile $output_map
+        echo   similarity value =  $similarity
+        echo "   Searched database = ", $input_file
+        echo "   Search result saved in ", $output_sln
+        echo "   Log file in ", $output_log
+        echo    Map file with T-score in  $output_map
+        echo "reported compounds = " $maxnn
+
+        dcl dbtranslate -type sln -translate maccs \
+           -output  $output_sdf  $other1 $output_sln
+
+
+        quit YES 
+        @ 
+        # End of script
+
+
+echo " Input DB is " $input_file
+echo " Active file is " $active_sdf
+echo "   It is converted to SLN hitlist file as " $active_sln
+echo " Similarity result saved in " $output_sln and $output_sdf
+echo "  Similarity with Tanimoto score in CSV format: $output_map"
+echo "   similarity value = " $similarity

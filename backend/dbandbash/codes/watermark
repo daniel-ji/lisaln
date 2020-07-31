@@ -1,0 +1,224 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+filen=0
+large=1  #=1: add large watermark2.png  =0: add small watermark1.png
+position='center'  #position of watermark: center, southeast
+postfix='_watermark'
+postfixo=$postfix  #Used by nodouble=1
+checkname=1  #Only work to .png .gif. =0: No check of name
+watermark='watermark2.png'  #watermark picture. watermark2.png: large  watermark1.png:small
+white=0  #=0: white color as transparant for watermark file
+display=0  #=1: display output file
+resize=100  #resize watermark file
+rotate=0   #rotate of watermark in degree
+nodouble=1 #=1: will not add watermark to files with $postfixo _watermark in name 
+text=0; textbg='none' #background for text: none, orange, grey, 
+font='/usr/share/fonts/bitstream-vera/VeraBd.ttf'
+[ ! -d /usr/share/fonts/bitstream-vera ] && font='/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf' #otherwise, use DejaVuSans-Bold.ttf
+
+fontsize=25; fontcolor='blue'
+
+oldline=$*   #all argvs
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -large)large=1; position='center';watermark='watermark2.png';shift;;
+   -small)large=0; position='southeast';watermark='watermark1.png';shift;;
+   -position)position=$2;shift 2;;
+   -postfix)postfix=$2;shift 2;;
+   -watermark)watermark=$2;white=1;text=0;shift 2;;
+   -text)text="$2";position='southeast';shift 2;;
+   -textbg)textbg=$2;shift 2;;
+   -fontsize)fontsize=$2;shift 2;;
+   -fontcolor)fontcolor=$2;shift 2;;
+   -resize)resize=$2;shift 2;;
+   -rotate)rotate=$2;shift 2;;
+   -display)display=1; shift;;
+   -nocheckname)checkname=0;shift;;
+   -double)nodouble=0;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then
+ infile="$1";filen=1
+ if [ -n "$2" ] ; then
+  infile2=$2;filen=2
+ fi
+ if [ -n "$3" ] ; then
+  infile3=$3;filen=3
+ fi
+ if [ -n "$4" ] ; then
+  infile4=$4;filen=4
+ fi
+ if [ -n "$5" ] ; then
+  infile5=$5;filen=5
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Add water mark/Text to graphic to avoid stealing by using ImageMagick
+  See: http://www.xoogu.com/2013/how-to-automatically-watermark-or-batch-watermark-photos-using-imagemagick/
+
+ To generate watermark picture:
+   Make white color transparent: convert watermark2.png -fuzz 2% -transparent white watermark.png
+ Overlap watermark picture to graphic:
+   To center:
+    composite -dissolve 50% -gravity center -quality 100 \( watermark2.png -resize 50% \) PDB.jpg PDB.jpg
+   To right-bottom conner:
+    composite -dissolve 50% -gravity southeast -quality 100 \( watermark1.png -resize 50% \) PDB.jpg PDB.jpg
+ Label text on image: http://www.imagemagick.org/Usage/annotating/#annotating
+  convert PDB.gif -background Orange  label:'PDB Name' -gravity Center -append PDB_label.jpg
+
+ Usage: $0 [Options] File/SubFolder [File2/SubFolder2 .. File5/SubFolder5]
+ Options:
+  -debug : debug model on
+  -display : display output graphics
+  -double : allow add watermark to picture with $postfixo inside. Default: will NOT add watermark to file with $postfixo in name to avoid double-watermark
+  -nocheckname : will not check if extension is .png or .gif. Default: Only work with files that has .png or .gif
+  -postfix PostFix : Output postfix as InputPostFix.* . Default Input${postfix}.gif/.png
+  -position Position : Position to add watermark, such as center, southeast. [$position] 
+  -watermark WatermarkFile : File name of watermark [$watermark]
+  -text "Text" : Add "Text" as watermark instead of watermark image
+   -textbg BackGroundColor : Text background color [$textbg]
+   -fontcolor Color : Text color [$fontcolor]
+   -fontsize Size : Text font size [$fontsize]
+  -resize Percentage : resize percentage of watermark file [$resize]
+  -rotate Degree : rotate degree of watermark [$rotate]
+  -large : Large watermark by adding watermark2.png in center [default]
+  -small : Small watermark by adding watermark1.png in right-bottom
+
+ Example: $0 A.png B.gif C.gif D.png   #Add large watermark to 4 files
+          $0 -small '*.png'   #Add small watermark to all .png files
+          $0 -double Folder/     #all .png or .gif (even as *_watermark* to be double-watermark) files in subfolder Folder/
+          $0 .  #all .png or .gif but not *_watermark* files in current folder
+          $0 -watermark WaterMark.png -resize 50 -rotate 45 -position center A.png  #Use watermark picture as WaterMark.png adding in center and rotate 45 degree
+          $0 -text "Copy Right HLi" -position northwest -fontsize 30 -fontcolor red -out A_mw.png A.png  #Add watermark as TEXT on top-left and output as A_mw.png
+
+ NOTE: To watermark movie, see ./movie_manuplate -watermark -wpos bl -wpic watermark1.png
+ NOTE: A better/full version for image manipulate to replace this script is ./image_manipulate
+
+ttt
+  exit
+fi
+
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/symbol.txt $ed/watermark1.png $ed/watermark2.png .
+fi
+
+R='\033[31m';G='\033[32m';Y='\033[33m';B='\033[34m';M='\033[35m';C='\033[36m'; N='\033[m'  #Color text of RBG Yellow Magenta Cyan Normal for echo -e 
+HR='\033[41m';HG='\033[42m';HY='\033[43m';HB='\033[44m';HM='\033[45m';HC='\033[46m';  #High-light Color text of RBG Yellow Magenta Cyan for echo -e
+A=`awk '{print $1}' symbol.txt | head -1`;PM=`awk '{print $2}' symbol.txt | head -1`;BL=`awk '{print $11}' symbol.txt | head -1` #Symbol for Amstrong and +/- for cat/echo
+LE=`awk '{print $3}' symbol.txt | head -1`;GE=`awk '{print $4}' symbol.txt | head -1`;NE=`awk '{print $8}' symbol.txt | head -1` #Symbol for <= ; >= ;!=
+alpha=`awk '{print $20}' symbol.txt | head -1`; beta=`awk '{print $21}' symbol.txt | head -1`;
+#echo -e "$R ColorText $A $N"
+
+#curdir=`pwd`
+#curdiro=`pwd`
+
+echo $infile
+[ -d $infile ] && curdir=$curdiro'/'$infile
+ls -l $infile | awk '{printf("%s/%s\n","'$curdir'",$NF)}' > $temp
+#ls -l $infile | awk '{printf("%s/%s\n","'$curdir'",$NF)}' > $temp2
+ls -l $infile  | awk '{print $NF}' > $temp2
+if [ $filen -ge 2 ] ; then
+ [ -d $infile2 ] && curdir=$curdiro'/'$infile2
+ ls -l $infile2 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ #ls -l $infile2 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+ ls -l $infile2  | awk '{print $NF}' >> $temp2
+fi
+if [ $filen -ge 3 ] ; then
+ [ -d $infile3 ] && curdir=$curdiro'/'$infile3
+ ls -l $infile3 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ #ls -l $infile3 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+ ls -l $infile3  | awk '{print $NF}' >> $temp2
+fi
+if [ $filen -ge 4 ] ; then
+ [ -d $infile4 ] && curdir=$curdiro'/'$infile4
+ ls -l $infile4 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ #ls -l $infile4 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+ ls -l $infile4  | awk '{print $NF}' >> $temp2
+fi
+if [ $filen -ge 5 ] ; then
+ [ -d $infile5 ] && curdir=$curdiro'/'$infile5
+ ls -l $infile5 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp
+ #ls -l $infile5 | awk '{printf("%s/%s\n","'$curdir'",$NF)}' >> $temp2
+ ls -l $infile5  | awk '{print $NF}' >> $temp2
+fi
+
+if [ $white -eq 1 ] ; then
+ echo "Set white color in watermark $watermark as transparent"
+ convert $watermark -fuzz 2% -transparent white $temp.png
+ watermark=$temp.png
+fi
+
+nf=`wc -l $temp | awk '{print $1}'`
+echo "Add watermark $watermark to  $nf of $infile at $position"
+if [ $nf -eq $filen ] ; then
+ checkname=0   #will not check name for .png and .gif only
+ nodouble=0    #will not avoid to double-watermark to files with _watermark in names
+fi
+
+if [ $nf -eq 1 ] ; then
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+ [ $doout -ne 1 ] && output=$infile'_wm'.${extension}
+fi
+
+for (( i = 1 ; i <= $nf ; i++ )) ; do
+
+ #cur=`head -$i $temp | tail -1`
+ file=`head -$i $temp2 | tail -1`
+ ofile=`echo $file | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".png"||a==".gif"){print substr($1,1,l-1)}else{print $1}}'`
+ extfile=`echo $file | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".png"||a==".gif"){print a}else{print ".png"}}'` 
+ did=1; outfile=$ofile$postfix$extfile
+ [ $nf -eq 1 ]  && outfile=$output
+ if [ $checkname -eq 1 ] ; then
+  did=`echo $file | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".png"||a==".gif"){print 1}else{print 0}}'`
+ fi
+ if [ $did -eq 1 ] && [ $nodouble -eq 1 ] ; then
+  did=`echo $file | grep $postfixo | wc -l | awk '{a=$1;if(a==0){print 1}else{print 0}}'`
+  [ $did -eq 0 ] && echo "No watermark added to #$i $file to avoid double-watermark"
+ fi
+ if [ $did -eq 1 ] ; then
+  if [ "$text" != "0" ] ; then
+   #generate image as watermark with TEXT
+   watermark=$temp'.png'
+   llab='label:'"${text}"
+   convert -background $textbg -pointsize $fontsize -fill $fontcolor -font $font "$llab" -gravity $position  $watermark
+   echo "#$i : Add Label text \"$text\" to $file saved in $outfile"
+  fi
+  composite -gravity $position \( $watermark -resize ${resize}% -rotate $rotate \)  $file $outfile
+  [ "$text" == "0" ] && echo "#$i : Add WATermark $watermark to $file saved in $outfile"
+  [ $display -eq 1 ] && nohup display $outfile &
+ fi
+
+done
+
+[ $display -eq 1 ] && echo "***To kill all displays: killall display"
+
+rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit

@@ -1,0 +1,2031 @@
+#!/bin/sh
+
+thisfile=$0
+exe='/usr/local/bin/gnuplot'  #gnuplot exec. Will check existence later
+
+display=1  #=1: display output plot file
+header=0  #how many headers in file
+silence=1 #=1: less screen dump
+default=0
+grid='grid back y'  #use grid
+runscriptonly=0  #=1: Input is gnuplot script file to run
+sidecolor=2 #=1:dark =2:hot
+watermark='none'  #=large: add large watermark in center. =small: add small watermark in right-bottom  =none: No watermark
+
+dobin=0  #bin input file and plot
+bin2file=0
+outcount=1 #=0 Out-range data will not count in  =others: Out-range data will count into first/last bin
+bin=10
+usemax=1 #=1: use min/max/BinNum to bin. Otherwise, user define startBin/endBin/stepBin
+dopercentage=1  #display percentage
+binlabel=0
+#font='LiberationSerif-Bold'  #default is VeraBd as defined in .bashrc
+#font='bchb'
+font='Vera';fontori=$font;dofont=0  #default is VeraBd as defined in .bashrc
+nobold=0 #whether use bold font
+fontsize=18  #was 20, too big for longer
+fontsize_tics=18   #font size for tics
+fontsize_xtics=0;fontsize_ytics=0
+dodend=0
+labelXbycol=0
+labelYbycol=0
+labelAngle=-45
+labelfactor=1
+nounderline=1
+dopicture=0;ptype='gif'
+interval=1
+markends=0
+lmargin=0.15;rmargin=0.95;tmargin=0.85;bmargin=0.2  #fixed margin for -histostyle/-Phong or -gradient
+boxwidth=0.9  #relative boxwidth for histogram, boxes etc. 0.9 means 90% of data space
+maxrow=0;minrow=0 #rows of input data to use
+oldPC=1  #=0: will add set output "Output.gif" in gnuplot
+
+doerrorbar=0;errorbartype='pt 7 ps 2'
+colordata=0
+colorcol=0;morestyle=''
+ticnum=5
+maxlength=0
+
+doboxes=0
+dopublication=0
+#For publication quality large size e.g. -plotsize 'size 3600,2400', remember increase font and linewidth as well:
+#    -extra "set border lw 4" -grid 'grid y lw 4' -errorbartype "lw 4 ps 3" -fontsize 80 -fontsize_tics 75
+#plotsize='size 1024,768'  #was 'large'  1024x768 is regular full screen size for computer
+#plotsize='size 921,691'  #90% of  1024x768 is regular full screen size for computer. Easier for ppt to insert
+plotsize='size 921,615'  #90% w /80% h of  1024x768 is regular full screen size for computer. Best for ppt to insert since there is Title in ppt
+doplotsize=0
+dotitle=0;title=''; notitle=0
+xlabel='X'; ylabel='Y'; zlabel='Z'
+doxlabel=0;doylabel=0;dozlabel=0;
+dolabel=0;didlabel=0
+donote=1;note='NA';donote2=0;note2='NA'  #add top/footnote
+xcol=1; ycol=2; zcol=3;dozcol=0
+doncol=0;ncol=1
+xfactor=1;yfactor=1;zfactor=1;
+xrange=0; yrange=0;zrange=0;doxrange=0; doyrange=0;dozrange=0;  #=exact: exact min:max range
+xreverse=0;yreverse=0;zreverse=0  #reverse x/y/z axis
+doout=0;doout2=0
+term='gif enhanced'  #output style as .png file. 'enhanced' can produce sub and superscripts
+#term='postscript eps enhanced solid'  #can work on symbol. Not workinf in my PC: Can't find PostScript prologue file prologue.ps
+datastyle='lines lw 2'
+dodatatitle=0;datatitle=''
+histostyle='NA';Phong=0;Phong2=0
+style='NA'
+keyposition='off'
+extra=''
+d3b=0
+d4top=5;d7top=0;dcol=7;molec='Water'
+d5n=1
+doave=0;showave=0 #=1: calculate/show average value/linear-fitting line
+  divx=15;divy=20  #offset to label average
+doslide=0;slidesize=10  #=1: slide-window average line
+dolfit=0;sen="";dosen=0  #=1: calculate/show linear fitting
+p3d=0;plot='plot' #plot for 2D and splot for 3D
+ dopm3d=1  #=1: draw cool set cntrparam levels 10
+  dopale=0 #Use a gray palette for the colouring for pm3d
+ dosurface=1 #=1: draw 3D surface
+ docontour=1 #=1: draw contour
+ labelcontour=0
+ isosamples='30,30' #grid density for surface plot: gnuplot default '10,10' for x/y
+ cntrparam='30'  #contour density for contour e.g. set cntrparam levels incremental 0,0.2,2.0; set cntrparam levels auto 5
+ clabelfontsize=10  #label size for contour value
+ miniContourLength=10  #min length/dataPoints of each contour line 
+ xview=60;zview=30;scale1=1;cview=0;  #rotate of X/Y/Z. Default: 60/30/1
+hidden3d=1 #=0 remove lines/boxes that would be hidden if the surface was not transparent
+dofence=0  #fence plot: offset 2D plots for 3D
+ offaxe=1  #=1: offset x-axis  =2: offset y  =3: offset z
+animate=0  #=1: show rotation animate
+ animatex=0;animatez=0;
+ nframe=100  #number of frames for animation
+dodata=0
+dopair=0 #=1: use paired x-y cols for multiple x-cols
+ pairwidth=2 # col width of the pair groups
+doheatmap=0  #=1: for heatmap as http://gnuplot.sourceforge.net/demo/heatmaps.html
+dogo=0
+showdata=0
+outplot=0;dooutplot=0
+extraplot=0;extraplotcomd=0;doextraplotcomd=0;extraplotbefore=0
+gradient2=0;gradient=0;hgradient=1;cgradient1='#DC143C';cgradient2='white'  #Add background gradient
+
+#workstation='hongzhi''li''@10.138.18.45'  #My workstation to run this script in final. NOTE: My newest 32CPU PC cannot use this script
+#workstationdir='/home''/hongzhili/'  #MUST use multiple quotes to avoid ./sed_allhome change this part
+runlocal=0
+dosmooth=0
+smooth='csplines'
+denlead=''
+xticsnum=0;yticsnum=0
+yticfactor=0.5
+xticfactor=0.4
+
+#label each data point
+labeldata=0
+ labeldataoffset='char 0,0' #no data label offset measured by char size   ='char 1,1' : offset by 1 char
+ labeldatadig=0  #decimal/digit for data label. =-1: label string
+ labeldataexcld=-999999  #exlcude label the data with value = labeldataexcld
+ labeldatacolor=3 #label color =3:blue =2:green =1:red =5:orange  [=4]:black 
+ labeldatacode=0 #two code to label, sometimes one is not work
+ labeldatafont=14  #fontsize for label
+#2nd set of label for each data point
+labeldata2=0
+ labeldataoffset2='char 0,0' #no data label offset measured by char size   ='char 1,1' : offset by 1 char
+ labeldatadig2=0  #decimal/digit for data label. =-1: label string
+ labeldataexcld2=-999999  #exlcude label the data with value = labeldataexcld
+ labeldatacolor2=3 #label color =3:blue =2:green =1:red =5:orange  [=4]:black 
+ labeldatacode2=0 #two code to label, sometimes one is not work
+ labeldatafont2=14  #fontsize for label
+
+
+#logscale
+logx=0;logy=0
+
+arial='arial'  #MS arial font
+if [ ! -d /usr/share/fonts/msttcorefonts ] ; then
+ arial='Vera'  #In case no arial font, use Vera
+ if [ ! -d /usr/share/fonts/bitstream-vera ] ; then
+   arial='/usr/share/fonts/dejavu/DejaVuSans.ttf'  
+   font='/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf'
+   [ $nobold -eq 1 ] && font='/usr/share/fonts/dejavu/DejaVuSans.ttf'   #no bold
+ #else
+ # echo "Fatal error at $0 : No font $arial found in current PC. Go check /usr/share/fonts/ and modify the script" 1>&2
+ # exit 
+ fi
+fi
+
+oldline=$*   #all argvs
+echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -logx)logx=1;shift;;
+   -logy)logy=1;shift;;
+   -log)logx=1;logy=1;shift;;
+   -labeldata)labeldata=1;labeldatax="$2";labeldatay=$3;labeldataz=$4;shift 4;;
+   -labeldatadig)labeldatadig=$2;shift 2;;
+   -labeldatafont)labeldatafont=$2;shift 2;;
+   -labeldataexcld)labeldataexcld=$2;shift 2;;
+   -labeldatacolor)labeldatacolor=$2;shift 2;;
+   -labeldatacode)labeldatacode=1;shift;;
+   -labeldataoffsetc)labeldataoffset='char '$2;shift 2;;
+   -labeldataoffset)labeldataoffset=$2;shift 2;;
+   -labeldata2)labeldata2=1;labeldatax2="$2";labeldatay2=$3;labeldataz2=$4;shift 4;;
+   -labeldatadig2)labeldatadig2=$2;shift 2;;
+   -labeldatafont2)labeldatafont2=$2;shift 2;;
+   -labeldataexcld2)labeldataexcld2=$2;shift 2;;
+   -labeldatacolor2)labeldatacolor2=$2;shift 2;;
+   -labeldatacode2)labeldatacode2=1;shift;;
+   -labeldataoffset2)labeldataoffset2=$2;shift 2;;
+   -labeldataoffsetc2)labeldataoffset2='char '$2;shift 2;;
+   -maxlength)maxlength=$2;shift 2;;
+   -watermark)watermark=$2;shift 2;;
+   -maxrow)maxrow=$2;shift 2;;
+   -minrow)minrow=$2;shift 2;;
+   -out2)output2=$2;doout2=1;shift 2;;
+   -exe) exe=$2; shift 2;;
+   -interval)interval=$2; shift 2;;
+   -markends)markends=1;shift;;
+   -display)display=1;shift;;
+   -nodisplay)display=0;shift;;
+   -silence)silence=1;shift;;
+   -nosilence)silence=0;shift;;
+   -header)header=$2;shift 2;;
+   -head)header=$2;shift 2;;
+   -default) default=$2;shift 2;;
+   -boxes)doboxes=1;shift;;
+   -box)doboxes=1;shift;;
+   -boxwidth)boxwidth=$2;shift 2;;
+   -errorbar)doerrorbar=1;datastyle='errorbars';shift;;
+   -errorbartype)errorbartype="$2";shift 2;;
+   -errorbarline)doerrorbar=2;datastyle='errorbars';shift;;
+   -xybars)doerrorbar=1;datastyle='xybars';shift;;
+   -xerrorbar)doerrorbar=1;datastyle='xerrorbars';shift;;
+   -yerrorbar)doerrorbar=1;datastyle='yerrorbars';shift;;   
+   -runlocal)runlocal=1;shift;;
+   -runscriptonly)runscriptonly=1;shift;;
+   -go)dogo=1;shift;;  
+   -dendogram)dodend=1;shift;;
+   -dendo)dodend=1;shift;;
+   -smoothmethod)dosmooth=1;smooth="$2";shift 2;;
+   -smooth)dosmooth=1;shift;;
+   -picture)dopicture=1;ptype=$2;shift 2;;
+   -gradient)gradient2=1;shift;;
+    -nogradient)gradient2=0;shift;;
+    -hgradient)gradient2=1;hgradient=1;shift;;
+    -vgradient)gradient2=1;hgradient=0;shift;;
+    -cgradient1)gradient2=1;cgradient1=$2;shift 2;;
+    -cgradient2)gradient2=1;cgradient2=$2;shift 2;;
+
+   -bin)dobin=1;shift;;
+   -binnum) bin=$2; usemax=1;shift 2;;
+   -outcount) outcount=1; shift ;;
+   -outdiscard) outcount=0; shift ;;
+   -binrange) usemax=0;startbin=$2;endbin=$3;stepbin=$4;shift 4;;
+   -showcount) dopercentage=0;shift;;
+   -binlabel)binlabel=1;shift;;
+   -bin2file)bin2file=$2;shift 2;;
+
+   -term)term="$2";shift 2;;
+   -grid)grid="$2";shift 2;;
+   -nogrid)grid='0';shift 2;;
+   -extra)[ "$2" != "NA" ] && extra=$extra' '"$2"';';[ "$2" != "NA" ] && denlead=$denlead' '$1' '"$2";shift 2;;   
+   -publication) dopublication=1;shift;;
+   -title) dotitle=1;title="$2";shift 2;;
+   -notitle)dotitle=0;notitle=1;shift;;
+   -xlabel) xlabel="$2";doxlabel=1;denlead=$denlead' '$1' '"$2";shift 2;;
+   -ylabel) ylabel="$2";doylabel=1;denlead=$denlead' '$1' '"$2";shift 2;;
+   -zlabel) zlabel="$2";dozlabel=1;shift 2;;
+   -xlable) xlabel="$2";doxlabel=1;denlead=$denlead' '$1' '"$2";shift 2;;
+   -ylable) ylabel="$2";doylabel=1;denlead=$denlead' '$1' '"$2";shift 2;;
+   -zlable) zlabel="$2";dozlabel=1;shift 2;;
+   -xticsnum)xticsnum=$2;shift 2;;
+   -yticsnum)yticsnum=$2;shift 2;;
+   -yticfactor)yticfactor=$2;shift 2;;
+   -xticfactor)xticfactor=$2;shift 2;;
+   -labelXbycol)labelXbycol=$2;shift 2;;
+   -labelYbycol)labelYbycol=$2;shift 2;;
+   -labelAngle)labelAngle=$2;shift 2;;
+   -labelfactor)labelfactor=$2;shift 2;;
+   -label)[ $dolabel -eq 0 ] && extra=$extra' set label "'"$2"'";' || extra=$extra'; set label "'"$2"'";';didlabel=1;dolabel=1;shift 2;;
+   -labelas)[ $dolabel -eq 1 ] && extra=$extra' '"$2"';' || echo "Fatal $1 $2 : No previous -label found! Ingnored!"; 
+       [ $dolabel -eq 1 ] && didlabel=1; dolabel=0; shift 2;;
+   -note)donote=2;note="$2";shift 2;;
+   -note2)donote2=2;note2="$2";shift 2;;
+   -nonote)donote=0;shift;;
+   -nonote2)donote2=0;shift;;
+   -out) output="$2";doout=1;shift 2;;
+   -xcol) xcol="$2";shift 2;;
+   -ycol) ycol="$2";shift 2;;
+   -zcol)zcol="$2";dozcol=1;shift 2;;
+   -ncol) doncol=1;ncol="$2";shift 2;;
+   -dcol) dcol=$2;shift 2;;
+   -xrange) xrange="$2";doxrange=1;shift 2;;
+   -yrange) yrange="$2";doyrange=1;shift 2;;
+   -zrange) zrange="$2";dozrange=1;shift 2;;
+   -xreverse)xreverse=1;shift;;
+   -yreverse)yreverse=1;shift;;
+   -zreverse)zreverse=1;shift;;
+   -datastyle) datastyle="$2"; shift 2;;
+   -style) style="$2";shift 2;;
+   -histostyle) histostyle="$2";shift 2;;
+   -histo)histostyle="clustered gap 1.0";shift;;
+   -histo2)histostyle="rowstacked";shift;;
+   -Phong)Phong=1;gradient2=0;shift;;
+   -Phong2)Phong2=1;gradient2=0;shift;;
+   -key) keyposition="$2";shift 2;;
+   -keyposition) keyposition="$2";shift 2;;
+   -datatitle) datatitle="$2";shift 2;;
+   -xfactor) xfactor="$2";shift 2;;
+   -yfactor) yfactor="$2";shift 2;;
+   -plotsize) plotsize="$2";doplotsize=1;shift 2;;
+   -average)doave=1;shift;;
+   -showave)showave=1;shift;;
+   -linear)dolfit=1;shift;;
+   -sen)dolfit=1;dosen=1;sen=$1;shift;;
+   -d3b)d3b="$2";shift 2;;
+   -d4top)d4top=$2;shift 2;;
+   -molec)molec=$2;shift 2;;
+   -d7top)d7top=$2;shift 2;;
+   -d5n)d5n=$2;shift 2;;
+   -3D)p3d=1;shift;;
+   -nosurface)dosurface=0;extra=$extra' set view map; 'shift;;
+   -nocontour)docontour=0;shift;;
+   -contour)extra=$extra' set view map; ';docontour=1;shift;;
+   -labelcontour)labelcontour=1;docontour=1;shift;;
+   -miniContourLength)miniContourLength=$2;shift 2;;
+   -clabelfontsize)clabelfontsize=$2;shift 2;;
+   -nopm3d)dopm3d=0;shift;;
+   -fence)dofence=1;shift;;
+   -offaxe)offaxe=$2;shift 2;;
+   -isosamples)isosamples="$2";shift 2;;
+   -dopale)dopale=1;shift;;
+   -cntrparam)cntrparam="$2";shift 2;;
+   -hidden3d)hidden3d=2;shift;;
+   -nohidden3d)hidden3d=0;shift;;
+   -xview)xview=$2;cview=1;shift 2;;
+#   -yview)yview=$2;cview=1;shift 2;;
+   -zview)zview=$2;cview=1;shift 2;;
+   -animatex)animatex=1;animate=1;shift;;
+   -animatez)animatez=1;animate=1;shift;;
+   -animate)animate=1;shift;;
+   -animatedata)dodata=1;dataevery=$2;animate=1;shift 2;;
+   -nframe)nframe=$2;shift 2;;
+   -heatmap)doheatmap=1;datastyle='image';shift;;
+   -font)font="$2";dofont=1;shift 2;;
+   -fontsize_tics)fontsize_tics="$2";shift 2;;
+   -fontsize_xtics)fontsize_xtics="$2";shift 2;;
+   -fontsize_ytics)fontsize_ytics="$2";shift 2;;
+   -fontsize)fontsize="$2";shift 2;;
+   -nobold)nobold=1;shift;;
+   -slide)doslide=1;shift;;
+   -slidesize)slidesize=$2;doslide=1;shift 2;;
+   -showdata)showdata=1;shift;;
+   -pair)dopair=1;shift;;
+   -pairwidth)pairwidth=$2;shift 2;;
+   -underline)nounderline=0;shift;;
+   -colordata)colordata=$2;shift 2;;
+   -colorcol)colorcol=$2;morestyle=$morestyle' palette';shift 2;;
+   -plot)outplot="$2";dooutplot=1;shift 2;;
+   -extraplot)extraplot="$2";shift 2;;
+   -extraplotcomd)extraplotcomd="$2";doextraplotcomd=1;shift 2;;
+   -extraplotbefore)extraplotbefore="$2";shift 2;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $animate -eq 1 ] && term='gif animate'
+termo=`echo $term | awk '{print $1}'`
+[ $termo == "postscript" ] && termo='.ps'
+extrao=$extra
+
+if [ -n "$1" ] ; then
+ input=$1
+ [ -n "$2" ] && output=$2
+ [ -n "$2" ] && doout=1
+else
+cat << ttt
+ Use gnuplot to generate/plot data file
+Manual: http://www.gnuplot.info/docs_4.2/gnuplot.html
+Demo: http://gnuplot.sourceforge.net/demo/
+
+How to install gnuplot? Command line to generate plot:
+http://www.gnuplot.info/faq/faq.html#SECTION00044000000000000000
+1.  gunzip X.tar.gz; tar xvf X.tar  2. ./configure -prefix=/home/holi
+3. make   4. make install
+5. gnuplot exe is in ~/bin/gnuplot   by which gnuplot
+
+How to setup gnuplot font?
+1. Found fonts in local machine: ls /usr/share/fonts/
+ e.g. I have /usr/share/fonts/bitstream-vera/VeraBd.ttf
+ To see its look like: display /usr/share/fonts/liberation/LiberationMono-Bold.ttf
+ If gnuplot was built with support for TrueType (.ttf) or Adobe Type 1 (.pfa) fonts, they may be selected using the 'font {}' option. 
+ is either the full pathname to the font file, or a font face name that is assumed to be the first part of a filename in one of the directories 
+ listed in the GDFONTPATH environmental variable. That is, 'set term png font "Face"' will look for a font file named either /Face.ttf or /Face.pfa.
+ Both TrueType and Adobe Type 1 fonts are fully scalable and may be rotated through any angle
+2. Define environment variables $GDFONTPATH and $GNUPLOT_DEFAULT_GDFONT
+ e.g. Add them to .bashrc as:
+export GDFONTPATH='/usr/share/fonts/bitstream-vera'
+export GDFONTPATH=$GDFONTPATH':/usr/share/fonts/msttcorefonts'  (Window Fonts as "Arial")
+export GNUPLOT_DEFAULT_GDFONT=VeraBd
+3. source .bashrc
+
+gnuplot commands:  http://people.duke.edu/~hpgavin/gnuplot.html
+      See what's your terminal can do  > test
+      Create a title:                  > set title "Force-Deflection Data RMSD ({\305})" 
+      Put a label on the x-axis:       > set xlabel "Deflection (meters)"
+      Put a label on the y-axis:       > set ylabel "Force (kN)" 
+      Change the x-axis range:         > set xrange [0.001:0.005]
+      Change the y-axis range:         > set yrange [20:500]
+      Have Gnuplot determine ranges:   > set autoscale
+      Move the key:                    > set key at 0.01,100
+      Delete the key:                  > unset key
+      Put a label on the plot:         > set label "Flux, F_{/Symbol L}" at 0.003, 260 center textcolor lt 1 font "Helvetica,22" rotate by 45 | at graph 0.3,0.7 center 
+      Remove all labels:               > unset label
+      Plot using log-axes:             > set logscale
+      Plot using log-axes on y-axis:   > unset logscale; set logscale y 
+      Change the tic-marks:            > set xtics (0.002,0.004,0.006,0.008) rotate by -45 scale 0 font "VeraBd,15" textcolor rgb "blue"
+                                         set xtics ("NA" 0,"Oxidoreductases" 1,"Transferases" 2,"Hydrolases" 3,"Lyases" 4,"Isomerases" 5);
+      Return to the default tics:      > unset xtics; set xtics auto
+      Draw an arrow :                  > set arrow from 0.0028,250 to 0.003,280 lt 1
+   To define side-bar/palette color: set pal def (0 "white",0.3 "yellow",0.7 "red",1 "blue") ; set cbtics 0.2 #label sidebar tics by 0.2
+       set cbrange [0:1]  #range of sidebar from 0 to 1;  set format cb "%2.1f"   #cb format
+       set cblabel "Similarity" offset character 0.5,0,0 font "" textcolor lt 3 rotate by -90  #Add label
+       set cbtics border in scale 0,0 mirror norotate offset character 0, 0, 0 autojustify    #remove sidebar box
+   palette color: set palette rgb -7,-5,-15; set cbtics 0.2; set format cb "%2.1f";    (traditional black-blue-red-yellow) To reverse color: 7,5,15
+     set palette rgb -21,-22,-23 #  hot (black-red-yellow-white)   #see ./sdf_contactmap
+     set palette define (0 "white",1 "black")  # grey
+     plot "A.dat" u 1:2:3 w pt palette   #col 3 for color of data point shown in palette
+         WARNing: cbtics affect final heatmap!!! 
+  Plot for data:    > plot "forceA.dat" using 1:2 title 'Column' with lines, \
+                           "forceB.dat" u 1:3 every 10 t 'Beam' w points 3
+  Plot for function:     > plot sin(x) title 'Sine Function', tan(x) title 'Tangent'   
+  3D plot for function:  > splot sin(x*y/20)   
+  Curve fitting: > f1(x) = a1*tanh(x/b1)            # define the function to be fit
+                 > a1 = 300; b1 = 0.005;            # initial guess for a1 and b1
+                 > fit f1(x) 'force.dat' using 1:2 via a1, b1
+                 > plot a1 * tanh( x / b1 ) title 'Column-fit: A=309, B=0.00227'
+  Smooth: plot "A.dat" u 1:2 smooth title 'smooth' w lines,\ "" u 1:2 title "data" w points 
+  Contour Plots:  set view map; set contour { base | surface | both } set nocontour
+  Double X2Y2 : double x/y axis : y2label "2nd Y"; set y2range [0:100]; grid x y2; plot X.dat u 1:2 axes x1y1 w lines, Y.dat axes x2y2 w boxes, ZZZ axes x1y2
+  MultiPlot: several plots inside one page 
+  Calculate data: > plot 'force.dat' using  (3*$2):(sin($3+$1))    #X = col2 x 3 ; Y= sin(col3+col1)
+  Comment characters in data file are # or %:   > set datafile commentschars "#%"  
+  Special Characters: http://judsonsnotes.com/notes/attachments/629_gnuplot_symbols_Helvetica.pdf
+    Angstrom: set encoding iso_8859_1; set xlabel 'RMSD ({\305})' ; set encoding default  #Now works!
+    Degree {\260}
+    Or Solution for Angstrom: A=`awk '{print $1}' symbol.txt | head -1`; set xlabel 'RMSD ('$A')'
+    "{/Symbol D}_x (m)"  [Greek delta]  "{/Times-Italic F}_A" [Italic] "ms^{-1}_{32}" [sub/superscripts]
+    "-56^+/-2"  [+/- sign]
+    NOTE: Need use -underline option to allow _ for special chars for title, labels
+  HeatMap 2D/3D : http://gnuplot.sourceforge.net/demo/heatmaps.html
+  Animation: http://gnuplot-surprising.blogspot.com/2011/09/creating-gif-animation-using-gnuplot.html
+  Tutorial: http://physicspmb.ukzn.ac.za/index.php/Gnuplot_tutorial 
+
+ Usage: [Options] $0 InputDataFile
+ Options:
+  -watermark none/small/large : #=large/small: also add large/small watermark in center/right-bottom  =others: No watermark [$watermark]
+  -runlocal : run do_gnuplot in local machine. Default: run in $runstation
+  -interval Inverval : Only display one data point of every $interval data points. [$interval]
+  -exe Gnuplot : gnuplot exec $exe . Full path. Use:  which gnuplot   to find out
+  -out Output: user defined output plot file in. Default: Input.$termo This will auto-ajust output extension. Seems need be .gif, cannot be .png 
+  -out2 Output2 : Output of gnuplot code. Can be re-used for -go option.
+  -silence | -nosilence : less screen dump
+  -display | -nodisplay : display output plot file .$termo format
+  -showdata : display plot data file
+  -markends : mark first and last data as points
+  -header|-head HeaderNum : How many headers to bypass in input. Default: $header
+    NOTE: gnuplot auto-bypass lines started with '#' and empty line or defined by: set datafile commentschars "#%"
+  -xticsnum|-yticsnum : Number of tics for X/Y-axis [default: auto]
+    NOTE: xticsnum should be DataNumber-1 , for example, if want label [3,4,5,6] 4 X-axis, use -xticsnum 3
+  -average : calculate/show average value (no line show)
+   -showave : show average horizontal line
+  -linear : calculate/show linear fitting values y=ax+b, R2
+   -sen : Use Sen’s Slope / Theil–Sen estimator to reduce outliers
+  -smooth : smooth/fitting data by "Method". csplines:  cubic-spline, each point will be connected. Bezier: point is not pass through
+   -smoothmethod "Method" : smooth/fitting method. [$smoothmethod] Only use csplines or bezier 
+    smooth {unique | frequency | cumulative | kdensity | csplines (less smooth) | acsplines | bezier (strong smooth)| sbezier}
+  -underline : allow title, axis-label and data-label to have _ for subscript. Default: will convert _ into - to avoid subscript
+  -slide : show slide-window average line of $slidesize points of average
+   -slidesize Size : slide-window average size [ $slidesize ]
+  -go | -runscriptonly : Input is Gnuplot file that can run directly. Make sure the first line in Input is: 
+    #!$exe
+    set terminal $term $plotsize font '$font,$fontsize'
+  -pair : use paired x-y cols for multiple x-cols
+    -pairwidth ColWidth : How many cols as a group in data. default=$pairwidth cols
+    -xcol | -ycol  Col : What's the col in a group and starts is for x and y. x-axis starts from col Xcol and y-axis starts from Ycol
+    So, pair data will be Xcol/Ycol, (Xcol+ColWidth)/(Ycol+ColWidth), (Xcol+2*ColWidth)/(Ycol+2*ColWidth),...
+  [-gradient] | -nogradient : Use gradient background method 2. See http://gnuplot-surprising.blogspot.com/2011/08/advanced-background-color-0.html
+   NOTE: Double plot of first data may effect some plots (histogram etc.). Not working with -Phong
+   -hgradient| -vgradient : horizental/vertical gradients.
+   -cgradient1|-cgradient2 Color : Color of two sides for gradient. e.g. yellow, #ffff00 [$cgradient1 $cgradient2]
+
+  -default Default : Using default setting for special Input data
+    default=1: Plot RMSD vs. MD Simulation Time plot from ./vmd_namd_rmsd
+    default=2: Plot HBonds vs. Time from ./vmd_hbonds
+    default=3: InteractionE vs. time from ./namd_pair_interaction_resids 
+      -fence : do fence plot: offset 2D graphics to display in 3D manner
+      -d3b "Residues" : InteractionE vs. time for Residues
+    default=4: For top residues that have fixed water, to show the residue-water distance vs time from ./vmd_namd_fixwater
+      -d4top TopRes : Number of top residues to show residue-water distance vs time
+      -molec MolecularName : Name to display for molecule. water or salt
+    default=5: For the d5n water-bridge plot: residue-water and water-ligand distances vs time from ./vmd_namd_waterbridge
+      -d5n NthPlot : Which top water-bridge to be plot
+    default=6: Plot 3D/Countour of metadynamics meta .pmf from ./metadynamics_getPMF
+    default=7: Plot 3D Cylinder of EC# statistics from ./offtarget_pipe 
+      -d7top TopProteins : top proteins to statics EC# distribution. Default: $d7top  =0: for all records
+      -dcol ColNum : Col number that has EC#. default: $dcol
+
+  -3D : for 3D plot. Data file can formated as N1 N2 N3, with empty line and # commends:
+      0 0 0
+      0 1 0
+      0 2 0
+
+      1 0 10
+      .....
+   -x|zview view : rotate of X/Z. Default: 60/30
+   -nopm3d : No cool colour shade the surfaces of plots with shades that depend on the height in the z direction (heatmap-like)
+   -nosurface : No 3D surface (grid-like) draw. Only show 2D contour plot then
+   -nocontour : No 2D-contour (grid-like). Only show 3D surface
+   -contour : Only plot 2D contour
+   -labelcontour : label contour lines by value
+    -miniContourLength Length : how many data points to label one contour value [$miniContourLength]
+    -clabelfontsize Fontsize : fontsize for contour label [$clabelfontsize]
+   -isosamples X,Y : grid density for contour: gnuplot default '10,10' for x/y. Here: $isosamples
+   -cntrparam "cntrparam" : grid density for contour:  [$cntrparam]  e.g. -cntrparam "incremental 0, 0.5,4" (contour of 0.5 step)
+   -hidden3d | -nohidden3d : remove lines that would be hidden if the surface was not transparent. Deafult: -hidden3d
+   -dopale : Use a gray palette Black/grey/white for the colouring of  -pm3d
+  -term term : Setup terminals. Default: $term ('enhanced' can produce sub and superscripts)
+    e.g. "png enhanced size 1024,768" for size 1024x768    also: gif, jpeg
+    e.g. "gif animate" for animation gif
+  -grid Grid | -nogrid : Display grid. e.g. "grid x y2" to use y2 as grid for x2y2 double axis  "grid y lw 4": Only Y-grid and linewidth=4
+   To set border: -extra "set border lw 4" : Increase border lw to 4 
+  -plotsize PlotSize : plot size. e.g. "size 1024,768" for size 1024x768. Default: $plotsize
+   For publication quality large size e.g. -plotsize 'size 3600,2400', remember increase font and linewidth as well:
+    -extra "set border lw 4" -grid 'grid y lw 4' -errorbartype "lw 4 ps 3" -fontsize 80 -fontsize_tics 75
+   -publication : plot for high-res publication [Only for default=6]
+  -title "title" : title of plot. e.g. "Force Deflection Data \n and curve fit"      # note newline!
+   -notitle : No title of plot
+  -note "BottomNote" : User defined top footnote at bottom. Default: OutputName
+   -nonote : No foot note added at bottom of plot
+  -note2 "TopNote" : User defined top footnote on top. Default: OutputName
+   -nonote2 : No foot note added at top of plot
+  -label "Label Text" : Add a/many label to plot by position/color ect. defined in -labelas. 
+      Can call many times of -label  -labelas to add many labels
+   -labelas "Label Properties". e.g. " at graph 0.3, 0.7  center textcolor lt 1 font \"Helvetica,22\" rotate by 45 "
+  -xlabel | -ylabel "label" : label of x/y-axis. ["none"] : no label (but not unset xlabel yet) 
+     e.g. "{/Symbol D}_x (m)"  [Greek delta]  "{/Times-Italic F}_A" [Italic] "ms^{-1}_{32}" [sub/superscripts]
+  -labeldata Xcol Ycol Datacol : label each data points for (Xcol,Ycol) by using the data value in DataCol
+   -labeldatadig Digital : how many digitals/decimals to label numeric value  [$labeldatadig]
+     To label string, must use -labeldatadig -1  Cannot label string in gnuplot by using %s : http://gnuplot.sourceforge.net/docs_4.2/node184.html
+   -labeldataexcld ExcludValue : exlcude label the data with value = labeldataexcld, expecially for heatmap pad value. [$labeldataexcld]
+   -labeldatacolor LabelColor : label color =3:blue =2:green =1:red =5:orange =4:black  [$labeldatacolor]
+   -labeldatafont FontSize : label font [$labeldatafont]
+   -labeldatacode : two codes to label. Sometimes one is not work. need pick another code. This option cannot exclude some data as -labeldataexcld
+   -labeldataoffset Coords : label offset by position, such as 0,-1,0 (shift to -1 in Y-axis)
+   -labeldataoffsetc Chars : label offset by char. -labeldataoffsetc 0,-1 : offset -1 char in y-axis. NOTE: Does not work together w/ -labeldatadig -1 to label string
+   -labeldata2 -labeldatadig2 ... for 2nd set of data point label
+    Called example in ./sdf_contactmap  ./cluster_Pickmutation (has to use -labeldatacode)
+    See https://stackoverflow.com/questions/23177716/in-gnuplot-how-to-label-each-point-in-the-plot-with-its-coordinates
+     plot 'abc.dat' using 1:2:(sprintf("(%d, %d)", $1, $2)) with labels point  pt 7 offset char 1,1 notitle   #Use 3 lines to label each datapoint 
+  -labelXbycol ColNumber : Label X-axis by names in Col colNumber. =0: not in use [$labelXbycol]
+  -labelYbycol ColNumber : Label Y-axis by names in Col colNumber. =0: not in use [$labelYbycol]
+   -labelAngle labelAngle : tile angle of the label when labelXbycol. [$labelAngle]
+   -labelfactor FontFactor : font size factor for the label [$labelfactor]
+   -maxlength MaxLengthLabel : max char/letter length for label in case very long label names. NOT work well! Contral string length outside
+   -fontsize_xtics Xtics : Xtics font when -labelXbycol
+   -fontsize_ytics Xtics : Ytics font when -labelYbycol
+  -colorcol ColorCol : Use number in col ColorCol to define color for each data point. palette is used and shown
+  -colordata ColorCol : Use string in col ColorCol to define color for each data point. Data with same string in ColorCol will have same color. No palette in use
+     See http://stackoverflow.com/questions/9082807/gnuplot-plotting-points-with-color-based-values-in-one-column
+  -maxrow | -minrow RowNumber : rows of input data to be use to display: [$minrow,$maxrow]  0:all data
+  -xcol xcol : col number in input for X-axis. Default: $xcol
+  -ycol ycol : cols in data file for y-axis. Default: $ycol
+        e.g. "2,3,5" : 3 cols of #2,3,5
+  -ncol NCol : this setting will use xcol=1; then ycols are NCol from col.2 
+  -xfactor | -yfactor factor : multiply factor for X/Y data   =1/0 : no multiplication of X/Y data
+  -xrange | -yrange | -zrange Rang : display range for X|Y|Z. e.g. "[-1:2.5] reverse"   Default=0: auto range. =exact: Use exact [min:max] range
+     Range format: "[min:max] no|reverse no|writeback"   =[0:] Started X from 0
+  -xreverse | -yreverse | -zreverse : reverse x/y/z axis
+  -datatitle datatitle : Title in legend for last y-col. Default for header=1 : col name in header line
+  -datastyle datastyle : Plot style for data. e.g. "linespoints pt 6 ps 1.5 (open circle+lines)" "lines lt 0 lw 1 lc 1" d  default: $style   [=NA/0: none]
+    "points pt 6 ps 1.5"  #Only open circle, no lines
+    'impulses': vertical lines  'boxes':vertical boxes, width default as relative (not good for different x-width data)
+    e.g. plot [1:100] [4:14] "err.dat" using 1:2 with "datastyle"
+    Use gnuplot >test to see what's your terminal can show:
+    pt (point type) 6/7: open/solid circle  ps: point size  (ps is scale factor w/ default as 1.0)
+    lt (line type) 0:dashed 1.Solid   lc/pc: line/point color
+    e.g. dots, ellipse, filledcurves, boxplot, boxes, boxerrorbars,candlesticks,circles,fsteps
+         lines, labels, points, polar, steps, xerrorbars, yerrorbars, xyerrorbars, impulses, palette
+    Points/Lines type table see: http://pleione.asu.cas.cz/~nemeth/work/stuff/gnuplot/
+  -boxes | -box : Use boxes (as histogram) to plot. May need replace by -datastyle impulses for irregular X-datas
+   -boxwidth Width : Width (relative) of box [$boxwidth]  =0.9: Width of box is 90% of data space
+    Or use -extra "set boxwidth 1.0 relative; set style fill solid 1.0" -datastyle "boxes"  For solid box
+    NOTE: boxes cannot be used for heatmap such as RMSD map. Need -heatmap
+    See ./PubChem_convert ./NCI_60cell ./bin_plot ./lists_compare for box show. It works but need X-value in order, otherwise boxwidth will be random
+   To show different boxwidth defined in col X as pixels : -box -zcol X 
+  -histostyle histostyle : bar-chart of parallel cols. Cool for bio-data. See http://gnuplot.sourceforge.net/demo/histograms.html
+     e.g. clustered, errorbars, rowstacked,columnstacked     "clustered gap 1.0"  Works now!
+     similar to -datastyle impulses (or boxes). But these are for hollow boxes
+     See ./GO_cluster for histogram
+   -histo : Use -histostyle "clustered gap 1.0" for histogram
+   -histo2 : Use -histostyle "rowstacked" for histogram 
+   -Phong : Use 3D-like histogram bars. My color and 3D-arrangement. Only has 6 colors RGB for data
+   X-Phong2 : NOT recommended. Bad looking and no keys. same as http://www.phyast.pitt.edu/~zov1/gnuplot/html/histogram.html 
+  -style style : Other styles
+    e.g. "data linespoints"  "fill <fillstyle>" "histogram <histogram style options>" "line n linestyle"
+  -key | -keyposition keyposition : Position for the legancy. on|off, inside|outside, e.g. -key "at 2,100 width 10"  (Remember at!)
+    Outside Mode: l|r|t|bmargin, Inside Mode: left|right|center|top|bottom
+    e.g. "reverse Left outside" "at -1.0,1.0,2.5 title 'Leg1' box" 
+    By default, the key is from the first line of data (header line: '-header 1' option)
+    set key samplen 2 spacing .5 font "arial,10"   #Use smaller keys, default: samplen 4(Horizental) spacing 1.25(Vertical)
+  -extra "SpecialCommand" : Special command to put right before plot. Can use multiple times. For empty, call -extra NA or -extra ";" 
+      e.g. "set encoding iso_8859_1; set ylabel \"RMSD ({\305}))\" ; set encoding default;"  #Y-Label contains Angstrom
+  -fence : do fence plot: offset 2D graphics to display in 3D manner See: http://gnuplot.sourceforge.net/demo/surface1.html
+   -offaxe X/Y/Z  #=1: offset x-axis  =2: offset y  =3: offset z
+  -logx|-logy|-log : set logscale for X/Y/Both. As used in ./PubChem_convert
+  -errorbar : Show Y-axis error bar.  -xcol/-ycol for X/Y-data. -zcol to define error (1 or 2 cols)
+   -errorbartype PointType : data point type to change datapoint shape. [$errorbartype] e.g. -errorbartype "pt 9 ps 2"
+    'set bar Num' to define length of top/bottom small bar. set bar 0 : disbale small bar
+   -errorbarline : Show X-axis error bar + line 
+   -xybars : show X/Y-axis error bars. -zcol to define error. -zcol 3:4:6 (triple col: col3/4 for Y-errorbar range, col6 for X:deltX) 
+   -xerrorbar | -yerrorbar 
+    -zcol 6 (single col 6 for +/- deltY); 
+    -zcol 3:4 (double col 3 and 4 for Y-data range: lowY:HighY)
+  -animatex|z : animate to rotate x/z
+   -nframe nframe : Number of frames for animation $nframe
+  -animatedata EveryStyle : animate Input data growing e.g. ::1:: (growing from first point)  ::iframe:: (only one point moving)
+  -picture ImageType : input is a picture as type [$ptype]. e.g. -picture png  Input should be the picture file. 
+     When -animate, input is a list with pictures inside. First col is picture file; 2nd col is Title is available
+   -animate : Animate a series of pictures defined in InputList with ImageType type pictures
+     NOTE: can use ./movie_manuplate -movie as well. To slow down  movie 6 times (4fps): ./movie_manuplate -slow 6 OriginalMovie.gif
+  -heatmap : Heatmap plot. 3D data but 2D plot. http://gnuplot.sourceforge.net/demo/heatmaps.html. 
+     Rows must be separated by blank lines in data! Can be any NxM data:  X Y Z in a row. Can started from anything for X/Y
+   -zcol zcol : col number in input for Z-axis or heatmap intensity
+  -font FontName : Available fonts: "cour"(Courie) "arial"(Areial) "times" "Vera" "VeraMono" "DejaVuLGCSans-ExtraLight" "bchbi" etc. 
+     See /usr/share/fonts/ for available fonts. default is "VeraBd" as defined in .bashrc as GNUPLOT_DEFAULT_GDFONT
+  -fontsize Size : fontsize (height pixels of font) for plot. Larger Size, bigger display. should>8  Default: $fontsize
+  -nobold : will NOT use bold font
+  -fontsize_tics Size : fontsize for X/Y/Z tics. Default: $fontsize_tics
+   -xticfactor | -yticfactor Factor : multiple factor for X/Y fontsize_tics when auto-determine tic size [$xticfactor/$yticfactor]
+  -dendogram | -dendo : Plot dendogram for clustered data. Use ./gnuplot_dendogram   Take 3 options: -x|ylabel -extra
+  -plot "PlotCommands" : User defined plot commands to replace plot commands generated by $0
+  -extraplot "extraplotCommands" : extra plot commands to appending current plot (but not new plot started with plot!) e.g. -labelcontour
+    e.g. -extraplot " \"A.dat\" u 1:2 w points pt 6 ps 3 pc 4"
+  -extraplotcomd "extraplotCommands" : extra new plot commands to append at last. See ./metadynamics_getPMF
+  -extraplotbefore "extraplotCommands" : extra plot commands to prefixing/before current plot
+
+  -bin : bin-plot data. eg as ./pdb_SitePrediction
+   -binnum BinNum : number of bins. [default]=10 
+   -outcount : [default] Out-range data will count into first/last bin
+   -outdiscard : Out-range data will not count in
+   -binrange startBin endBin stepBin : User defined startBin endBin stepBin. [default]: Use max/min value
+   -showcount : Show bin counts in Y-axis instead of default showing percentage
+   -binlabel : show [min,max] dev of data
+   -bin2file 2ndFile : 2nd bin file to display together with first one
+
+ Example:
+   $0 -default 1 -ncol 3 ITCH_L18s_wb_ions_50ns_m3_rmsd.xls
+     #Plot RMSD vs. MD Simulation Time plot from ./namd_analysis. Use all 3 rmsd cols in plot. -ncol 1: Only use 2nd col
+   $0 -default 2 ITCH_L18s_wb_ions_HBondN.xls
+     #Plot HBonds vs. MD Simulation Time plot from ./vmd_namd_rmsd
+   $0 -default 3 ITCH_L18c_wb_ions_eq2_50ns.dcd_pairE_L18_5.xls
+     #Plot Pair-Interaction E (protein/solvent) vs. MD Simulation Time plot from ./namd_pair_interaction_resids
+   $0 -default 3 -fence -d3b "GLY100 GLU201" ITCH_L18c_wb_ions_eq2_50ns.dcd_pairE_L18_5.xls
+     #Plot Pair-Interaction E (ligand to GLY100 and GLU201) vs. time
+   $0 -default 4 -fence -d4top 10 ITCH_L18s_wb_ions_50ns_TIP3_10_1_all_con2_2_disT_m.txt
+     #Plot top 10 residues that have fixed water and show water-residue distance vs time from ./vmd_namd_fixwater 
+   $0 -default 5 -d5n 2  X_waterbridge_dist.xls
+     #Plot #2 waterbridge : residue-water and water-ligand distances vs time from ./vmd_namd_waterbridge 
+   $0 -default 6 COH29_meta_50ns.pmf
+     #Plot 3D/Countour of metadynamics meta .pmf from ./metadynamics_getPMF
+   $0 -default 6 -labelcontour|-contour -xlabel "Distance ({\305})" -ylabel "Angle ({\260})" A.pmf_3.15ns
+     #Only plot 2D/contour of metadynamics data w(/o) label
+   $0 -extraplot "\"colvar.xls2\" every 20 u 2:3:1 w l palette" -labelcontour -default 6  3VKX_wb_ions_eq2_50ns_meta
+     #Also overlap colvar-MD data on top of PMF plot. Need normalize col1 of colvar.xls2 to Input so the same palette will shown
+   $0 -default 7 /home/holi/offtarget/Berbamine_c2083.list_fda_drugbank_div_100s_14_0_1_5_HTVS_0_0_top3_offtarget_top500_top100_XP_10_unique_prop.xls
+     #Plot 3D Cylinder of EC# statistics from ./offtarget_pipe. can use -x/yrange -x/ylabel 
+
+   $0 -go A.gnu
+     #-go means input is gnuplot file to directly run. Make sure the first line in Input is: #!$exe
+   $0 -watermark large ...
+     #also generate graphics with my own watermark for stealing
+   $0 -nosilence -showdata ...
+     #show gnuplot file and data file for plot
+   $0 -note "This is for" ...
+     #Add small footnote at very bottom of plot by -note and at very top by -note2
+   $0 -extra "set label \"F=10\" at graph 0.1, 0.9"...  #Add a label at relative position of left-top corner
+   $0 -label "Hello A" -labelas "at graph 0,0.9 textcolor lt 1" -label "B" -labelas "at graph 0.1,0.8"...
+     #Add two labels on plot
+   $0 -labelXbycol 3 -fontsize_xtics 10 -xticsnum 10 -labelYbycol 4 -labelAngle -45 -labelfactor 1.2 -yticsnum 8 -key "at 5,10" ...
+     #Label X/Y-axis by names in col 3/4 , tiled angle is -45, fontsize increase 1.2 folds, and display 10/8 tics for X/Y. Keys will use header line 
+   $0 -colorcol 6 -extra "set palette rgb -21,-22,-23; set cblabel \"S\" offset character 0.5,0,0 textcolor lt 3 rotate by -90; set format cb "%1.0f" ;" ....
+      or just: -colorcol 6 ....
+     #Use number in col 6 to color data point: different value in col 6 shows different color. Color palette is defined and will be shown aside
+   $0 -colordata 6 -xcol 2 -ycol 3 ...
+     #Use strings in col 6 to color data points: same strings in col 6 will show same color. No palette in use
+   $0 -extra "set encoding iso_8859_1; set ylabel \"RMSD ({\305})\" ; set encoding default;" A.xls  
+     #Y-Label contains Angstrom 
+   $0 -header 1 -ycol 2,3,4 -key "center top" -histostyle  "clustered gap 1.0" -Phong -labelXbycol 2  a.data 
+     #plot 3 cols of 2-4 (with header lines =1 to bypass, but for key labels) by using 3D-like histogram/bar/coloumn style. same as -histo
+   $0 -vgradient -cgradient1 "#e68080" -cgradient2 white ...  
+     #vertical gradient background colored from pink to white
+   $0 -smooth -smoothmethod "Bezier" ...
+     #Use Bezier method for strong smoothing to smooth/fitting data
+   $0 -average -linear -sen -datastyle "points pt 6 ps 2" ...
+     #Add average value in plot and also linear fitting line (use Sen’s Slope / Theil–Sen estimator to reduce outliers)
+   $0 -slidesize 8 -datastyle "points pt 6 ps 2" -keyposition off -linear ...
+     #Add 8-point slide-window average line, original data use "points type 7 (solid circle) size 4", no keynotes, also linear fitting
+   $0 -fence -offaxe 2 -hidden3d ...
+     #fence plot to offset 2D plots into 3D looking
+   $0 -font LiberationMono-Italic -boxes ...
+     #draw boxes for data as histogram. May need replace as -datastyle impulses . Use font as LiberationMono-Italic type
+   $0 -box -boxwidth 0.9 -zcol 4 ...
+     #draw different width box along x-axis by using width data (pixels) defined in col 4. Width of box is 90% of data space
+   $0 -3D -xrange exact -yrange [0:30] -zrange [0.5:0.99] -header 1 -datastyle "points pt 7 ps 1" ~/RLIP76/amri/rl_Site1_rl_Site1_amri_SP_2_top1000_div80_total100_XP_5_unique.rept_contact.map
+     #draw 3D view of contact map file
+   $0 -picture gif A.gif
+     #Input is a picture
+   $0 -animate -picture gif -nframe 100 picture.list
+     #Input is a picture list as gif type for animation. -nframe for delay. 100 frames will generated (~5s show at 24pfs)
+   $0 -bin -binnum 5 -outdiscard -ycol 2 ... 
+     #bin plot for col 2.       -bin2file XXX : Add 2nd file on plot to bin
+   $0 -pair -pairwith 4 -xcol 2 -ycol 4...
+     #plo paired x-y cols for multiple x-cols. A group of 4 cols as a unit, plot 2nd col in group as x and 4th col as y. x starts from 2nd col
+   $0 -plot "plot \"A.dat\" u 1:2 axes x1y1 t \"A\" w lines, \"B.dat\" u 1:2 axes x2y2 t \"B\" w boxes" -extra "set y2tics auto; set y2range [0:100]; set y2label \"Y2\" rotate by -90" A.dat
+     #Use user-defined plot commands to draw double X/Y axes
+   $0 -plot "reset; set tmargin 0;set bmargin 0;set lmargin 5;set rmargin 3;set key off; unset xtics; set multiplot; set size 0.9,0.4; set origin 0.1,0.5;unset title;unset xlabel; plot \"i\" u 1:2;set size 0.9,0.4; set xtics nomirror; set tics scale 0 font \",8\";set origin 0.1,0.1;unset title;set xtics; plot \"i\" u 1:3; unset multiplot" i
+     #Draw multiplot (2 plots merged together)
+   $0 -extra "set size square 1,1; set origin 0,0" ....
+     #Make square (equal X-Y) plot for RMSD Map etc.
+   $0 -extraplotbefore "\"$output\"  u 1:3 w l title \"\"" -datastyle "points pt 7 ps 1.5" -colordata 4 -xcol 1 -ycol 3 A.dat
+     #Plot lines mixing with data points as circles colored by col 4
+   $0 -animatey -plotsize " " -nframe 24 ...
+     #Animate by rotation Y-axis for 24 frames
+   $0 -animatedata ::1:: -nframe 100 -extraplot "\"B.dat\" w ima" -xcol 2 -ycol 3 -xrange [0:100] -yrange [0:12] -nframe 100 Input
+     #Animate 100 points picked by same interval of Input that growing from first point on top of image.   ::iframe:: will only show one last point moving
+     If -zol 1 added, -zcol will be used as color palette to draw lines 
+   $0 -errorbar|-errorbarline -errorbartype "pt 9 ps 2" -xcol 1 -ycol 2 -zcol 3:4 (or -zcol 3)...
+     #Show error bar as -zcol. See http://www.csse.uwa.edu.au/programming/gnuplot_demos/errorbar/errorbar.html 
+   $0 -xlabel "RMSD{\305}" -extra "set title \"Cluster\"; set xlabel offset 1 tc lt 1" -dendo Cluster_data.txt
+     #dendogram to show cluster of cmpds etc.
+   $0 -labelcontour -miniContourLength 15 ...   #Contour plot and label the contour line value
+   $0 -labeldata 1 2 3 -labeldataexcld 0 ...  
+     #label each data point value, exclude to label points w/ value=0 (to avoid label pad). called example as ./sdf_contactmap ./cluster_Pickmutation
+     #To label string, must use -labeldatadig -1 . See ./cluster_Pickmutation
+     #To label 2nd set, use -labeldata2, -labeldataexcld2... See ./cluster_Pickmutation
+   $0 -heatmap -zcol 3 -zrange [0:20]  A.dat
+     #Heatmap and cut zcol data in range [0,20]. See ./pdb_contactmap. Rows must be separated by blank lines in data!
+     #To label xtics/cbtics, and discrete side-bar, see example in ./DSSP_vmd    To cluster/dendogram for NxN matrix, see ./sdf_contactmap
+   $0 -errorbartype "lw 4 ps 3" -datastyle -nonote -nonote2 -title '' -plotsize 'size 3600,2400' -extra "set border lw 4" -grid 'grid y lw 4'  -fontsize 80 -fontsize_tics 75 -yrange [-5:35] -key "top center"  -nosilence -extra 'set xlabel "Residue Number" ;set ylabel "Weighted Average RMSD({\305})"' -errorbar -colordata 7 -xcol 1 -ycol 2 -zcol 3 -header 1 DNA2_md_wb_ions_eq2_50ns_20_-nognuplot_ResidueRMS2.xls
+     #Publication quality 3600x2400 for Weighted Average RMSD, in DNA2/MD
+
+   XNOTE: In my new 32-CPU PC, need add set output "Output.gif" to generate figure as oldPC=1, 
+   X  but now use old 16-CPU to run this and copy back
+   NOTE: Use ./movie_manuplate to maniplate animation GIF
+   NOTE: Use ./image_manipulate to manipulate images. To label on image: ./image_manipulate -text
+   NOTE: When calling this program outside, must use $0 ... >& $temp to avoid waiting for plot window closing
+   NOTE: {/Symbol a} for Greek character does not work in my station
+   NOTE: gnuplot does not like % in cmpd name to display. Change it to - here
+
+ttt
+  exit
+fi
+
+
+[ ! -s $exe ] && exe='/usr/local/bin/gnuplot'
+[ ! -s $exe ] && exe='/usr/bin/gnuplot'
+if [ ! -s $exe ]; then
+ echo "Fata error at $0. No gnuplot $exe exists. Try: which gnuplot" 1>&2
+ exit
+fi
+
+#Check font if exits
+if [ $dofont -eq 0 ] && [ $nobold -eq 1 ] ; then
+ font='Vera';fontori=$font;
+fi
+if [ $dofont -eq 1 ] && [ ! -s "$font" ] ; then
+ font='/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf'   #My new 32CPU pc only has this font
+ [ $nobold -eq 1 ] && font='/usr/share/fonts/dejavu/DejaVuSans.ttf'  #plain font, not default bold
+ [ ! -s "$font" ] && font=$fontori
+fi
+
+#Directly run Gnuplot Input. NOT wroking!
+# May need add in input: set output Output.gif
+if [ $dogo -eq 1 ] || [ $runscriptonly -eq 1 ] ; then
+ echo "Directly run Gnuplot Input $input"
+ ee='#!'$exe
+ ex=`head -1 $input | awk '{print $1}'`
+ if [ $ex != $ee ] ; then 
+  echo "Error! First line of gunplot input  $input should be: $ee"
+ else
+  chmod +x $input  #make it executable
+  [ $doout -ne 1 ] && output=$input.gif
+  echo "Output gif is $output"
+  ./$input > $output
+  [ $display -eq 1 ] && nohup display $output &
+ fi
+ exit
+fi
+
+
+#infile=`echo $input | awk '{l=length($1)-3;if(substr($1,l,4)==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp $ed/back $ed/gnuplot_dendogram $ed/linear_regression $ed/symbol.txt $ed/watermark $ed/movie_manuplate $ed/image_manipulate .
+fi
+
+R='\033[31m';G='\033[32m';Y='\033[33m';B='\033[34m';M='\033[35m';C='\033[36m'; N='\033[m'  #Color text of RBG Yellow Magenta Cyan Normal for echo -e 
+HR='\033[41m';HG='\033[42m';HY='\033[43m';HB='\033[44m';HM='\033[45m';HC='\033[46m';  #High-light Color text of RBG Yellow Magenta Cyan for echo -e
+A=`awk '{print $1}' symbol.txt | head -1`;PM=`awk '{print $2}' symbol.txt | head -1`;   #Symbol for Amstrong and +/- for cat/echo
+LE=`awk '{print $3}' symbol.txt | head -1`;GE=`awk '{print $4}' symbol.txt | head -1`;NE=`awk '{print $8}' symbol.txt | head -1`  #Symbol for <= ; >= ;!=
+
+xplotsize=`echo $plotsize | awk '{split($2,a,",");print a[1] }'`
+yplotsize=`echo $plotsize | awk '{split($2,a,",");print a[2] }'`
+
+if [ $doout -ne 1 ] ; then
+  output=${input}.$termo
+  [ $animate -eq 1 ] && output=${input}_animate.$termo
+fi
+
+outext=`echo $output | awk '{l=length($1)-3;if(substr($1,l,4)==".png"||substr($1,l,4)==".gif"||substr($1,l+1,3)==".ps"){print 1}else{print 0}}'`
+if [ $outext -eq 0 ] ; then
+ output=${output}.$termo
+ [ $animate -eq 1 ] && output=${output}_animate.$termo
+ echo "Change output name to $output"
+fi
+
+if [ $dodend -eq 1 ] ; then
+ ./gnuplot_dendogram $denlead $input
+ echo "Dendogram is run by: ./gnuplot_dendogram $input"
+ exit
+fi
+
+notthere=0
+if [ ! -s $input ] ; then
+ notthere=1
+else
+ nnnlll=`wc -l $input | awk '{print $1}'`
+ [ $nnnlll -le $header ] && notthere=1
+fi
+if [ $notthere -eq 1 ] ; then
+ echo "Fatal error @$0 $oldline : No Input $input exists" 1>&2
+ exit
+fi
+
+[ $didlabel -eq 1 ] && extra=$extra';'
+
+
+###### Must replace % as gnuplot cannot display it
+inputo=$input
+sed 's/%/-/g' $input > $temp.input
+input=$temp.input
+
+
+####### Default settings
+if [ $default -eq 1 ] ; then
+ echo "Plot RMSD vs. MD Simulation Time plot from ./vmd_namd_rmsd"
+ if [ $notitle -ne 1 ] ; then
+  title="RMSD vs. MD Simulation Time (ns)"; dotitle=1
+ fi
+ xlabel='Simulation Time (ns)'; 
+ datastyle='lines lw 2';xcol=1; header=0;keyposition='off'
+ ycol=2
+ if [ $ncol -eq 3 ] ; then
+  ycol='2,3,4'; #=2: to Initial Structure  =3: to Best frame  =4: to last frame
+ fi
+ if [ $dofence -eq 1 ] ; then  #fence plot
+  offaxe=2  #offset Y-axis
+  extra=$extra' set encoding iso_8859_1; show encoding; set zlabel "RMSD ({\305})" ; set encoding default; '   #get Angstrom sybol. Not working
+  extra=$extra' set ztics 1 font "'$font','$fontsize_tics'" ; set ytics 1 ; ' #change ztics as integer A. Fontsize works now! Must specify fontname
+  extra=$extra' set view 60,10 ; set grid ztics ; '
+  extra=$extra' set palette model RGB functions 0.9, 0.9,0.95; '
+ else
+  if [ $ncol -gt 1 ] ; then
+    extra=$extra' set encoding iso_8859_1; show encoding; set ylabel "RMSD ({\305})" ; set encoding default; '   #get Angstrom sybol
+  else
+    extra=$extra' set encoding iso_8859_1; show encoding; set ylabel "RMSD ({\305}) to Initial Structure" ; set encoding default; '   #get Angstrom sybol
+  fi
+  extra=$extra' set ytics 1 font "'$font','$fontsize_tics'" ; '  #change ytics as integer A. Fontsize works now! Must specify fontname
+  #extra=$extra' set ylabel offset 1,0 ;'  #offset ylabel to be more close to y-axis
+ fi
+fi
+
+if [ $default -eq 2 ] ; then
+ echo "Plot HBonds vs. MD Simulation Time from ./vmd_hbonds"
+ if [ $notitle -ne 1 ] ; then
+  title="HBonds vs. MD Simulation Time (ns)"; dotitle=1
+ fi
+ xlabel='Simulation Time (ns)';
+ ylabel='Hydrogen Bonds Number'
+ extra=$extra' set ytics 1 font "'$font','$fontsize_tics'" ; '  #change ytics as integer A. Fontsize works now! Must specify fontname
+ datastyle='points pt 6 ps 1';xcol=1; header=1;keyposition='off'
+ ycol=2;
+ doave=1;divx=12;divy=20;showave=0
+ dolfit=1
+fi
+
+if [ $default -eq 3 ] ; then
+ echo "Plot InteractionE vs. MD Simulation Time from ./vmd_hbonds"
+ xlabel='Simulation Time (ns)';
+ ylabel='Pair Interaction Energy (kcal/mol)'
+ #datastyle='lines lw 1'; keyposition='bottom center'
+ datastyle='dots' 
+ #datastyle='points pt 6 ps 1'
+ keyposition='off'   #do not use key for dot
+ xcol=1; header=1
+ if [ "$d3b" == "0" ] ; then  #show Protein Solvent Total E vs. Time
+  if [ $notitle -ne 1 ] ; then
+   title="Pair Interaction Energy of Ligand to Protein/Solvent"; dotitle=1
+  fi
+  numcol=`head -1 $input | tail -1 | awk '{print NF}'`
+  n1=`expr $numcol - 1`
+  cat $input | awk 'BEGIN{FS="\t";m='$n1';n='$numcol'}
+    {if(NR==1){print "Time Protein Solvent Total"}else{if($m!=""&&$n!=""){print $1,$m,$n-$m,$n}}}' > $temp4
+  ycol='2,3,4'
+ else  #show user defined residues pairE vs. time
+  title="Pair Interaction Energy of Ligand to Residues"; dotitle=1
+  cat $input | awk 'BEGIN{FS="\t"}{print $1}' > $temp4
+  nc=`echo $d3b | wc -w | awk '{print $1}'`
+  for (( i=1 ; i<=$nc ; i++ )) ; do
+   nr=`echo $d3b | awk '{i='$i';print $i}'`
+   cat $input | awk 'BEGIN{k=-1;FS="\t"}{
+    if(NR==1){for(i=1;i<=NF;i++){if($i=="'$nr'"){k=i;break;}}}
+    if(k>0){print $i," "} 
+   }' > $temp5
+   paste $temp4 $temp5 > $temp6
+   mv $temp6 $temp4
+  done
+  ncc=`head -1 $temp4 | wc -w | awk '{print $1}'`
+  [ $ncc -ne $nc ] && echo "Fatal error @$0 $oldline : Not same residues $nc $ncc for $d3b" 1>&2
+  awk '{if(NF=='$ncc'){print $_}}' $temp4 > $temp5
+  mv $temp5 $temp4
+  #head $temp4;tail $temp4;exit
+  ycol=`head -1 $temp4 | awk '{s=2;for(i=3;i<=NF;i++){s=sprintf("%s,%d",s,i)};print s}'`
+ fi
+ input=$temp4
+ doave=1;divx=5;divy=10;showave=0
+ dolfit=1
+fi
+
+if [ $default -eq 4 ] ; then
+ echo "Plot top $d4top Residue-fixed water distance vs. MD Simulation Time from ./vmd_namd_fixwater"
+ if [ $notitle -ne 1 ] ; then
+  [ $dotitle -eq 0 ] && title="Fixed-${molec}/Residue Distance vs. MD Time(ns)"; dotitle=1
+ fi
+ xlabel='Simulation Time (ns)';
+ extra=$extra' set encoding iso_8859_1; show encoding; set ylabel "Fixed-Water/Residue Distance ({\305})" ; set encoding default; '
+ extra=$extra' set yrange [0:20];'
+ datastyle='lines lw 2';xcol=1; header=1;keyposition='top center'
+ ncol=$d4top; doncol=1
+fi
+
+if [ $default -eq 5 ] ; then
+ echo "Plot the $d5n water-bridge distances vs. MD Time from ./vmd_namd_waterbridge"
+ if [ $notitle -ne 1 ] ; then
+  [ $dotitle -eq 0 ] && title="Water-Bridge #$d5n : Residue-Water/Water-Ligand Distances"; dotitle=1
+ fi
+ xlabel='Simulation Time (ns)';
+ extra=$extra' set encoding iso_8859_1; show encoding; set ylabel "Distance to Fixed-Water ({\305})" ; set encoding default; '
+ datastyle='lines lw 2';xcol=1; header=1;keyposition='top center'
+ ycol=`echo $d5n | awk '{a=$1;printf("%d,%d",3*a-1,3*a)}'` 
+ yrange='[0:20]'  
+fi
+
+if [ $default -eq 6 ] ; then
+ #To plot contour only: $0 -labelcontour -default 6 -extra "set view map;" -xlabel "Distance ({\305})" -ylabel "Angle ({\260})" A.pmf_2.00ns
+ echo "Plot 3D/Countour of metadynamics meta .pmf from ./metadynamics_getPMF"
+ ticnum=5  #number of tics
+ #cat $input | awk '{if(NF==3&&substr($1,1,1)!="#"){print $1,$2,-1*$3}else{print $_}}' > ${temp6}.6; input=${temp6}.6
+ if [ $doxrange -ne 1 ] ; then
+  xmax=`tail -1 $input | awk '{print $1}'`;
+  xmin=`cat $input | awk '{if(NF==3&&substr($1,1,1)!="#"){print $1;exit}}'`
+ else
+  xmax=`echo $xrange | awk '{split($1,a,":");l=length(a[2]);print substr(a[2],1,l-1)}'`
+  xmin=`echo $xrange | awk '{split($1,a,":");l=length(a[1]);print substr(a[1],2,l-1)}'`
+ fi
+ if [ $doyrange -ne 1 ] ; then
+  ymax=`tail -1 $input | awk '{print $2}'`
+  ymin=`cat $input | awk '{if(NF==3&&substr($1,1,1)!="#"){print $2;exit}}'`
+ else
+  ymax=`echo $yrange | awk '{split($1,a,":");l=length(a[2]);print substr(a[2],1,l-1)}'`
+  ymin=`echo $yrange | awk '{split($1,a,":");l=length(a[1]);print substr(a[1],2,l-1)}'`
+ fi
+ zmin=`cat $input | awk 'BEGIN{z=999999}{if(NF==3&&substr($1,1,1)!="#"){if($3<z){z=$3}}}END{print z}'`
+ zmax=`cat $input | awk 'BEGIN{z=-999999}{if(NF==3&&substr($1,1,1)!="#"){if($3>z){z=$3}}}END{print z}'`
+ xtic=`echo $xmin $xmax $ticnum | awk '{s=($2-$1)/$3; if(s>2){printf("%d",s+1)}else{print s}}'`
+ ytic=`echo $ymin $ymax $ticnum | awk '{s=($2-$1)/$3; if(s>2){printf("%d",s+1)}else{print s}}'`
+ ztic=`echo $zmin $zmax $ticnum | awk '{s=($2-$1)/$3; if(s>2){printf("%d",s+1)}else{print s}}'`
+ ctic=`echo $zmax $ticnum | awk '{s=$1/$2; if(s>2){printf("%d",s+1)}else{print s}}'`
+ mdtime=`echo $input | awk '{k=split($NF,a,"_");if(a[k]=="meta"){print a[k-1]}else{print a[k]}}'`
+ if [ $notitle -ne 1 ] ; then
+  [ $dotitle -eq 0 ] && title="Potential of Mean Force $mdtime"; dotitle=1
+ fi
+ #[ "$xlabel" == "X" ] && xlabel="Distance ({\305})"; [ "$ylabel" == "Y" ] && ylabel="Angle ({\260})";zlabel='Force Energy (kcal/mol)'
+ if [ $doxlabel -eq 0 ] ; then
+  xlabel="Distance ({\305})"
+ fi
+ if [ $doylabel -eq 0 ] ; then
+  ylabel="Angle ({\260})"
+ fi
+ zlabel='Force Energy (kcal/mol)'
+ if [ $dopublication -ne 1 ] ; then  #Normal plot
+  extra=$extra" set xtics $xtic ; set ytics $ytic ; set ztics $ztic ; set format cb \"%2.1f\"; set format z \"%2.1f\"; set ytics offset 1; " 
+  #Can adjust Y/Z label by using: set ylabel offset 3,0,0; set zlabel offset 3,0,0;
+ else #for publication
+  [ $doplotsize -eq 0 ] && plotsize='size 3600,2400'  #3600x2400 size, also need to expand the following:
+  extra=$extra" set border lw 4; "; grid="grid y lw 4"; errorbartype="lw 4 ps 3"; fontsize="80"; fontsize_tics="75" 
+  if [ $labelcontour -eq 1 ] ; then  #for 2D contour plot
+   extra=$extra" set xtics $xtic ; set ytics $ytic ; set ztics $ztic ; set format cb \"%2.0f\"; set format z \"%2.0f\"; set ytics offset 1; set ylabel offset 3,0,0; "  
+   #Only interger for z-axis and sidebar cb. Move ylabel 3 char toward y, but 0 to x/z
+  else  #for 3D
+   extra=$extra" set xtics $xtic ; set ytics $ytic ; set ztics $ztic ; set format cb \"%2.0f\"; set format z \"%2.0f\"; set ytics offset 1; set xtics offset -2; set zlabel offset 3,0,0;"  #Only interger for z-axis and sidebar cb
+  fi
+ fi
+ #[ "$xlabel" != "0" ] && extra=$extra" set label \"$xlabel\" at graph 0.5 -0.1 -0.1 center rotate by -15 textcolor rgb \"cyan\";" 
+ extra=$extra' set cbrange [*:'$zmax'];'" set cbtics $ctic" #sidebar box tics
+ extra='set cntrparam level incremental 0, 0.5,20; '$extra  #contour step is 0.5kcal/mol
+ datastyle='lines';xcol=1; ycol=2;zcol=3;header=0;#keyposition='outside'
+ p3d=1; dosurface=0;dopm3d=1;grid='0';hidden3d=0
+ docontour=1;  #Show contour shadow
+ dopale=0 #=1: Use a gray palette for the colouring for pm3d
+ [ $donote -ne 2 ] && donote=0
+ xrange='['$xmin':'$xmax']';yrange='['$ymin':'$ymax']'; zrange='['$zmin':'$zmax']';
+ #xlabel=0;ylabel=0
+fi
+
+if [ $default -eq 7 ] ; then #input data as offtarget/Berbamine_c2083.list_fda_drugbank_div_100s_14_0_1_5_HTVS_0_0_top3_offtarget_top500_top100_XP_10_unique_prop.xls
+#2. 7.10.-    Protein-tyrosine kinases.
+#2. 7.11.-    Protein-serine/threonine kinases.
+#2. 7.12.-    Dual-specificity kinases (those acting on Ser/Thr and Tyr residues).
+#2. 7.13.-    Protein-histidine kinases.
+#2. 7.99.-    Other protein kinases.
+#2. 7.1
+ echo "Plot 3D Cylinder of EC# statistics from ./offtarget_pipe"
+ nrec=`wc -l $input | awk '{print $1-1}'`
+ if [ $d7top -ne 0 ] && [ $d7top -lt $nrec ] ; then
+  nrec=$d7top
+ fi
+ cat $input | awk 'BEGIN{ne=0;n=0;nkinase=0;y='$dcol';}
+{if(NR>1&&NF>1&&(NR<=('$d7top'+1)||'$d7top'==0)){n++;a=split($y,b,":");if(b[1]=="-"){ne++}else{
+  c=split(b[1],d,".");e=split(b[2],f,"_");eca=d[1];nec[eca]++;if(d[1]==2&&d[2]==7&&((d[3]>=10&&d[3]<=13)||d[3]==99||d[3]==1)){nkinase++};
+ }}}END{print 0,ne/n*100,0;for(i=1;i<=6;i++){if(i!=2){print i,nec[i]/n*100,0}; if(i==2){print 2,nec[i]/n*100,nkinase/n*100}};}' > $temp4  
+ pkinase=`head -3 $temp4 | tail -1 | awk '{print $2+1}'`
+ echo "EC# Distribution (with kinase) of $nrec proteins: 1=Oxidoreductases; 2=Transferases; 3=Hydrolases; 4=Lyases; 5=Isomerases; 6=Ligases"
+ cat $temp4
+ ncol=2;doncol=1
+ input=$temp4
+ extra=$extra' set xtics ("NA" 0,"Oxidoreductases" 1,"Transferases" 2,"Hydrolases" 3,"Lyases" 4,"Isomerases" 5,"Ligases" 6); ' #label X-axis with EC type
+ #extra=$extra' set style data histogram ; set style histogram cluster gap 1 ;'   #Use histogram style. Does NOT work
+ extra=$extra' set style fill transparent solid 0.5  ; set boxwidth '$boxwidth' relative ; ' #box color and width
+ #extra=$extra' set style fill solid 1.0  ; set boxwidth '$boxwidth' relative ; ' #box color and width
+ extra=$extra' set ytics 10 font "'$font','$fontsize_tics'" ; '
+ extra=$extra' set label "Kinase" at 2, '$pkinase' center textcolor lt 2 ;'  #label kinase
+ extra=$extra' set xtics border in scale 0,0 nomirror rotate by -45  offset character 0, 0, 0 autojustify ;'   #rotation works!
+ keyposition='off'
+ if [ $notitle -ne 1 ] ; then
+  title="Enzyme Commission Number (EC#) Distribution"; dotitle=1
+ fi
+ xlabel=0; zlabel=0;ylabel="Percentage of $nrec proteins";donote=0
+ datastyle='boxes';xcol=1; ycol=2;zcol=3;header=0;#keyposition='outside'
+ #p3d=1; dosurface=0;docontour=0;dopm3d=1;grid='0'
+ # dopale=0 #=1: Use a gray palette for the colouring for pm3d
+fi
+
+[ $default -ge 1 ] && extra=$extra'; '$extrao
+if [ $donote -ne 0 ] ; then
+ [ "$note" == "NA" ] && note='Permission Required for Publication by H.Li. '$output    #make _ not subscript
+ note=`echo $note | sed 's/\_/\\\_/g'`
+ note=`echo $note | sed 's/\_/\\\_/g'`
+ #extra=$extra'; set label "'"$note"'" at graph 0.5,1.2 center tc lt 5 font "'$font',10" ; '   #on top
+ extra=$extra'; set label "'"$note"'" at screen 0.5, screen 0.01 center tc lt 5 font "'$font',10" ; ' #at bottom. screen for canvas and graph for plot
+fi
+if [ $donote2 -ne 0 ] ; then
+ note2=`echo $note2 | sed 's/\_/\\\_/g'`
+ note2=`echo $note2 | sed 's/\_/\\\_/g'`
+ #extra=$extra'; set label "'"$note2"'" at graph 0.5,-0.22 center tc lt 5 font "'$font',10" ; '  #at bottom
+ extra=$extra'; set label "'"$note2"'" at screen 0.5, screen 0.97 center tc lt 5 font "'$font',10" ; '   #on top 
+fi
+
+
+if [ $doboxes -eq 1 ] ; then
+ datastyle='boxes'; 
+ #extra=$extra' set style fill transparent solid 0.5  ; set boxwidth '$boxwidth' relative ; '
+ extra=' set style fill transparent solid 0.5  ; set boxwidth '$boxwidth' relative ; '$extra  #box color and width in case no setting 
+ #extra=' set style fill solid 1.0 ; set boxwidth '$boxwidth' relative ; '$extra  #box color and width in case no setting 
+fi
+
+ycolini=$ycol
+if [ $doncol -gt 0 ] ; then
+ ycol=`awk 'BEGIN{s="2";for(i=3;i<=('$ncol'+1);i++){s=sprintf("%s,%s",s,i)};print s}'`
+ #echo $ycol
+fi
+
+if [ $notitle -ne 1 ] ; then
+ [ $dotitle -ne 1 ] && title=$input
+else
+ title=" " 
+fi
+[ $xfactor == '0' ] && xfactor=1
+[ $yfactor == '0' ] && yfactor=1
+[ $zfactor == '0' ] && zfactor=1
+
+#remove headers
+cat $input | awk '{if(NR>'$header'){n++;if(n>='$minrow'&&('$maxrow'<=0||n<='$maxrow')){print $_}}}' > $temp2
+
+#get how many ycols:
+nycol=`echo $ycol | awk '{a=split($1,b,",");print a}'`
+
+#Get data range for first ycol
+#for (( i=1 ; i <= $nycol ; i++ )) ; do
+ i=1
+ yc=`echo $ycol | awk '{i='$i';a=split($1,b,",");print b[i]}'`
+ stat=`cat $temp2 | awk 'BEGIN{a=0;n=0;c='$yc';b='$xcol';yfactor='$yfactor';minx=999999;maxx=-999999;miny=999999;maxy=-999999}
+{n++;a=a+$c*yfactor;if(minx>$b){minx=$b};if(maxx<$b){maxx=$b};if(miny>$c){miny=$c};if(maxy<$c){maxy=$c}}
+END{if(n>0){a=a/n}else{a=0};print a,minx,maxx,miny,maxy}'`
+ ave=`echo $stat | awk '{printf("%5.2f",$1)}'`
+ minx=`echo $stat | awk '{print $2}'`
+ maxx=`echo $stat | awk '{print $3}'`
+ miny=`echo $stat | awk '{print $4}'`
+ maxy=`echo $stat | awk '{print $5}'`
+ posy=`echo $ave $miny $maxy $divy | awk '{print $1+($3-$2)/$4}'`
+ posx=`echo $ave $minx $maxx $divx | awk '{print $3}'`
+#done
+
+
+#Only use one data point for every $interval
+if [ $interval -gt 1 ] ; then
+ cat $temp2 | awk '{iv='$interval';if((NR % iv)==1){print $_}}' > $temp3
+ mv $temp3 $temp2
+fi
+
+#Use zrange to cut heatmap data
+if [ $doheatmap -eq 1 ] && [ $zrange != '0' ] ; then
+ cat $input | awk 'BEGIN{zd="'$zrange'";z='$zcol';n=split(zd,a,":");l=length(a[1]);min=substr(a[1],2,l-1);min=strtonum(min);
+ l=length(a[2]);max=substr(a[2],1,l-1);max=strtonum(max);
+ }{if(NR>'$header'){t="";for(i=1;i<=NF;i++){d=$i;if(i==z&&$z<min){d=min};if(i==z&&$z>max){d=max};t=sprintf("%s %s",t,d)};print t}}' > $temp2
+ ctic=`echo $zrange $ticnum | awk '{split($1,a,":");l=length(a[1]);min=substr(a[1],2,l-1);min=strtonum(min);l=length(a[2]);max=substr(a[2],1,l-1);max=strtonum(max);
+ s=(max-min)/$2; if(s>2){printf("%d",s+1)}else{print s}}'`
+ extra=' set cbrange '$zrange'; set cbtics '$ctic'; '$extra
+#XIncrease plotwidth/height slightly so all cubic are same size, edge is not cut: Not work as label occupy space as well
+# nblocs=`echo $maxx $minx | awk '{printf("%d",$1-$2+1)}'`
+# xplotsize=`echo $xplotsize $nblocs | awk '{i=sprintf("%d",$1/$2);w=i*$2+i;print w}'`
+# yplotsize=`echo $yplotsize $nblocs | awk '{i=sprintf("%d",$1/$2);w=i*$2;print w}'`
+# plotsize='size '$xplotsize','$yplotsize ; doplotsize=1
+#XPlot half more one minx and miny to display full for edge, otherwise edge is cut. Not working
+# minx=`echo $minx | awk '{print $1-1}'`
+# maxx=`echo $maxx | awk '{print $1+1}'` 
+# doxrange=1; xrange='['${minx}':'${maxx}']' 
+# miny=`echo $miny | awk '{print $1-1}'`
+# maxy=`echo $maxy | awk '{print $1+1}'`
+# doyrange=1; yrange='['${miny}':'${maxy}']'
+fi
+
+#Bin plot data preparation
+if [ $dobin -eq 1 ] ; then
+ ra=`cat $input | awk 'BEGIN{t=0;n=0;h='$header';max=-999999;min=999999;c='$ycol'}
+   {if(NR>h){t++;if($c!=""){n++;if($c<min){min=$c};if($c>max){max=$c}}}}
+   END{fold=0;if(min!=0){fold=max/min};print min, max,n,t,fold}'`
+ if [ $usemax -eq 1 ] ; then
+  startbin=`echo $ra | awk '{print $1}'`
+  endbin=`echo $ra | awk '{print $2}'`
+  stepbin=`echo $ra | awk '{a=strtonum($1);b=strtonum($2);print (b-a)/'$bin'}'`
+ fi
+ #echo $ra
+ min=`echo $ra | awk '{print $1}'`
+ max=`echo $ra | awk '{print $2}'`
+ fold=`echo $ra | awk '{print $5}'`
+ valid=`echo $ra | awk '{print $3}'`
+ record=`echo $ra | awk '{print $4}'`
+ bin=1
+ [ "$min" != "$max" ] && bin=`awk 'BEGIN{e='$endbin';s='$startbin';p='$stepbin';bin=(e-s)/p+1;printf("%d",bin)}'`
+ ave=`cat $input | awk 'BEGIN{c='$ycol';n=0;ave=0;h='$header'}{if($c!=""&&NR>h){n++;ave=ave+$c;}}END{if(n>0){av=ave/n}else{av=0};printf("%4.2f",av) }'`
+ dev=`cat $input | awk 'BEGIN{c='$ycol';n=0;ave='$ave';dev=0;h='$header';}{if($c!=""&&NR>h){n++;dev=dev+($c-ave)*($c-ave);}}END{printf("%4.2f",sqrt(dev/(n-1))) }'`
+ cat $input | awk 'BEGIN{bin='$bin';h='$header';stb='$startbin';stbn=strtonum(stb)
+  for(i=1;i<=bin;i++){s[i]=0};o='$outcount';c='$ycol';n=0}
+  {if($c!=""&&NR>h){
+    n++;v=strtonum($c);b=(v-stbn)/'$stepbin'+1;
+    b=int(b)
+    if(b>0&&b<=bin){s[b]++}else{
+     if(b<0&&o!=0){s[1]++}
+     if(b>bin&&o!=0){s[bin]++}
+    }
+  }}
+   END{ for (i=1;i<=bin;i++){
+        printf("%8.2f %7d %5.2f\n", stbn+'$stepbin'*(i-1),s[i],s[i]/n*100)
+      }
+   }' > $temp2  #format="|BinStart|BinCount|BinPercentage(%)|"
+ ycol=3  #=2: Plot bin count =3: Plot bin percentage  
+ datastyle='boxes' #Use boxBar
+ extra=$extra' set style fill transparent solid 0.5  ; set boxwidth '$boxwidth' relative ; ' #box color and width
+ keyposition='off';
+ xcol=1;header=0;doncol=0
+
+ if [ $bin2file != '0' ] ; then   #Add 2nd file on bin-plot
+  shift=0.4 #Shift factor for the 2nd file [0-1], so the two colBar will not overlap
+  cat $bin2file | awk 'BEGIN{bin='$bin';h='$header';stb='$startbin';stbn=strtonum(stb)
+  for(i=1;i<=bin;i++){s[i]=0};o='$outcount';c='$ycol';n=0}
+  {if($c!=""&&NR>h){
+    n++;v=strtonum($c);b=(v-stbn)/'$stepbin'+1;
+    b=int(b)
+    if(b>0&&b<=bin){s[b]++}else{
+     if(b<0&&o!=0){s[1]++}
+     if(b>bin&&o!=0){s[bin]++}
+    }
+  }}
+   END{ for (i=1;i<=bin;i++){
+        printf("%8.2f %7d %5.2f\n", stbn+'$stepbin'*(i-1+'$shift'),s[i],s[i]/n*100)   #2nd file, add ShiftedBin|BinCount|BinPercentage
+      }
+   }' > $temp5
+  paste $temp2 $temp5 > $temp6
+  mv $temp6 $temp2
+  echo "Bin Target Target Shiftbin Ref Ref" > $temp5
+  cat $temp2 >> $temp5
+  input=$temp5 
+  #ycol='3,5'  #=2,4: Plot bin count =3,5: Plot bin percentage 
+  #extra=''   #Only draw lines instead of box/columnBar 
+  #datastyle='lines lw 2'  #Use lines to compare two bins
+  extra=$extra' set style fill transparent solid 0.5  ; set boxwidth '$shift' relative ; ' #box color and width
+  keyposition='center right'
+  dopair=1;pairwidth=3;xcol=1;ycol=3;header=1   #Use dopair to show two plots together. The 2nd plot shifted $shift
+ fi
+ echo "Binned data:"
+ cat $temp2
+
+[ $dopercentage -eq 0 ] && ycol=2
+ylabel="Percentage of Total $record"
+if [ $doylabel -eq 0 ] ; then
+ [ $ycol -eq 2 ] && ylabel="Count of Total $record"
+fi
+[ $ycol == '3' ] && extra=$extra' set ytics 10 font "'$font','$fontsize_tics'" ; '
+[ $binlabel -eq 1 ] && extra=$extra' set label "['$min', '$max'] '$ave'" at graph 0.2, 0.9 center font "${arial},8"; '
+[ $dotitle -eq 0 ] && title="Bin Plot of $input"
+dotitle=1
+fi #dobin
+
+#Add slide-window average line:
+if [ $doslide -eq 1 ] ; then 
+ #datastyle='dots' keyposition='off'   #do not use key for dot
+ slideycol=`cat $input | awk '{if(NR>'$header'){print NF;exit}}'`
+ cp $temp2 $temp
+ for (( i=1 ; i <= $nycol ; i++ )) ; do
+  yc=`echo $ycol | awk '{i='$i';a=split($1,b,",");print b[i]}'`
+  cat $temp | awk 'BEGIN{y='$yc';size='$slidesize';s=0}{s++;a[s]=$y;b[s]=$_}
+   END{
+ s1=sprintf("%d",size/2+0.5)
+ s1=strtonum(s1)
+ s2=s-(size-s1)
+ for(i=1;i<=s;i++){
+  if(i<s1||i>s2){
+   print b[i]
+  }else{
+   ave=0
+   for(k=1;k<=size;k++){
+    ave=ave+a[i-s1+k]
+   }
+   ave=ave/size
+   print b[i],ave
+  }
+ }
+ }' > $temp2
+ cp $temp2 $temp
+ done
+fi #doslide
+
+
+#regenerate data for fence plot: by adding Data Titles as X-axis
+if [ $dofence -eq 1 ] ; then
+ echo "Fence Plot: offset 2D graphics to display in 3D manner"
+ p3d=1; dosurface=1;dopm3d=0;docontour=0; dosurface=1;isosamples='2,2'; keyposition='off'
+ extra=$extra' set ticslevel 0 ;'
+ [ $offaxe -eq 1 ] && extra=$extra'  set xtics 1;  unset xlabel ;'
+ [ $offaxe -eq 2 ] && extra=$extra'  set xtics 2; unset ylabel ;'
+ [ $offaxe -eq 3 ] && extra=$extra'  set xtics 3; unset zlabel ;'
+ extra=$extra' set title offset 0,0,-2 ; '
+ [ $hidden3d -eq 1 ] && hidden3d=0  #if no -hidden3d option, will NOT hidden3d
+fi
+
+#make tics by tics number
+xdelttics=1;ydelttics=1
+if [ $xticsnum -gt 0 ] ; then
+ xdelttics=`echo $minx $maxx $xticsnum | awk '{print ($2-$1)/$3}'`
+ extra=$extra' ; set xtics '$minx','$xdelttics','$maxx' ; '
+fi
+if [ $yticsnum -gt 0 ] ; then
+ ydelttics=`echo $miny $maxy $yticsnum | awk '{print ($2-$1)/$3}'`
+ extra=$extra' ; set ytics '$miny','$ydelttics','$maxy' ; '
+fi
+
+#how many data points
+ndata=`wc -l $temp2 | awk '{print $1}'`
+#Label X-axis by names defined in col
+if [ $labelXbycol -gt 0 ] ; then
+ ndatau=$ndata; [ $xticsnum -gt 0 ] && ndatau=$xticsnum
+ if [ $fontsize_xtics -eq 0 ] ; then
+  fontsize_xtics=16
+  fontsize_xtics=`echo $ndatau $fontsize_xtics | awk '{n='$xplotsize'*'$xticfactor'/$1; 
+   if(n<6){n=6};if(n>$2){n=$2};n=n*'$labelfactor';printf("%d",n)}'`
+ fi
+ tlb=`awk 'BEGIN{max='$maxlength';dd='$xdelttics';n=0;c='$labelXbycol';a='$xcol';o=" set xtics ("}
+  {if(length($c)<=max||max==0){lb=$c}else{lb=substr($c,1,max)} 
+  if(NR==1){o=sprintf("%s\"%s\" %s",o,lb,$a);n++}else{if(NR>dd*n&&NR<=(dd*n+1)){n++;o=sprintf("%s, \"%s\" %s",o,lb,$a)}}}END{printf("%s); ",o)}' $temp2`
+ [ "$histostyle" == "NA" ] && extra=$extra' '$tlb
+ #extra=$extra' '$tlb
+ extra=$extra' set xtics border in scale 0,0 nomirror rotate by '$labelAngle'  offset character 0, 0, 0 autojustify ;' 
+ #extra=$extra' set xtics border in scale 0,0 nomirror rotate by '$labelAngle'  offset character 0, 0, 0;'
+ extra=$extra' set xtics font "'$font','$fontsize_xtics'" ;'
+ [ $fontsize_ytics -ne 0 ] && extra=$extra' set ytics font "'$font','$fontsize_ytics'" ;'
+ #echo haha $extra
+fi
+if [ $labelYbycol -gt 0 ] ; then
+ ndatau=$ndata; [ $yticsnum -gt 0 ] && ndatau=$yticsnum
+ if [ $fontsize_ytics -eq 0 ] ; then
+  fontsize_ytics=16;
+  fontsize_ytics=`echo $ndatau $fontsize_ytics | awk '{n='$yplotsize'*'$yticfactor'/$1; 
+  if(n<6){n=6};if(n>$2){n=$2};n=n*'$labelfactor';printf("%d",n)}'` 
+ fi
+ #tlb=`awk 'BEGIN{c='$labelYbycol';a='$ycol';o=" set ytics ("}{if(NR==1){o=sprintf("%s\"%s\" %s",o,$c,$a)}else{o=sprintf("%s, \"%s\" %s",o,$c,$a)}}END{printf("%s); ",o)}' $temp2`
+ tlb=`awk 'BEGIN{max='$maxlength';dd='$ydelttics';n=0;c='$labelYbycol';a='$ycol';o=" set ytics ("}
+ {if(length($c)<=max||max==0){lb=$c}else{lb=substr($c,1,max)}
+  if(NR==1){o=sprintf("%s\"%s\" %s",o,lb,$a);n++}else{if(NR>dd*n&&NR<=(dd*n+1)){n++;o=sprintf("%s, \"%s\" %s",o,lb,$a)}}}END{printf("%s); ",o)}' $temp2`
+ extra=$extra' '$tlb
+ extra=$extra' set ytics border in scale 0,0 nomirror rotate by 0  offset character 0, 0, 0 autojustify ;'
+ extra=$extra' set ytics font "'$font','$fontsize_ytics'" ;'
+fi
+
+[ "$xlabel" == "none" ] && xlabel=''
+[ "$ylabel" == "none" ] && ylabel=''
+[ "$zlabel" == "none" ] && zlabel=''
+[ "$zlabel" == "Z" ] && zlabel=''
+
+
+
+#3D plot
+if [ $p3d -eq 1 ] ; then
+ plot='splot'  #3D
+else
+ if [ $cview -ne 1 ] ; then
+   xview=0;scale1=1;zview=0  #reset view setting for 2D
+ fi
+fi
+
+#anmiation
+if [ $animate -eq 1 ] ; then
+ [ $animatex -eq 1 ] && xview=0  #rotate only works for 0-360. Must set first=0
+ [ $animatez -eq 1 ] && zview=0 #rotate only works for 0-360. Must set first=0
+fi
+
+if [ $showdata -eq 1 ] ; then
+ echo "==> Data file for plot $temp2 :"
+ cat $temp2
+fi
+
+#Linear fitting
+if [ $dolfit -eq 1 ] ; then
+ rfit='';echo -n > $temp6.ft;echo -n > $temp6.la
+ for (( i=1 ; i <= $nycol ; i++ )) ; do  
+  yc=`echo $ycol | awk '{i='$i';a=split($1,b,",");print b[i]}'`
+  ./linear_regression $sen -noplot -col1 $xcol -col2 $yc $temp2 > $temp
+  grep 'y = ' $temp | tail -1
+  grep 'R2 =' $temp | tail -1
+  awk '{if($1=="y"&&$2=="="){s1=$_};if($1=="R2"&&$2=="="){s2=sprintf("R^{2}=%3.2f",$NF)}}
+   END{sen="";if('$dosen'==1){sen="(Theil–Sen fitting)"};printf("%s  %s %s\n",s1,s2,sen)}' $temp >> $temp6.la
+  awk '{i='$i';if($1=="y"&&$2=="="){s="";for(j=3;j<=NF;j++){s=sprintf("%s %s",s,$j)}
+    printf(" %s notitle w l ls 0 lw 2 lc %d  ,\\\n",s,i);exit}}' $temp >> $temp6.ft
+  [ $i -eq 1 ] && rfit=$rfitting
+ done
+ #cat $temp6.ft ; exit
+fi
+
+#color data point by Strings
+ncolordata=0
+if [ $colordata -gt 0 ] ; then
+ awk 'BEGIN{c='$colordata'}{if(!a[$c]){a[$c]=$c}}END{for(x in a){print a[x]}}' $temp2 | sort -k 1 > $temp6.color
+ [ -s $temp6.color ] && ncolordata=`wc -l ${temp6}.color | awk '{print $1}'`
+ if [ $ncolordata -gt 1 ] ; then
+  echo "Use col $colordata to color $ncolordata kinds of data point"
+  nycol=$ncolordata
+ fi
+fi
+
+#change _ to \\\_ for title to avoid lower-case letter shown
+if [ $nounderline -eq 1 ] ; then
+ #echo $title $xlabel $ylabel $zlabel
+ title=`echo $title | sed 's/\_/\\\_/g'`
+ xlabel=`echo $xlabel | sed 's/\_/\\\_/g'`
+ ylabel=`echo $ylabel | sed 's/\_/\\\_/g'`
+ zlabel=`echo $zlabel | sed 's/\_/\\\_/g'`
+ title=`echo $title | sed 's/\_/\\\_/g'`  #Double-cal to add \\ to make sure bypass _
+ xlabel=`echo $xlabel | sed 's/\_/\\\_/g'`
+ ylabel=`echo $ylabel | sed 's/\_/\\\_/g'`
+ zlabel=`echo $zlabel | sed 's/\_/\\\_/g'`
+ #[ $silence -ne 1 ] && echo "Changed underline as:" $title $xlabel $ylabel $zlabel
+fi
+
+datastyle=$datastyle' '$morestyle
+
+#############################################################################
+#################################### Start for gnuplot code: #############
+############################################################################
+temp2=`basename $temp2`
+cat << eee > $temp
+#!$exe
+
+#see http://cs.ecs.baylor.edu/~donahoo/tools/gnuplot/3Dex.html
+reset
+set terminal $term $plotsize font '$font,$fontsize' # 'enhanced' can produce sub and superscripts
+set   autoscale                        # scale axes automatically
+set title "$title"
+set key samplen 1 spacing .5 font "$arial,10"  #Horizental/Vertical/Font
+set key $keyposition   #legand
+
+set xtics font '$font,$fontsize_tics'  #smaller font 
+set ytics font '$font,$fontsize_tics'  #smaller font 
+set ztics font '$font,$fontsize_tics'  #smaller font 
+#set xdata time
+#set timefmt "%d/%m/%Y %H:%M:%S"
+#set format x "%H:%M"
+set boxwidth $boxwidth
+set ylabel offset 1,0 ;  #offset ylabel to be more close to y-axis
+
+eee
+
+#log scale
+[ $logx -eq 1 ] && echo "set logscale x ;" >> $temp
+[ $logy -eq 1 ] && echo "set logscale y ;" >> $temp
+
+if [ $gradient2 -eq 1 ] ; then
+ echo "set lmargin at screen $lmargin; set rmargin at screen $rmargin;set tmargin at screen $tmargin; set bmargin at screen $bmargin">> $temp #Use fixed margin
+ if [ $hgradient -eq 0 ] ; then  #vertical gradient
+  echo "n=200;dx=($rmargin-$lmargin)/n;set palette defined(0\"${cgradient1}\",n\"${cgradient2}\");set cbrange [0:n];unset colorbox" >> $temp
+  echo "set for [i=1:n] object i rectangle from screen (i-1)*dx+$lmargin,$bmargin to screen i*dx+dx/2+$lmargin,$tmargin fs solid 1.0 noborder fillcolor palette cb i behind" >> $temp
+ else #horizental margin
+  echo "n=200;dx=($tmargin-$bmargin)/n;set palette defined(0\"${cgradient1}\",n\"${cgradient2}\");set cbrange [0:n];unset colorbox" >> $temp
+  echo "set for [i=1:n] object i rectangle from screen $lmargin,(i-1)*dx+$bmargin to screen $rmargin,i*dx+dx/2+$bmargin fs solid 1.0 noborder fillcolor palette cb i behind" >> $temp
+ fi
+fi
+
+[ "$xlabel" != "0" ] && echo "set xlabel \"$xlabel\"" >> $temp
+[ "$ylabel" != "0" ] && echo "set ylabel \"$ylabel\"" >> $temp
+[ "$zlabel" != "" ] && echo "set zlabel \"$zlabel\" rotate by 90 offset 2,0" >> $temp
+if [ "$histostyle" != "NA" ] ; then
+  echo "set style data histogram ; set boxwidth $boxwidth" >> $temp
+  echo "set style histogram $histostyle" >> $temp
+  if [ $Phong -eq 1 ] || [ $Phong2 -eq 1 ] ; then
+   echo "div=1.1; bw=$boxwidth; h=1.0; BW=bw; wd=15; LIMIT=255-wd; white=0" >> $temp  #for -Phong 3D-like bar. wd=10-20 for best 3D-effect
+   if [ $Phong -eq 1 ] ; then
+    echo "red=\"#FF0000\"; green=\"#00FF00\"; blue =\"#0000FF\"; set boxwidth bw" >> $temp
+    echo "color1=\"#FF00FF\"; color2=\"#FFFF00\"; color3 =\"#00FFFF\"; set boxwidth bw" >> $temp
+   else
+    echo "red=\"#080000\"; green=\"#000800\"; blue =\"#000008\"; set boxwidth bw" >> $temp
+    echo "color1=\"#080008\"; color2=\"#080800\"; color3 =\"#000808\"; set boxwidth bw" >> $temp
+   fi
+   echo "set style fill solid;"  >> $temp  #fill histogram bar
+   echo "set lmargin at screen $lmargin; set rmargin at screen $rmargin;set tmargin at screen $tmargin; set bmargin at screen $bmargin">> $temp #Use fixed margin to avoid puffy labels
+   echo "set multiplot"  >> $temp
+  else
+   echo "set style fill solid border -1"  >> $temp  #fill histogram bar 
+  fi
+fi
+[ "$grid" != '0' ] && echo "set  $grid " >> $temp
+[ $xreverse -eq 1 ] && echo "set xrange [] reverse; " >> $temp
+[ $yreverse -eq 1 ] && echo "set yrange [] reverse; " >> $temp
+[ $zreverse -eq 1 ] && echo "set zrange [] reverse; " >> $temp
+isran=`echo $xrange | grep ':' | wc -l | awk '{print $1}'`
+[ $isran -eq 1 ] &&  echo "set xrange $xrange " >> $temp
+[ "$xrange" == "exact" ] &&  echo "set xrange [${minx}:${maxx}] " >> $temp
+isran=`echo $yrange | grep ':' | wc -l | awk '{print $1}'`
+[ $isran -eq 1 ] &&  echo "set yrange $yrange " >> $temp
+[ "$yrange" == "exact" ] &&  echo "set yrange [${miny}:${maxy}] " >> $temp
+isran=`echo $zrange | grep ':' | wc -l | awk '{print $1}'`
+[ $isran -eq 1 ]  && echo "set zrange $zrange " >> $temp
+[ "$zrange" == "exact" ] &&  echo "set zrange [${minz}:${maxz}] " >> $temp
+
+###################### 3D plot
+if [ $p3d -eq 1 ] ; then
+
+[ $dopm3d -eq 1 ] && echo "set pm3d #cool heatmap colored surface or contour"  >> $temp
+[ $dosurface -eq 1 ] && echo "set surface;   #Draw 3D surface" >> $temp
+[ $dosurface -ne 1 ] && echo "unset surface;   #Draw 3D surface" >> $temp
+[ $docontour -eq 1 ] && echo "set contour base; #set contour plot on 'surface' 'base' or 'both'" >>$temp
+[ $dopale -eq 1 ] && echo "set palette gray negative #gray palette for the colouring. The negative reverse order" >>$temp
+[ $hidden3d -ne 0 ] && echo "set hidden3d #remove lines that would be hidden if the surface was not transparent" >>$temp
+
+cat <<ppp >> $temp
+
+#set xyplane at -10   #set bottom plane position at z-axis
+#set xyplance 0.2     #set bottom plane position at 20% relative
+#set ticslevel 0      #the zero of Z-Axis moves to on the XY plane. No gap
+#set hidden3d #remove lines that would be hidden if the surface was not transparent
+
+#set clabel '%8.2f'  #label contours. color legend of z-axis intensity on key right
+#set ytics offset 0,-1
+
+set isosamples $isosamples   #increase 3D surface plot density
+set cntrparam levels $cntrparam  #increase contour plot density
+
+set view $xview, $zview  #rotate 60 degree on X-axis and 30 on z
+
+ppp
+echo $extra >> $temp
+
+if [ $dofence -eq 1 ] ; then
+for (( i=1 ; i<=$nycol ; i++ )) ; do
+ yc=`echo $ycol $i | awk '{a=split($1,b,",");i=$2;print b[i]}'`
+ [ $offaxe -eq 1 ] && dplot=`echo " \"$temp2\" using ($i):$xcol:${yc}  notitle w $datastyle "`
+ [ $offaxe -eq 2 ] && dplot=`echo " \"$temp2\" using $xcol:($i):${yc}  notitle w $datastyle "`
+ [ $offaxe -eq 3 ] && dplot=`echo " \"$temp2\" using $xcol:${yc}:($i)  notitle w $datastyle "`
+ [ $i -eq 1 ] && dplot=$plot' '$dplot
+ dplot=$dplot' ,\'
+ echo $dplot >> $temp6
+done
+
+else #not dofence
+for (( i=1 ; i<=$nycol ; i++ )) ; do
+ yc=`echo $ycol $i | awk '{a=split($1,b,",");i=$2;print b[i]}'`
+ dplot=`echo " \"$temp2\" using $xcol:${yc}:${zcol}  notitle w $datastyle "`
+ [ $i -eq 1 ] && dplot=$plot' '$dplot
+ dplot=$dplot' ,\'
+ echo $dplot >> $temp6
+done
+fi #dofence
+
+fi  #p3d
+
+
+############################ Code for 2D plot
+if [ $p3d -ne 1 ] ; then
+# Set line styles and label for average dashed line
+if [ $doave -eq 1 ] ; then
+for (( i=1 ; i <= $nycol ; i++ )) ; do
+ yc=`echo $ycol | awk '{i='$i';a=split($1,b,",");print b[i]}'`
+ stat=`cat $temp2 | awk 'BEGIN{a=0;n=0;c='$yc';b='$xcol';yfactor='$yfactor';minx=999999;maxx=-999999;miny=999999;maxy=-999999}
+{n++;a=a+$c*yfactor;if(minx>$b){minx=$b};if(maxx<$b){maxx=$b};if(miny>$c){miny=$c};if(maxy<$c){maxy=$c}}
+END{if(n>0){a=a/n}else{a=0};print a,minx,maxx,miny,maxy}'`
+ ave=`echo $stat | awk '{printf("%5.2f",$1)}'`
+ minx=`echo $stat | awk '{print $2}'`
+ maxx=`echo $stat | awk '{print $3}'`
+ miny=`echo $stat | awk '{print $4}'`
+ maxy=`echo $stat | awk '{print $5}'`
+ posy=`echo $ave $miny $maxy $divy | awk '{print $1+($3-$2)/$4}'`
+ #posx=`echo $ave $minx $maxx $divx | awk '{print $3-($3-$2)/$4}'`
+ posx=`echo $ave $minx $maxx $divx | awk '{print $3}'`
+ echo "#$i:Col $yc  Average=$ave $stat" 
+ i1=`expr $i + 1`
+   #set dashed line style as line $i/l$i for average line : different colors. lc=1: red,green,blue,7:black http://www2.yukawa.kyoto-u.ac.jp/~ohnishi/Lib/gnuplot.html
+ #[ $i -eq 1 ] && echo "set xrange [$minx:$maxx]"  >> $temp
+ if [ $default -eq 3 ] ; then
+  ht=`head -1 $input | awk '{i='$i'+1;print $i}'`
+  echo "set style line $i lt 6 lw 4 pt 1 lc $i ;" >> $temp
+  echo "set label \"$ave $ht\" at  $posx,$posy textcolor lt $i font \"$font,9\" "  >> $temp
+ else
+  echo "set style line $i lt 6 lw 4 pt 1 lc $i1 ;" >> $temp
+  echo "set label \"$ave\" at  $posx,$posy textcolor lt $i font \"${arial},9\" "  >> $temp
+ fi
+done
+fi #doave
+
+#Linear fitting
+if [ $dolfit -eq 1 ] ; then
+for (( i=1 ; i <= $nycol ; i++ )) ; do
+ #yc=`echo $ycol | awk '{i='$i';a=split($1,b,",");print b[i]}'`
+ #echo "f$i(x) = a$i*x+b$i; a$i = 1; b$i = 0; fit f$i(x) '$temp2' using $xcol:$yc via a$i, b$i; " >> $temp
+ #echo "set label \"a$i=$ave\" at  $posx,$posy"  >> $temp
+ rfit=`head -$i $temp6.la | tail -1`
+ yla=`awk 'BEGIN{print 0.97-('$i'-1)*0.03 }'`
+ echo "set label \"$rfit\" at graph 0.05, $yla textcolor lt  $i font \"${arial},8\" "  >> $temp
+done
+fi #dolfit -eq 1
+if [ $dosmooth -eq 1 ] ; then
+ smooth=' smooth '$smooth
+else
+ smooth=''
+fi
+
+#Label each data point with string in data col: to label numberic value, will use below sprintf("%2.1f") code
+if [ $labeldata -eq 1 ] ; then
+ if [ $labeldatadig -eq -1 ] ; then
+  nd=`wc -l $temp2 | awk '{print $1}'`
+  [ "$labeldataoffset"=='char 0,0' ] && labeldataoffset='char 0,0.5'  #force to make 0.5 char offset in y
+  for (( j=1; j<=$nd; j++)) ; do
+   lnum=`expr 5555 + $j`
+   llin=`head -$j $temp2 | tail -1`
+   lx=`echo $llin | awk '{a="'$labeldatax'";print $a}'`
+   ly=`echo $llin | awk '{a="'$labeldatay'";print $a}'`
+   ll=`echo $llin | awk '{a="'$labeldataz'";print $a}'`
+   dplot=`echo "set label \"$ll\" at $lx,$ly center font ',$labeldatafont' tc lt $labeldatacolor offset $labeldataoffset"`
+   #dplot=$dplot' ,\'
+   echo $dplot >> $temp
+  done
+ fi #[ $labeldatadig -ne -1 ]
+fi #[ $labeldata -eq 1 ]
+#2nd set of labeling
+if [ $labeldata2 -eq 1 ] ; then
+ if [ $labeldatadig2 -eq -1 ] ; then
+  nd=`wc -l $temp2 | awk '{print $1}'`
+  [ "$labeldataoffset2"=='char 0,0' ] && labeldataoffset2='char 0,1'  #force to make 1 char offset in y
+  for (( j=1; j<=$nd; j++)) ; do
+   lnum=`expr 5555 + $j`
+   llin=`head -$j $temp2 | tail -1`
+   lx=`echo $llin | awk '{a="'$labeldatax2'";print $a}'`
+   ly=`echo $llin | awk '{a="'$labeldatay2'";print $a}'`
+   ll=`echo $llin | awk '{a="'$labeldataz2'";print $a}'`
+   dplot=`echo "set label \"$ll\" at $lx,$ly center font ',$labeldatafont2' tc lt $labeldatacolor2 offset $labeldataoffset2"`
+   #dplot=$dplot' ,\'
+   echo $dplot >> $temp
+  done
+ fi #[ $labeldatadig -ne -1 ]
+fi #[ $labeldata -eq 1 ]
+
+
+
+echo $extra >> $temp
+echo " " >> $temp
+
+###################### Plot data file
+#Basic plot
+echo -n > $temp6
+if [ $dopair -eq 1 ] ; then
+ nycol=`head -1 $temp2 | wc -w | awk '{s=$1;w='$pairwidth';printf("%d",s/w)}'`
+ echo "Pair groups = $nycol"
+ ycolo=$ycol; xcolo=$xcol
+fi
+for (( i=1 ; i <= $nycol ; i++ )) ; do   #loop for each col of data
+ extrp=''
+ yc=`echo $ycol | awk '{i='$i';a=split($1,b,",");print b[i]}'`
+ if [ $dopair -eq 1 ] ; then
+  xcol=`echo $i $xcolo $pairwidth | awk '{print ($1-1)*$3+$2}'`
+  yc=`echo $i $ycolo $pairwidth | awk '{print ($1-1)*$3+$2}'`
+ fi
+ dt=$i
+ [ $dodatatitle -ne 1 ] &&  dt='col.'$yc  #default legend title
+ if [ $header -ge 1 ] && [ $ncolordata -le 0 ] ; then
+  [ $nounderline -eq 1 ] && dt=`head -1 $input | awk '{i='$yc';print $i}' | sed 's/\_/\\\_/g'`  #Use header as title
+  [ $nounderline -ne 1 ] && dt=`head -1 $input | awk '{i='$yc';print $i}'` #Use header as title
+ fi
+ if [ $i -eq $nycol ] && [ $dodatatitle -eq 1 ] ; then
+  dt=$datatitle
+ fi
+ if [ $ncolordata -gt 0 ] ; then
+  dt=`head -$i $temp6.color | tail -1`
+  ycol=$ycolini
+ fi
+ colhere=$xcol':'${yc} 
+ titlehere=' title "'$dt'" '
+ datastylehere=' w '$datastyle
+ if [ "$histostyle" != "NA" ] ; then
+  datastylehere=''; colhere=$yc
+  [ $labelXbycol -gt 0 ] && xcol=$labelXbycol
+  [ $i -eq 1 ] && colhere=$yc':xticlabels('$xcol')'
+  if [ $Phong -eq 1 ] || [ $Phong2 -eq 1 ] ; then
+   phcolor=`echo $i | awk '{s="color2";t=$1 % 6;
+    if(t==1){s="red"};if(t==2){s="green"};if(t==3){s="blue"};
+    if(t==4){s="color1"};if(t==5){s="color3"};
+    print s}'`  #Only 3 RGB colors
+   colherePho=$colhere' lc rgb '$phcolor
+   if [ $gradient2 -ne 1 ] || [ $i -ne 1 ] ; then
+    colhere=$colhere' lc rgb '$phcolor
+   fi
+  fi 
+ fi
+ [ $doerrorbar -ge 1 ] && datastylehere=$datastylehere' '$errorbartype
+ [ "$datastyle" == "0" ] && datastylehere=''
+ [ "$datastyle" == "NA" ] && datastylehere=''
+ if [ $doheatmap -eq 1 ] || [ $dozcol -eq 1 ] ; then
+  [ $doheatmap -eq 1 ] && titlehere=' notitle '
+  colhere=$colhere':'$zcol
+ fi
+ if [ $colorcol -gt 0 ] ; then
+  titlehere=' notitle '
+  colhere=$colhere':'$colorcol
+ fi
+ [ $doerrorbar -eq 1 ] && colhere=$colhere':'$zcol 
+ if [ $gradient2 -eq 1 ] && [ $i -eq 1 ] ; then
+  datastylehere00=$datastylehere; titlehere00=$titlehere;
+  datastylehere=$datastylehere' lc palette cb 0 '
+  if [ "$histostyle" == "NA" ]  ; then
+   titlehere='notitle'  #avoid showing double-key for first data
+   extrp=`echo ", \"$temp2\" using ${colhere} ${titlehere00} ${datastylehere00} lc rgb \"red\" ${extrp}"`  #Note: Key will double for i=1
+  else
+   if [ $Phong -eq 1 ] || [ $Phong2 -eq 1 ] ; then
+    [ $i -ne $nycol ] && echo -n "plot \"$temp2\" using ${colherePho} ${titlehere} ${datastylehere00},  " > $temp6.pho2
+    [ $i -eq $nycol ] && echo -n "plot \"$temp2\" using ${colherePho} ${titlehere} ${datastylehere00} " > $temp6.pho2
+   fi
+  fi
+ else
+  if [ $Phong -eq 1 ] || [ $Phong2 -eq 1 ] ; then
+   if [ $i -eq $nycol ] ; then
+    echo -n " \"$temp2\" using ${colhere} ${titlehere} ${datastylehere00}" >> $temp6.pho2
+   else
+    echo -n " \"$temp2\" using ${colhere} ${titlehere} ${datastylehere00}, " >> $temp6.pho2
+   fi
+  fi
+ fi
+ if [ $xfactor != '1' ] || [ $yfactor != '1' ] ; then  #scale X/Y axis?
+  dplot=`awk -v dt="$dt" -v ds="$datastyle" 'BEGIN{file="'$temp2'";x='$xcol';y='$yc';xf='$xfactor';yf='$yfactor'; 
+  printf(" \"%s\" using (%f*$%d):(%f*$%d) title \"%s\" w %s",file,xf,x,yf,y,dt,ds)}'`
+ else #plot "A.dat" using 1:2:4  title "A" w pt 
+  dplot=`echo " \"$temp2\" using ${colhere} ${titlehere} ${datastylehere} ${extrp}"`
+  #[ $doerrorbar -eq 2 ] && dplot=`echo "  \"$temp2\" using $xcol:${yc} with lines, \"$temp2\" using $xcol:${yc}:$zcol title \"$dt\" w $datastyle"`
+  [ $doerrorbar -eq 2 ] && dplot=`echo "  \"$temp2\" using $xcol:${yc} with lines, \"$temp2\" using $xcol:${yc}:$zcol title \"$dt\" $datastylehere"`
+  if [ $ncolordata -gt 0 ] ; then   #plot different color of data point based on col ${colordata}
+   #plot "< awk '{if($3 == \"red\") print}' Data.csv" u 1:2 t "red" w p pt 2, \
+   #  "< awk '{if($3 == \"green\") print}' Data.csv" u 1:2 t "green" w p pt 2, \
+   dplot='"< awk '"'"'{if($'$colordata' == \"'$dt'\") print}'"' "$temp2'" using '$xcol':'${ycolini}' title "'$dt'" w '$datastyle
+   #[ $doerrorbar -eq 1 ] && dplot='"< awk '"'"'{if($'$colordata' == \"'$dt'\") print}'"' "$temp2'" using '$xcol':'${ycolini}':'$zcol' title "'$dt'" w '$datastyle
+   [ $doerrorbar -eq 1 ] && dplot='"< awk '"'"'{if($'$colordata' == \"'$dt'\") print}'"' "$temp2'" using '$xcol':'${ycolini}':'$zcol' title "'$dt'" '$datastylehere
+
+   #if [ $doerrorbar -eq 2 ] && [ $i -eq 1 ] ; then
+   # a=`echo " \"$temp2\" using $xcol:${yc} with lines lw 2"` 
+   # dplot=$dplot', '$a
+   #fi
+  fi
+ fi
+ if [ $i -eq 1 ] ; then
+  #before extra plot commands?
+  if [ "$extraplotbefore" != "0" ] ; then
+   dplot=$extraplotbefore', '$dplot 
+  fi
+  dplot=$plot' '$dplot
+ fi
+ dplot=$dplot' ,\'
+ echo $dplot >> $temp6
+ if [ $dosmooth -eq 1 ] ; then
+  echo '"" using '${colhere}' '$smooth' title "smooth" ,\' >> $temp6
+ fi
+
+ if [ $doslide -eq 1 ] ; then
+  yc2=`expr $slideycol + $i`
+  dplot=`echo "\"$temp2\" using $xcol:${yc2} notitle w l ls 1 lw 1 lc $i"`
+  dplot=$dplot' ,\'
+  echo $dplot >> $temp6
+ fi
+ #echo "tatata : " $dplot
+ #cat $temp6
+done
+
+#label each data point with numeric value:
+# See https://stackoverflow.com/questions/23177716/in-gnuplot-how-to-label-each-point-in-the-plot-with-its-coordinates
+#Use the labels plotting style for this. That requires three using specifiers: x-value, y-value and a string which is placed at the given coordinates.
+# So the easiest command would be:
+#set offset 1,1,1,1
+#plot 'abc.dat' using 1:2:(sprintf("(%d, %d)", $1, $2)) with labels point  pt 7 offset char 1,1 notitle
+#Cannot label string by %s : http://gnuplot.sourceforge.net/docs_4.2/node184.html. Use above label code to do so
+if [ $labeldata -eq 1 ] ; then
+ labeldatadigs="%1.0f"
+ labeldatazdis=`echo '$'$labeldataz `
+ #[ $labeldatadig -eq -1 ] && labeldatadigs="%s"   #Cannot label string by %s : http://gnuplot.sourceforge.net/docs_4.2/node184.html. Use above codes to do so
+ [ $labeldatadig -eq 0 ] && labeldatadigs="%1.0f"
+ [ $labeldatadig -eq 1 ] && labeldatadigs="%2.1f"
+ [ $labeldatadig -eq 2 ] && labeldatadigs="%3.2f"
+ [ $labeldatadig -eq 3 ] && labeldatadigs="%4.3f"
+ #To control font size, use font ',14' 
+ if [ $labeldatadig -ne -1 ] ; then
+  if [ $labeldatacode -eq 0 ] ; then  #can exclude some data
+   dplot=`echo "\"$temp2\" using $labeldatax:$labeldatay:($labeldatazdis!=$labeldataexcld ? sprintf(\"$labeldatadigs\", $labeldatazdis) : sprintf(\"\")) with labels point  pt 0 font ',$labeldatafont' tc lt $labeldatacolor offset $labeldataoffset notitle"`
+   echo " If plot error shown on $labeldatazdis!=$labeldataexcld ? sprintf() : Try use -labeldatacode to avoid this error"
+  else
+   #working, but cannot exlcude pad value display: but has to use this in ./cluster_Pickmutation
+   echo " If padding also labeled, try not use -labeldatacode, but use -labeldataexcld padding value"
+   dplot=`echo "\"$temp2\" using $labeldatax:$labeldatay:(sprintf(\"$labeldatadigs\", $labeldatazdis)) with labels point  pt 0 font ',$labeldatafont' offset $labeldataoffset notitle"`
+  fi
+  dplot=$dplot' ,\'
+  echo $dplot >> $temp6 
+  echo " If want to label string, must use -labeldatadig -1" 
+ fi #[ $labeldatadig -ne -1 ]
+fi #labeldata -eq 1
+#2nd set of label
+if [ $labeldata2 -eq 1 ] ; then
+ labeldatadigs2="%1.0f"
+ labeldatazdis2=`echo '$'$labeldataz2 `
+ [ $labeldatadig2 -eq 0 ] && labeldatadigs2="%1.0f"
+ [ $labeldatadig2 -eq 1 ] && labeldatadigs2="%2.1f"
+ [ $labeldatadig2 -eq 2 ] && labeldatadigs2="%3.2f"
+ [ $labeldatadig2 -eq 3 ] && labeldatadigs2="%4.3f"
+ #To control font size, use font ',14' 
+ if [ $labeldatadig2 -ne -1 ] ; then
+  if [ $labeldatacode2 -eq 0 ] ; then  #can exclude some data
+   dplot=`echo "\"$temp2\" using $labeldatax2:$labeldatay2:($labeldatazdis2!=$labeldataexcld2 ? sprintf(\"$labeldatadigs2\", $labeldatazdis2) : sprintf(\"\")) with labels point  pt 0 font ',$labeldatafont2' tc lt $labeldatacolor2 offset $labeldataoffset2 notitle"`
+   echo " If plot error shown on $labeldatazdis2!=$labeldataexcld2 ? sprintf() : Try use -labeldatacode2 to avoid this error"
+  else
+   #working, but cannot exlcude pad value display: but has to use this in ./cluster_Pickmutation
+   echo " If padding also labeled, try not use -labeldatacode2, but use -labeldataexcld2 padding value"
+   dplot=`echo "\"$temp2\" using $labeldatax2:$labeldatay2:(sprintf(\"$labeldatadigs2\", $labeldatazdis2)) with labels point  pt 0 font ',$labeldatafont2' offset $labeldataoffset2 notitle"`
+  fi
+  dplot=$dplot' ,\'
+  echo $dplot >> $temp6 
+  echo " If want to label string, must use -labeldatadig2 -1" 
+ fi #[ $labeldatadig2 -ne -1 ]
+fi #labeldata2 -eq 1
+
+
+# Plot average dashed line
+if [ $showave -eq 1 ] && [ $colordata -le 0 ]; then
+for (( i=1 ; i <= $nycol ; i++ )) ; do
+ yc=`echo $ycol | awk '{i='$i';a=split($1,b,",");print b[i]}'`
+ #calculate/show average value/line
+  ave=`cat $temp2 | awk 'BEGIN{a=0;n=0;c='$yc';yfactor='$yfactor'}{n++;a=a+$c*yfactor}END{if(n>0){print a/n}else{print 0}}'`
+  #set dashed line style as line $i/l$i for average line : different colors. lc=1: red,green,blue,7:black http://www2.yukawa.kyoto-u.ac.jp/~ohnishi/Lib/gnuplot.html
+  i1=`expr $i + 1`
+  dplot=`echo "$ave w l ls $i1 lw 1 "`  #ls: line style  
+  dplot=$dplot' ,\'
+ echo $dplot >> $temp6 
+done
+fi #$showave -eq 1
+#cat $temp6 ;exit
+
+#Linear fitting
+if [ $dolfit -eq 1 ] ; then
+ cat $temp6.ft >> $temp6
+fi #dolfit -eq 1
+
+#mark start and end data point with points
+if [ $markends -eq 1 ] ; then
+ head -1 $temp2 > $temp6.s1
+ tail -1 $temp2 > $temp6.s2
+ dplot=`echo "  \"$temp6.s1\" using $xcol:${ycol} notitle w points pt 8 ps 3 lc 1"`
+ dplot=$dplot' ,\'
+ echo $dplot >> $temp6
+ dplot=`echo "  \"$temp6.s2\" using $xcol:${ycol} notitle w points pt 8 ps 3 lc 2"`
+ dplot=$dplot' ,\'
+ echo $dplot >> $temp6
+ #echo "hahah";cat $temp6.s1 ; cat $temp6.s2;echo "hahah";
+fi
+
+fi #$p3d -ne 1
+
+#################### Final step, a must to remove last ,\
+#Remove ,\ in last line
+nn=`wc -l $temp6 | awk '{print $1}'`
+cat $temp6 | awk '{d=1;
+ if(NR=='$nn'&&$NF==",\\"){
+  s=$1;d=0;
+  for(i=2;i<NF;i++){
+   k=$i;s=sprintf("%s %s",s,k)
+  }
+  print s
+ }
+ if(d==1){print $_}
+}' > $temp3
+mv $temp3 $temp6
+
+if [ $dopicture -eq 1 ] ; then
+ echo "#!$exe" > $temp
+ echo "set terminal $term $plotsize font '$font,$fontsize' # 'enhanced' can produce sub and superscripts" >> $temp
+ echo "unset title; unset key; unset xtics; unset ytics; unset ztics ; unset xlabel; unset ylabel; unset zlabel" >> $temp
+ echo $extra >> $temp
+ echo "plot \"$input\" binary filetype=$ptype with rgbimage" >> $temp
+fi
+
+if [ $labelcontour -eq 1 ] ; then
+ echo "set table \"${temp6}.dat\"" >> $temp
+fi
+
+################### Animation? 
+didextrap=0
+if [ $animate -ne 1 ] ; then  #not Animation
+ if [ $dooutplot -ne 1 ]  ; then  
+  if [ $dopicture -ne 1 ] ; then
+   cat $temp6 >> $temp
+  fi
+ else
+  echo $outplot >> $temp  #User defined plot commands
+ fi
+else #animate of rotation X/Y/Z by setting different view. There is jitter at ending. Do not know why
+ #cat $temp6 >> $temp  #Turn on this to allow first picture with X/Y/Z shown
+ #Clean graph to prepare for animation:
+ if [ $dopicture -ne 1 ] ; then  #rotation animation
+  if [ $dodata -eq 1 ] ; then
+   echo $extra >> $temp
+   npdata=`wc -l $temp2 | awk '{print $1}'`
+   medim=`basename ${temp6}.pts`
+   if [ $npdata -le $nframe ] ; then
+    cp $temp2 $medim
+   else
+    awk 'BEGIN{p='$npdata';f='$nframe';s=p/f;n=0}{if(NR>=n*s){print $_;n++}}' $temp2 > $medim   #sample out nframe data point for animation
+   fi
+   aaa=`echo "plot \"$medim\" u $xcol:$ycol every ::1::1 w points pt 6"`   #plot head points
+   if [ "$extraplot" != "0" ] ; then
+    echo "$aaa , $extraplot" >> $temp
+    didextrap=1
+   else
+    echo $aaa >> $temp
+   fi 
+   echo "nframe=$nframe ; iframe=1 ; load \"$temp5\" " >> $temp
+   echo "iframe=iframe+1; " > $temp5
+   aaa=`echo "replot \"$medim\" u $xcol:$ycol every ::iframe::iframe w points pt 6"`  #replot head points. replot to avoid animation flickering
+   if [ $dataevery != "::iframe::" ] ; then
+    if [ $dozcol -ne 1 ] ; then
+     echo " $aaa, \"$medim\" u $xcol:$ycol every ${dataevery}iframe w lines lc 2" >> $temp5  #Draw line
+    else
+     echo " $aaa, \"$medim\" u $xcol:$ycol:$zcol every ${dataevery}iframe w linespoints pt 7 palette" >> $temp5  #Draw line with zcol as color
+    fi 
+   else
+    echo $aaa >> $temp5
+   fi
+   #echo "pause 0.01" >> $temp5
+   echo "if (iframe<nframe) reread" >> $temp5
+  else  # rotation animation
+   echo "unset title; unset key; unset xtics; unset ytics; unset ztics ; unset xlabel; unset ylabel; unset zlabel" >> $temp 
+   echo " set angles degrees;" >> $temp
+   echo $extra >> $temp
+   echo "nframe=$nframe ; iframe=-1 ; set view $xview, $zview ; load \"$temp5\"" >> $temp  #load: loop call for code insdie $temp5
+   #generate loop/load file for animation:
+   cat $temp6 > $temp5  #plot inside loop file
+   echo "iframe=iframe+1; " >> $temp5  #frame increment
+   echo "dt=360/nframe*iframe; xv=($xview+dt*$animatex)%360; "  >> $temp5  #view changing
+   echo " zv=($zview+dt*$animatez)%360;" >> $temp5  #view changing
+   echo "set view xv, zv ;" >> $temp5   #new view
+   echo "if (iframe<=nframe) reread" >> $temp5  #loop until last frame by reread
+  fi
+  [ $silence -ne 1 ] && cat $temp5
+ else #picture animation slide show
+  npic=`wc -l $input | awk '{print $1}'`
+  [ $npic -gt $nframe ] && nframe=$npic
+  echo "#!$exe" > $temp
+  echo "set terminal $term $plotsize font '$font,$fontsize' # 'enhanced' can produce sub and superscripts" >> $temp
+  echo "unset key; unset xtics; unset ytics; unset ztics ; unset xlabel; unset ylabel; unset zlabel" >> $temp
+  echo $extra >> $temp
+  preii=-1
+  for (( i=1;i<=$nframe;i++ )) ; do
+   ii=`echo $i $nframe $npic | awk '{s=int($1*$3/$2+0.999);if(s<1){s=1};if(s>$3){s=$3};print s}'`
+   pic=`head -$ii $input | tail -1 | awk '{print $1}'`
+   tit=`head -$ii $input | tail -1 | awk '{print $2}'`
+   if [ $preii -ne $ii ] ; then
+    echo " set title \"$tit\" ; plot  \"$pic\" binary filetype=$ptype with rgbimage" >> $temp
+    #echo "pause 0.01" >> $temp
+    preii=$ii
+   else
+    echo " replot " >> $temp
+   fi
+  done
+ fi
+fi #animate
+
+if [ $labelcontour -eq 1 ] ; then
+#Generate .sh to label contour modified from http://www.phyast.pitt.edu/~zov1/gnuplot/html/contour.html
+#Contour density/step is controlled by e.g. set cntrparam level incremental 0, 0.5,4  one contour line per 0.5 step from 0-4
+#Contour label size and density is controlled by $miniContourLength $clabelfontsize
+cat << sshhh > $temp6.sh
+#!/bin/bash
+#ARG2 d=0: contour label   d=1: contour plot data
+#ARG3 len [10] : contour length > len to label it to avoid small contours to be labeled
+#ARG4 font: label fontsize [10]
+gawk -v d=\$2 -v len=\$3 -v font=\$4 'function abs(x) { return (x>=0?x:-x) }
+ {
+  if(pre==1&&NF==3){s++}
+  if(pre==1&&NF==3&&s>len){a[i]=\$1; b[i]=\$2; c[i]=\$3;pre=0}
+  if(NF==0){if(s>len){i++};pre=1;s=0}
+  r[i]=0  #no rotation of label
+  if(d==1&&substr(\$1,1,1)!="#"){print \$0}
+  nr++
+ }
+END {if(d==0){
+ for(j=1;j<=i;j++)
+  printf "set label %d \\"%g\\" at %g, %g centre front font \\"Vera,%d\\" rotate by %d\\n", j, c[j], a[j], b[j], font,r[j]
+ }
+}' \$1
+sshhh
+chmod +x $temp6.sh
+
+cat << ccon >> $temp
+ unset table;
+ set cont base ; unset surf
+ #set cntrparam level incremental 0, 0.5,4
+ set table "${temp6}.dat2"   #output splot data into table
+ splot "${temp2}"
+ unset table; unset key; 
+ load '<./${temp6}.sh ${temp6}.dat2 0 $miniContourLength $clabelfontsize'
+ plot "${temp2}" w ima, '<./${temp6}.sh ${temp6}.dat2 1 $miniContourLength $clabelfontsize' w l lt -1 lw 1.5
+ccon
+fi  #labelcontour
+
+#Add Phong 3D-like histogram bar: http://www.phyast.pitt.edu/~zov1/gnuplot/html/histogram.html
+if [ $Phong -eq 1 ] || [ $Phong2 -eq 1 ] ; then
+ #unset grid here to avoid grid on top of graph. unset label/tics to avoid puffy label due to multiply plots
+ echo "unset border;unset xlabel;unset ylabel;unset xtics;unset title;unset ytics;unset grid;unset key;call '${temp6}.phong';unset multiplot" >> $temp
+ echo "a=cos(pi*white/LIMIT/2.0);bw=BW*a; set boxwidth bw;white=white+wd;" > ${temp6}.phong  #Must pi* first, since white/LIMIT return int
+ if [ $Phong -eq 1 ] ; then
+  echo "colorsh=LIMIT*(1-a)*(1-a)*(1-a); colorsh2=255" >> ${temp6}.phong
+ else
+  echo "colorsh=128+white/2; colorsh2=white" >> ${temp6}.phong
+ fi
+ echo "red = sprintf(\"#%02X%02X%02X\", colorsh2, colorsh,colorsh)" >> ${temp6}.phong
+ echo "green = sprintf(\"#%02X%02X%02X\", colorsh, colorsh2, colorsh)" >> ${temp6}.phong
+ echo "blue = sprintf(\"#%02X%02X%02X\", colorsh, colorsh, colorsh2)" >> ${temp6}.phong
+ echo "color1 = sprintf(\"#%02X%02X%02X\", colorsh2, colorsh, colorsh2)" >> ${temp6}.phong
+ echo "color2 = sprintf(\"#%02X%02X%02X\", colorsh2, colorsh2, colorsh)" >> ${temp6}.phong
+ echo "color3 = sprintf(\"#%02X%02X%02X\", colorsh, colorsh2, colorsh2)" >> ${temp6}.phong
+ if [ $gradient2 -ne 1 ] ; then
+  echo "replot" >> ${temp6}.phong
+ else
+  cat $temp6.pho2 >> ${temp6}.phong
+  echo "" >> ${temp6}.phong
+ fi
+ echo "if(white<LIMIT) reread" >> ${temp6}.phong
+ [ $silence -ne 1 ] && cat ${temp6}.phong
+fi
+
+#extra plot commands to append current plot?
+if [ "$extraplot" != "0" ] && [ $didextrap -ne 1 ] ; then
+ awk -v extrap="$extraplot" '{if(NR==1){pre=$_};if(NR>1){print pre;pre=$_}}END{printf("%s,%s\n",pre,extrap)}' $temp > $temp6.po
+ mv $temp6.po $temp
+fi
+#extra new plot commands
+if [ "$extraplotcomd" != "0" ] ; then
+ echo $extraplotcomd >> $temp
+fi
+
+#make it executable
+chmod +x $temp
+
+#make sure output name has same extension as $termo
+output=`echo $output | awk '{p="'$termo'";a=split($1,b,".");if(b[a]==p){print $1}else{
+ d="";for(i=1;i<a;i++){d=sprintf("%s.%s",d,b[i])};printf("%s.%s",d,p)}}'`
+
+#Generate plot file
+crd=`pwd`
+workdir=`echo $crd | sed 's/\/hongzhili//' | sed 's/\/flower_data//' | sed 's/\/isi-flower//' | awk '{print substr($1,2,length($1)-1)}'`
+#workstationdir=$workstationdir'/'$workdir'/'
+
+#cp $temp k  #gunoplot file
+$temp > $output
+
+[ ! -s $output ] && echo "WARNing @$0 $oldline: Not gnuplot $output generated" 1>&2
+
+[ $silence -ne 1 ] && cat $temp
+if [ $doout2 -eq 1 ] ; then
+ #cp $temp $output2
+ sed "s/${temp2}/${input}/g"  $temp > $output2
+ echo "=> Gnuplot file is saved in $output2"
+fi
+echo "=> Output graphics is $output"
+
+if [ $watermark == "large" ] || [ $watermark == "small" ] ; then
+ ./watermark -$watermark $output > $temp4
+ output_watermark=`grep 'Add WATermark' $temp4 | awk '{print $NF}'` 
+ echo "  Output graphics with watermark saved in $output_watermark"
+else
+ echo " ** To add watermark, use -watermark large/small"
+fi
+
+#display plot file
+if [ $display -eq 1 ] ; then
+ nohup display $output & 
+ sleep 1  #Must sleep 1 when output is temp file to be deleted
+fi
+
+#cp ${temp6}.dat2 i
+
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6*; exit
+
