@@ -3,12 +3,18 @@
     src: url('../fonts/Recursive-VariableFont_CASL\,CRSV\,MONO\,slnt\,wght.ttf') format('truetype');
 }
 
+@import './defaults.scss';
+
+* {
+    transition: 0.5s;
+}
+
 html {
     font-size: 16px;
 }
 
 body {
-    margin: 3vh 0 0 0;
+    margin: 0;
 }
 
 .App {
@@ -19,7 +25,6 @@ body {
 }
 
 .Header {
-    font-size: 2rem;
     text-align: center;
 
     h1 {
@@ -27,12 +32,77 @@ body {
     }
 }
 
-
 .BlastRequest {
     display: flex;
     align-items: center;
     flex-direction: column;
-    justify-content: space-between;
     margin-top: 5vh;
-    height: 50vh;
+    min-height: 90vh;
+    padding: 3vw;
+    box-sizing: border-box;
+    border: 0.25rem solid black;
+    border-radius: 1vw;
+
+    &:hover {
+        border-color: $primary;
+
+        & > .Header {
+            color: $primary;
+        }
+    }
+
+    .Header {
+        margin-bottom: 5vh;
+    }
+
+    .inputField {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 5vh;
+        padding: 2vw;
+        border: 3px solid black;
+        border-radius: 0.5vw;
+        width: 35vw;
+
+        &:hover {
+            border-color: $primary;
+            
+            & h1 {
+                color: $primary;
+            }
+        }
+
+        .rowInput {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            margin-bottom: 5vh;
+            padding-left: 2vw;
+
+            .MuiInputBase-root {
+                margin-right: 2vw;
+            }
+    
+            .MuiButtonBase-root {
+                margin-right: 2vw;
+                text-transform: none;
+            }
+        }
+
+        .MuiTextField-root {
+            width: 90%;
+        }
+    }
+
+    .sendButton {
+        width: 10vw;
+        font-size: 1.5rem;
+        text-transform: none;
+        margin-top: auto;
+    }
+}
+
+.MuiButtonBase-root {
+    text-transform: none;
 }

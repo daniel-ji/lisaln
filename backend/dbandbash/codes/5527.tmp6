@@ -1,6 +1,0 @@
-The Uniprot data used is ./uniprot_sprot_202001.dat. To download the newest version, run: ./UniProt_get -download 1
-Fast version: find IDs, shortname, fullname or fasta for human protein in fast version from ./human_uniprot.xls
-=> Matched human proteins for ARI1A :
-Rank	ID	Gene	UniprotID	Refseq	ENSG	HGNC	Length	Isoforms	PDBs	LongPDBs	Names	UniprotURL	FullName
-1017	ARI1A_HUMAN	ARID1A	Q9HBJ5	NP_006006.3	ENSG00000117713	11110	2285	2	1	1	ARI1A_HUMAN|ARID domain-containing protein 1A|BAF250|BAF250A|hOSA1	https://www.uniprot.org/uniprot/Q9HBJ5	AT-rich interactive domain-containing protein 1A
- Download  proteins fasta saved as 5527.tmp.fasta.txt
