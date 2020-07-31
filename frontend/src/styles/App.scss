@@ -1,0 +1,38 @@
+@font-face {
+    font-family: 'Recursive';
+    src: url('../fonts/Recursive-VariableFont_CASL\,CRSV\,MONO\,slnt\,wght.ttf') format('truetype');
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    margin: 3vh 0 0 0;
+}
+
+.App {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    font-family: 'Recursive';
+}
+
+.Header {
+    font-size: 2rem;
+    text-align: center;
+
+    h1 {
+        margin: 0;
+    }
+}
+
+
+.BlastRequest {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-top: 5vh;
+    height: 50vh;
+}

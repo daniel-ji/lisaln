@@ -1,0 +1,11 @@
+#
+#
+#  Percent Identity  Matrix - created by Clustal2.1 
+#
+#
+
+     1: sp|Q17RS7|GEN_HUMAN   100.00   27.43   19.73   13.01   14.66
+     2: sp|P39748|FEN1_HUMAN   27.43  100.00   11.83   12.27   12.84
+     3: sp|Q8IZH2|XRN1_HUMAN   19.73   11.83  100.00   18.44   19.26
+     4: sp|P08394|RECB_ECOLI   13.01   12.27   18.44  100.00   16.56
+     5: sp|P07648|RECC_ECOLI   14.66   12.84   19.26   16.56  100.00

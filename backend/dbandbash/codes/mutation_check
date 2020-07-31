@@ -1,0 +1,444 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+detail=0
+rna=0
+single=0;lead=""
+snp=1  #only should snp. When no snp, show others
+allmu=0
+less=0
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -less)less=1;shift;;
+   -m)allmu=1;shift;;
+   -all)snp=0;shift;;
+   -debug) debug=1; shift;;
+   -detail)detail=1;shift;;
+   -d)detail=1;lead=$lead' '$1;shift;;
+   -r)rna=1;lead=$lead' '$1;shift;;
+   -RNA)rna=1;lead=$lead' '$1;shift;;
+   -single)single=1;lead=$lead' '$1;shift;;
+   -s)single=1;lead=$lead' '$1;shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1" ; num=1
+ if [ -n "$2" ] ; then
+  input2=$2; num=2
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Check whether a mutation is SNP (Single nucleotide polymorphisms) one-point DNA mutation (one nucleic base mutation)
+  Or Multi-nucleotide polymorphisms : double nucleotide polymorphisms (DNPs) and triple nucleotide polymorphisms (TNPs).
+ It can find all DNPs and TNPs as well
+ It can also find DNA mutation type: e.g. R273C is C->T mutation
+ It can also find all DNA mutations when -m : e.g. C->T mutation causes R|C ...
+ It can also find all SNP mutation of ARG when -m : All SNP mutations from R are 11: S|P|G|L|C|K|T|H|W|Q|I
+
+double nucleotide polymorphisms (DNPs) and triple nucleotide polymorphisms (TNPs). 
+xNPs
+We have found a TNP causing a single amino acid change in LAMC2 and a TNP causing a truncation of HUWE1
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2952858/
+
+See my ./point_mutation
+ Analyze the SNP(Single nucleotide polymorphisms ) point mutation (one nucleic base mutation) frequency :
+SER 6  =>   SER(25.9%) THR(11.1%) ARG(11.1%) CYS(7.4%) PRO(7.4%) ALA(7.4%) STOP(5.6%) TYR(3.7%) GLY(3.7%) PHE(3.7%) LEU(3.7%) ILE(3.7%) ASN(3.7%) TRP(1.9%)
+LEU 6  =>   LEU(33.3%) PHE(11.1%) VAL(11.1%) PRO(7.4%) ARG(7.4%) ILE(7.4%) STOP(5.6%) HIS(3.7%) GLN(3.7%) SER(3.7%) STAT(3.7%) TRP(1.9%)
+ARG 6  =>   ARG(33.3%) SER(11.1%) GLY(11.1%) LEU(7.4%) PRO(7.4%) CYS(3.7%) LYS(3.7%) THR(3.7%) HIS(3.7%) TRP(3.7%) GLN(3.7%) STOP(3.7%) STAT(1.9%) ILE(1.9%)
+VAL 4  =>   VAL(33.3%) LEU(16.7%) ALA(11.1%) GLY(11.1%) ILE(8.3%) GLU(5.6%) ASP(5.6%) PHE(5.6%) STAT(2.8%)
+THR 4  =>   THR(33.3%) SER(16.7%) PRO(11.1%) ALA(11.1%) ILE(8.3%) ASN(5.6%) ARG(5.6%) LYS(5.6%) STAT(2.8%)
+PRO 4  =>   PRO(33.3%) LEU(11.1%) THR(11.1%) SER(11.1%) ARG(11.1%) ALA(11.1%) GLN(5.6%) HIS(5.6%)
+GLY 4  =>   GLY(33.3%) ARG(16.7%) ALA(11.1%) VAL(11.1%) GLU(5.6%) CYS(5.6%) ASP(5.6%) SER(5.6%) STOP(2.8%) TRP(2.8%)
+ALA 4  =>   ALA(33.3%) THR(11.1%) PRO(11.1%) SER(11.1%) GLY(11.1%) VAL(11.1%) ASP(5.6%) GLU(5.6%)
+STOP 3  =>   TYR(14.8%) STOP(14.8%) SER(11.1%) LEU(11.1%) LYS(7.4%) GLN(7.4%) GLU(7.4%) ARG(7.4%) TRP(7.4%) CYS(7.4%) GLY(3.7%)
+ILE 3  =>   ILE(22.2%) LEU(14.8%) THR(11.1%) STAT(11.1%) VAL(11.1%) SER(7.4%) PHE(7.4%) ASN(7.4%) ARG(3.7%) LYS(3.7%)
+TYR 2  =>   STOP(22.2%) ASN(11.1%) TYR(11.1%) SER(11.1%) ASP(11.1%) PHE(11.1%) HIS(11.1%) CYS(11.1%)
+PHE 2  =>   LEU(33.3%) CYS(11.1%) ILE(11.1%) TYR(11.1%) SER(11.1%) PHE(11.1%) VAL(11.1%)
+LYS 2  =>   ASN(22.2%) GLN(11.1%) THR(11.1%) LYS(11.1%) GLU(11.1%) ARG(11.1%) STOP(11.1%) ILE(5.6%) STAT(5.6%)
+HIS 2  =>   GLN(22.2%) LEU(11.1%) PRO(11.1%) ASN(11.1%) TYR(11.1%) ASP(11.1%) HIS(11.1%) ARG(11.1%)
+GLU 2  =>   ASP(22.2%) GLN(11.1%) LYS(11.1%) GLY(11.1%) GLU(11.1%) ALA(11.1%) VAL(11.1%) STOP(11.1%)
+GLN 2  =>   HIS(22.2%) GLN(11.1%) PRO(11.1%) LYS(11.1%) LEU(11.1%) GLU(11.1%) ARG(11.1%) STOP(11.1%)
+CYS 2  =>   SER(22.2%) GLY(11.1%) TYR(11.1%) CYS(11.1%) PHE(11.1%) TRP(11.1%) ARG(11.1%) STOP(11.1%)
+ASP 2  =>   GLU(22.2%) ASN(11.1%) TYR(11.1%) ASP(11.1%) GLY(11.1%) HIS(11.1%) ALA(11.1%) VAL(11.1%)
+ASN 2  =>   LYS(22.2%) ILE(11.1%) ASN(11.1%) THR(11.1%) TYR(11.1%) SER(11.1%) ASP(11.1%) HIS(11.1%)
+TRP 1  =>   CYS(22.2%) ARG(22.2%) STOP(22.2%) SER(11.1%) GLY(11.1%) LEU(11.1%)
+MET/STRAT 1  =>   ILE(33.3%) LEU(22.2%) THR(11.1%) LYS(11.1%) ARG(11.1%) VAL(11.1%)
+
+$0 SNP
+=> Total 75 SNP mutations:
+ALA|VAL ALA|PRO ALA|GLY ALA|SER ALA|THR ALA|ASP ALA|GLU VAL|LEU VAL|ILE VAL|MET VAL|PHE VAL|GLY VAL|ASP VAL|GLU LEU|ILE LEU|PRO LEU|MET LEU|PHE LEU|TRP LEU|SER LEU|GLN LEU|ARG LEU|HIS ILE|MET ILE|PHE ILE|SER ILE|THR ILE|ASN ILE|LYS ILE|ARG PRO|SER PRO|THR PRO|GLN PRO|ARG PRO|HIS MET|THR MET|LYS MET|ARG PHE|SER PHE|CYS PHE|TYR TRP|GLY TRP|SER TRP|CYS TRP|ARG GLY|SER GLY|CYS GLY|ASP GLY|GLU GLY|ARG SER|THR SER|CYS SER|ASN SER|TYR SER|ARG THR|ASN THR|LYS THR|ARG CYS|TYR CYS|ARG ASN|TYR ASN|ASP ASN|LYS ASN|HIS GLN|GLU GLN|LYS GLN|ARG GLN|HIS TYR|ASP TYR|HIS ASP|GLU ASP|HIS GLU|LYS LYS|ARG ARG|HIS
+A|V A|P A|G A|S A|T A|D A|E V|L V|I V|M V|F V|G V|D V|E L|I L|P L|M L|F L|W L|S L|Q L|R L|H I|M I|F I|S I|T I|N I|K I|R P|S P|T P|Q P|R P|H M|T M|K M|R F|S F|C F|Y W|G W|S W|C W|R G|S G|C G|D G|E G|R S|T S|C S|N S|Y S|R T|N T|K T|R C|Y C|R N|Y N|D N|K N|H Q|E Q|K Q|R Q|H Y|D Y|H D|E D|H E|K K|R R|H
+
+$0 DNP
+=> Total 101 DNP mutations:
+ALA|LEU ALA|ILE ALA|MET ALA|PHE ALA|TRP ALA|CYS ALA|ASN ALA|GLN ALA|TYR ALA|LYS ALA|ARG ALA|HIS VAL|PRO VAL|TRP VAL|SER VAL|THR VAL|CYS VAL|ASN VAL|GLN VAL|TYR VAL|LYS VAL|ARG VAL|HIS LEU|GLY LEU|THR LEU|CYS LEU|ASN LEU|TYR LEU|ASP LEU|GLU LEU|LYS ILE|PRO ILE|GLY ILE|CYS ILE|GLN ILE|TYR ILE|ASP ILE|GLU ILE|HIS PRO|MET PRO|PHE PRO|TRP PRO|GLY PRO|CYS PRO|ASN PRO|TYR PRO|ASP PRO|GLU PRO|LYS MET|PHE MET|TRP MET|GLY MET|SER MET|ASN MET|GLN MET|GLU PHE|TRP PHE|GLY PHE|THR PHE|ASN PHE|ASP PHE|ARG PHE|HIS TRP|THR TRP|GLN TRP|TYR TRP|GLU TRP|LYS GLY|THR GLY|ASN GLY|GLN GLY|TYR GLY|LYS GLY|HIS SER|GLN SER|ASP SER|GLU SER|LYS SER|HIS THR|CYS THR|GLN THR|TYR THR|ASP THR|GLU THR|HIS CYS|ASN CYS|ASP CYS|HIS ASN|GLN ASN|GLU ASN|ARG GLN|TYR GLN|ASP TYR|GLU TYR|LYS TYR|ARG ASP|LYS ASP|ARG GLU|ARG GLU|HIS LYS|HIS
+A|L A|I A|M A|F A|W A|C A|N A|Q A|Y A|K A|R A|H V|P V|W V|S V|T V|C V|N V|Q V|Y V|K V|R V|H L|G L|T L|C L|N L|Y L|D L|E L|K I|P I|G I|C I|Q I|Y I|D I|E I|H P|M P|F P|W P|G P|C P|N P|Y P|D P|E P|K M|F M|W M|G M|S M|N M|Q M|E F|W F|G F|T F|N F|D F|R F|H W|T W|Q W|Y W|E W|K G|T G|N G|Q G|Y G|K G|H S|Q S|D S|E S|K S|H T|C T|Q T|Y T|D T|E T|H C|N C|D C|H N|Q N|E N|R Q|Y Q|D Y|E Y|K Y|R D|K D|R E|R E|H K|H
+
+$0 TNP 
+=> Total 14 TNP mutations:
+ILE|TRP MET|CYS MET|TYR MET|ASP MET|HIS PHE|GLN PHE|GLU PHE|LYS TRP|ASN TRP|ASP TRP|HIS CYS|GLN CYS|GLU CYS|LYS
+I|W M|C M|Y M|D M|H F|Q F|E F|K W|N W|D W|H C|Q C|E C|K
+
+C->T mutation caused by AID and CAD: (See AID/)
+Activation-induced cytidine deaminase :  regulates antibody diversification, especially the process of somatic hypermutation.
+https://en.wikipedia.org/wiki/Activation-induced_cytidine_deaminase
+encoded by the AICDA gene. It creates mutations in DNA[6] by deamination of cytosine base: it changes a C:G base pair into a U:G mismatch, and hence C:G is converted to a T:A base pair.
+AID is currently thought to be the master regulator of secondary antibody diversification. It is involved in the initiation of three separate immunoglobulin (Ig) diversification processes.
+AID has been shown in vitro to be active on single-strand DNA,[8] and has been shown to require active transcription in order to exert its deaminating activity
+The U:G mismatch is replicated across creating two daughter species, one that remains unmutated and one that undergoes a C => T transition mutation.
+Defects in this gene are associated with Hyper-IgM syndrome type 2.[18] In certain haematological malignancies such as follicular lymphoma persistent AID expression has been linked to lymphomagenesis
+Related protein: Cytidine deaminase (CDA) Also mutate C->T (https://en.wikipedia.org/wiki/Cytidine_deaminase)
+
+https://en.wikipedia.org/wiki/Mutation
+Spontaneous mutations:
+ occur with non-zero probability even given a healthy, uncontaminated cell. They can be characterized by the specific change:[47]
+    Tautomerism — A base is changed by the repositioning of a hydrogen atom, altering the hydrogen bonding pattern of that base, resulting in incorrect base pairing during replication.
+    Depurination — Loss of a purine base (A or G) to form an apurinic site (AP site).
+    Deamination — Hydrolysis changes a normal base to an atypical base containing a keto group in place of the original amine group. Examples include C → U and A → HX (hypoxanthine), which can be corrected by DNA repair mechanisms; and 5MeC (5-methylcytosine) → T, which is less likely to be detected as a mutation because thymine is a normal DNA base.
+    Slipped strand mispairing — Denaturation of the new strand from the template during replication, followed by renaturation in a different spot ("slipping"). This can lead to insertions or deletions.
+    Replication slippage
+Error-prone replication bypass:
+ There is increasing evidence that the majority of spontaneously arising mutations are due to error-prone replication (translesion synthesis) past DNA damage in the template strand. Naturally occurring oxidative DNA damages arise at least 10,000 times per cell per day in humans and 50,000 times or more per cell per day in rats.[citation needed] In mice, the majority of mutations are caused by translesion synthesis.[48] Likewise, in yeast, Kunz et al.[49] found that more than 60% of the spontaneous single base pair substitutions and deletions were caused by translesion synthesis.
+Errors introduced during DNA repair:
+ Although naturally occurring double-strand breaks occur at a relatively low frequency in DNA, their repair often causes mutation. Non-homologous end joining (NHEJ) is a major pathway for repairing double-strand breaks. NHEJ involves removal of a few nucleotides to allow somewhat inaccurate alignment of the two ends for rejoining followed by addition of nucleotides to fill in gaps. As a consequence, NHEJ often introduces mutations.[50]
+A covalent adduct between the metabolite of benzo[a]pyrene, the major mutagen in tobacco smoke, and DNA[51]
+Induced mutation:
+ Induced mutations are alterations in the gene after it has come in contact with mutagens and environmental causes.
+
+https://en.wikipedia.org/wiki/Deamination
+Most common SNP: (~ C->T)
+ Spontaneous deamination of 5-methylcytosine results in thymine and ammonia.
+ can be corrected by the enzyme thymine-DNA glycosylase, which removes the thymine base in a G/T mismatch
+C->U/T (may C->A): See AID/ (AICDA)  CDA(Cytidine deaminase, see CDA/)
+G->A : Guanine deaminase (GAH) https://en.wikipedia.org/wiki/Guanine_deaminase   See GAH/
+ Deamination of guanine results in the formation of xanthine
+ This results in a post-replicative transition mutation, where the original G-C base pair transforms into an A-T base pair.
+ Correction of this mutation involves the use of alkyladenine glycosylase (Aag) during base excision repair.
+ Guanine Deaminase (GDA) : No PDBs. See GAH/
+ NOTE: GAH may only bind Guanine molecule, NOT DNA. Share some similarity with ADA/
+A->G : Adenosine deaminase (ADA) It is needed for the breakdown of adenosine from food https://en.wikipedia.org/wiki/Adenosine_deaminase
+  Deamination of adenine results in the formation of hypoxanthine.
+  This results in a post-replicative transition mutation, where the original A-T base pair transforms into a G-C base pair.
+ NOTE: ADA may only bind Adenosine, NOT DNA! See ADA/
+Adenosine Deaminase acting on tRNA (ADAT1/2/3) : See ADA/ ADAT2 (3dh1) may have RNA-binding site
+Adenosine Deaminase acting on dsRNA (ADAR) : See ADA/ 1qbj has DNA and clearly DNA-binding site
+AMP deaminase : https://en.wikipedia.org/wiki/AMP_deaminase See DCTD/ (AMPD2)
+dCMP deaminase : https://en.wikipedia.org/wiki/DCMP_deaminase See DCTD/
+
+Depurination: https://en.wikipedia.org/wiki/Depurination
+ When depurination occurs with DNA, it leads to the formation of apurinic site and results in an alteration of the structure. Studies estimate that as many as 5,000 purines are lost this way each day in a typical human cell
+ Apurinic sites (AP-site) in double-stranded DNA are efficiently repaired by portions of the base excision repair (BER) pathway. Depurinated bases in single-stranded DNA undergoing replication can lead to mutations, because in the absence of information from the complementary strand, BER can add an incorrect base at the apurinic site, resulting in either a transition or transversion mutation.
+ Depurination is known to play a major role in cancer initiation
+It is a chemical reaction that does NOT need enzyme? So no protein related to this.
+
+AP-site: https://en.wikipedia.org/wiki/AP_site
+This can happen spontaneously, as a result of chemical activity, radiation, or due to enzyme activity.
+Enzymes, namely DNA glycosylases, also commonly create AP sites, as part of the base excision repair pathway.
+
+DNA glycosylase: https://en.wikipedia.org/wiki/DNA_glycosylase
+DNA glycosylases are a family of enzymes involved in base excision repair.
+MPG/AAG : DNA-3-methyladenine glycosylase https://en.wikipedia.org/wiki/DNA-3-methyladenine_glycosylase
+a bad activity of hAAG may be associated with cancer risk in BRCA1 and BRCA2 mutation carriers.
+
+-------All proteins with cytidine deaminase activity
+./UniProt_get -all -addmatch -species human -function "cytidine deaminase activity"
+=> 12 Proteins saved in cytidine_uniprot.xls
+
+What residues good/bad on helix structure?
+https://en.wikipedia.org/wiki/Alpha_helix
+Pace CN, Scholtz JM (July 1998). "A helix propensity scale based on experimental studies of peptides and proteins". Biophysical Journal. 75 (1): 422-7.
+Proline (3.16kcal/mol) and Gly (1.0kcal/mol) are not good in helix with high penalty score:
+  Proline has poor helix-forming propensities by either breaking or kinking the helix
+ Proline either breaks or kinks a helix, both because it cannot donate an amide hydrogen bond (having no amide hydrogen),
+  and also because its sidechain interferes sterically with the backbone of the preceding turn ¿ inside a helix,
+  this forces a bend of about 30° in the helix's axis.
+  However, proline is often seen as the first residue of a helix, it is presumed due to its structural rigidity.
+ Glycine also tends to disrupt helices because its high conformational flexibility makes it entropically expensive
+  to adopt the relatively constrained ¿-helical structure.
+Methionine, alanine, leucine, glutamate (Glu/E), and lysine uncharged ("MALEK" in the amino-acid 1-letter codes) all have especially
+high helix-forming propensities, whereas proline and glycine have poor helix-forming propensities.
+
+ 
+ Usage: $0 [Options] Resname/mutation/SNP/DNP/TNP [Resname2]
+ Options:
+   -d|-detail: show detail of codons
+   -r|-RNA : Use RNA codon codon.txt
+   -s|-single : shown one-letter amino acid name instead of 3 
+   -less : less display
+   -m : check all mutations that include C->T etc. or all SNP mutations from ARG
+   -all : show all possible mutations including SNP/DNP/TNP
+     [default] : Only show SNPs if there is any. If no SNPs, show others
+
+ Example: $0 -s ASP GLU  #check for SNP or DNP or TNP for mutation ASP to GLU. Output as single letter amino acid name
+          $0 R C   #can use single letter
+          $0 D152E   #Must use single-letter name for single input mutation D152E
+          $0 -detail -RNA I M   #show detail and use RNA codons
+           Output as: ARG|CYS SNP mutation are 2:  CGT|TGT(C->T) CGC|TGC(C->T)
+
+          #Find all SNPs/DNPs/TNPs:  
+          $0 -s SNP    #75 SNPs (A|V V|A as one)
+          $0 -s DNP    #101 DNPs
+          $0  TNP    #14 TNPs
+
+          #Find all C->T mutations  (see AID/)
+          $0 -m C T
+           => Total 6 mutations for SNP C->T:
+            A|V R|C R|W H|Y L|F P|S
+
+          #Find all ARG SNP mutations (not including self silence mutation)
+          $0 -m ARG
+          $0 -m R
+           => All SNP mutations from ARG are 11: SER|PRO|GLY|LEU|CYS|LYS|THR|HIS|TRP|GLN|ILE
+
+
+ NOTE: To find all interactions of a residue: ./pymol_pdb_contacts
+ NOTE: Use ./cluster_Pickmutation to check cancer mutation rate and my theories
+ NOTE: Run ./point_mutation to Analyze the SNP(Single nucleotide polymorphisms ) point mutation (one nucleic base mutation) frequency
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+#infile=`basename $input ${extension}`
+[ $doout -ne 1 ] && output=$infile'_.xls'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/point_mutation $ed/1-char23-char $ed/3-char21-char .
+fi
+
+cfile=$ed'/DNA_codon.txt' #DNA-codon file
+nfile=$ed'/pdb_aminoacid_3char1.list'  #aa name file
+[ $rna -eq 1 ] && cfile=$ed'/codon.txt'  #RNA-codon file
+
+############# Find all C->T mutations  added 2020/1
+if [ $allmu -eq 1 ] ; then
+if [ $num -eq 2 ] ; then
+ match=`echo hals | awk 'BEGIN{printf("%s->%s",toupper("'$input'"),toupper("'$input2'"))}'`
+ ots="";nots=0
+ awk '{if(length($2)==3){print $2}}' $cfile | sort | uniq > $temp #get all residues 
+ n=`wc -l $temp | awk '{print $1}'`
+ echo "=> Check all $n residue mutations that has SNP $input->$input2 :"
+ for (( i=1; i<n ; i++ )) ; do
+  p1=`head -$i $temp | tail -1`
+  p1s=`./3-char21-char -single $p1`
+  i1=`expr $i + 1`
+  for (( j=$i1; j<=n ; j++ )) ; do
+   p2=`head -$j $temp | tail -1`
+   p2s=`./3-char21-char -single $p2`
+   $0 $p1 $p2 > $temp2
+   grep 'SNP mutation are' $temp2 | grep $match > $temp3
+   nma=`wc -l $temp3 | awk '{print $1}'`
+   if [ $nma -gt 0 ] ; then
+    [ $less -eq 0 ] && cat $temp3
+    nots=`expr $nots + 1`
+    p12s=`echo $p1s $p2s | awk '{printf("%s|%s",$1,$2)}'`  #remove space
+    ots=$ots' '$p12s        
+   fi
+  done #j
+ done #i
+ echo "=> Total $nots mutations for SNP $input->$input2:"
+ echo $ots
+######################## Find all ARG SNP mutations
+else
+ nl=`echo $input | awk '{print length($1)}'`
+ res=`echo $input | awk '{print toupper($1)}'`
+ [ $nl -eq 1 ] && res=`./1-char23-char -single $res`
+ res=`echo $res | awk '{print toupper($1)}'`
+ ./point_mutation 1 | grep '=>' | grep $res > $temp #PRO 4 => PRO(33.3%) LEU(11.1%) THR(11.1%) SER(11.1%) ARG(11.1%) ALA(11.1%) GLN(5.6%) HIS(5.6%)
+ awk 'BEGIN{res="'$res'"}{if($1==res){for(i=4;i<=NF;i++){split($i,a,"(");if(a[1]!=res&&a[1]!="STAT"&&a[1]!="STOP"){printf("%s ",a[1])}}}}' $temp > $temp2
+ nm=`wc -w $temp2 | awk '{print $1}'`
+ echo -n "=> All SNP mutations from $input are $nm:"
+ if [ $nl -eq 1 ] ; then  #single-letter resn
+  ./3-char21-char $temp2 | awk '{printf(" %s",$1);for(i=2;i<=NF;i++){printf("|%s",$i)};printf("\n")}'
+ else #3-letter
+  cat $temp2 | awk '{printf(" %s",$1);for(i=2;i<=NF;i++){printf("|%s",$i)};printf("\n")}'
+ fi
+fi #$num -eq 2 
+ rm $temp* ; exit
+fi #$allmu -eq 1
+
+
+if [ $num -eq 1 ] ; then  #single input. Must be single-letter aa name
+ res1=`echo $input | awk '{print substr($1,1,1)}'`  #single-letter resname
+ res2=`echo $input | awk '{print substr($1,length($1),1)}'` 
+ r1=`./1-char23-char -single $res1`  #3-letter resname
+ r2=`./1-char23-char -single $res2`  #3-letter resname
+else
+ len=`echo $input | awk '{print length($1)}'`
+ if [ $len -eq 1 ] ; then
+  res1=$input
+  r1=`./1-char23-char -single $res1`  #3-letter resname
+ else
+  if [ $len -eq 3 ] ; then
+   r1=$input
+   res1=`./3-char21-char -single $r1` #single-letter resname
+  else
+   echo "Fatal error! Cannot recognize resname for $input"
+   exit
+  fi
+ fi
+
+ len=`echo $input2 | awk '{print length($1)}'`
+ if [ $len -eq 1 ] ; then
+  res2=$input2
+  r2=`./1-char23-char -single $res2`  #3-letter resname
+ else
+  if [ $len -eq 3 ] ; then
+   r2=$input2
+   res2=`./3-char21-char -single $r2` #single-letter resname
+  else
+   echo "Fatal error! Cannot recognize resname for $input2"
+   exit
+  fi
+ fi
+fi
+
+sing=0
+[ "$input" == "SNP" ] && sing=1
+[ "$input" == "DNP" ] && sing=1
+[ "$input" == "TNP" ] && sing=1
+
+############# Find all SNP/DNP/TNP
+if [ $sing -eq 1 ] ; then
+ echo "Find all $input mutations"
+ n=0
+ for (( i=1 ; i<20 ; i++ )) ; do
+  r1=`head -$i $nfile | tail -1 | awk '{print $1}'`
+  pp=`expr $i + 1`
+  for (( j=pp; j<=20; j++)) ;do   
+   if [ $i -ne $j ] ; then
+    r2=`head -$j $nfile | tail -1 | awk '{print $1}'`
+    ouk=`$0 $lead $r1 $r2`
+    if [ $detail -eq 1 ] ; then
+      echo $ouk | grep $input
+    fi
+    hasit=`echo $ouk | grep $input | wc -l | awk '{print $1}'`
+    if [ $hasit -ge 1 ] ; then
+     n=`expr $n + 1`
+     its=`echo $ouk | grep $input | awk '{print $1}'`
+     sum=$sum' '$its
+    fi 
+   fi
+  done
+ done 
+ echo "=> Total $n $input mutations (vice versa):"
+ echo $sum
+ rm -f $temp ; exit
+fi 
+
+
+######### Find SNP DNA mutations of a pair residues
+echo $r1 $r2 | awk '{r1=$1;r2=$2}
+ END{
+ file="'$cfile'";  n=0;n1=0;n2=0;total=0;sum="";detail='$detail';nmu=0;snp='$snp'
+ if(detail==1){print "For mutation ",r1,r2}
+ while ((getline line < file) > 0) {  #UUU PHE
+  n++; nf=split(line,d," "); 
+  if(d[2]==toupper(r1)){n1++;s1[n1]=d[1];if(detail==1){print line}}
+  if(d[2]==toupper(r2)){n2++;s2[n2]=d[1];if(detail==1){print line}}
+ }
+ close(file)
+
+ if(detail==1){print "Codons found:",n1,n2}
+ for(i=1;i<=n1;i++){
+  for(j=1;j<=n2;j++){
+   map=0;diff=""
+   for(k=1;k<=3;k++){  #loop for 3 DNAs of codon
+    x=substr(s1[i],k,1)
+    y=substr(s2[j],k,1)
+    if(x==y){map++}
+    if(x!=y){
+     if(diff==""){diff=sprintf("%s->%s",x,y)}else{diff=sprintf("%s;%s->%s",diff,x,y)}
+    }
+   }
+   if(map>=total){total=map}
+   if(snp==1){  #only show SNPs
+    if(map==2){sum=sprintf("%s %s|%s(%s)",sum, s1[i],s2[j],diff);nmu++}
+   }else{
+    if(map<3){sum=sprintf("%s %s|%s(%s)",sum, s1[i],s2[j],diff);nmu++}
+   }
+   #if(map>=total){total=map;sum=sprintf("%s %s|%s(%s)",sum, s1[i],s2[j],diff);nmu++}
+  }
+ }
+
+ if(total>=3){printf("%s|%s are same resname\n",r1,r2)}
+ if(total==2||snp==1){printf("%s|%s SNP mutation are %s: %s\n",r1,r2,nmu,sum)}
+ if(total==1){printf("%s|%s DNP mutation are %s: %s\n",r1,r2,nmu,sum)}
+ if(total==0){printf("%s|%s TNP mutation are %s: %s\n",r1,r2,nmu,sum)}
+  
+}' > $temp
+
+#convert into one-letter aa name
+if [ $single -eq 1 ] ; then
+ cat $temp | awk 'BEGIN{
+ file="'$nfile'"
+ nr=0
+ while ((getline line < file) > 0) {
+  nr++
+  nf=split(line,d," ")
+  a[nr]=d[1]
+  b[nr]=d[2]
+ }
+ close(file)
+}{
+ if (index($1,"|")>0){
+  split($1,x,"|")
+  for(i=1;i<=2;i++){ 
+   jjj=x[i]
+   for(j=1;j<=nr;j++){
+    if(index(jjj,a[j])>0&&length(a[j])==3){
+     hhh[i]=jjj
+     sub(a[j],b[j],hhh[i])
+    }
+   }
+  }
+  printf("%s|%s",hhh[1],hhh[2])
+  for(i=2;i<=NF;i++){printf(" %s",$i)}
+  printf("\n")
+ } else {
+  print $_
+ }
+}'
+ 
+else
+ cat $temp
+fi
+
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

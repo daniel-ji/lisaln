@@ -1,0 +1,1146 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+display=1
+autoxy=0;nochangexy=0
+autonumber=70
+addrank=1
+dosort=1  #=0: no sort  =1: sort by cluster rank  =2: sort by cluster size
+filetype=0  #0: Cluster File  1:Distance/Similarity Matrix file  2:SDF file  3. None-complete or none-ordered Maxtrix/map file 4.Half-matrix
+ mapnum=2 #=2:SDF file and use mapfile2 =1: SDF and use mapfile as matrix
+fill0='min'  #filling value for missing pairs of different rank when -map
+fill1='max'  #filling value for missing pairs of same rank when -map
+doVCN=1
+distop=5
+
+autoc=1; cstep=10  #=1:auto determine cluster steps from max (startc) to min (endc) at cstep cluster
+startc=0.8;endc=0;stepc=-0.1;dostepc=1;list='NA'  #cluster steps
+start=0;end=0
+nocontactmap=0
+ismf=1
+smaller=0
+xlabel='';ylabel='';extraline=''
+docout=0
+maxlength=20  #max length of name to display
+digit=2 #label how many digitals. =0: No decimal 1/2: 1 or 2 decimals
+cutshow=0.6;docutshow=0
+noplot=0
+less=0
+
+exe='/home/holi/bin/gnuplot'  #gnuplot exec
+[ ! -s $exe ] && exe='/usr/local/bin/gnuplot'
+[ ! -s $exe ] && exe='/usr/bin/gnuplot'
+[ ! -s $exe ] && exe='gnuplot'
+
+#font='VeraBd'  #default is VeraBd as defined in .bashrc
+#[ ! -d /usr/share/fonts/msttcorefonts ] && font='VeraBd'  #In case no arial font, use VeraBd
+#[ ! -d /usr/share/fonts/bitstream-vera ] && font='/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf' #otherwise, use DejaVuSans-Bold.ttf
+
+font='courbd'
+[ ! -d /usr/share/fonts/msttcorefonts ] && font='VeraBd'  #In case no arial font, use VeraBd
+[ ! -d /usr/share/fonts/bitstream-vera ] && font='/usr/share/fonts/dejavu/DejaVuSans.ttf' #otherwise, use DejaVuSans-Bold.ttf
+
+
+fontsize=15
+dofontsize_tics=0;fontsize_tics=15   #font size for tics
+plotwidth=921 #90% w /80% h of  1024x768 is regular full screen size for computer. Best for ppt to insert since there is Title in ppt
+plotheight=615
+widthbase=350   #Increase this for long data name. Decrease for shorter cmpd name
+#plotsize='size 921,615'  #90% w /80% h of  1024x768 is regular full screen size for computer. Best for ppt to insert since there is Title in ppt
+linelength=60  #length of each line when -auto. Use 60pts for orient='y' and 40pts for orient='x'
+term='gif enhanced'  #output style as .png file. 'enhanced' can produce sub and superscripts
+dotitle=0;title=''; 
+doxlabel=0;doylabel=0;dozlabel=0;
+keyposition='off'
+title=''
+head=1
+orient='y'  #=y: put data along y-axis
+linetype=1
+linewidth=2
+linecolor=1
+nox=1
+offset=0;maxoff=0.5;offgroup=5   #=1: lines are offset: maxoff: max offset ratio of each line. e.g. at most offset 50%: 
+       #A group of $offgroup compounds will goes to maxoff
+unicolor=0
+
+workstation='holi@br11159.coh.org'  #My workstation to run this script
+workstationdir='/home/holi/'
+runlocal=1  #force to run in local machine. Otherwise, script need modification
+
+oldline=$*   #all argvs
+#echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -noVCN)doVCN=0;shift;;
+   -smaller)smaller=1;shift;;
+   -larger)smaller=0;shift;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c';./template -i "$d" will give i='a b c' instead i='a'
+   -clusterout)mclusterfile=$2;docout=1;shift 2;;
+   -x)orient='x';nochangexy=1;shift;;
+   -y)orient='y';nochangexy=1;shift;;
+   -auto)autoxy=1;shift;;
+   -linetype)linetype=$2;shift 2;;
+   -linewidth)linewidth=$2;shift 2;;
+   -linecolor)linecolor=$2;shift 2;;
+   -linelength)linelength=$2;shift 2;;
+   -title)title="$2";shift 2;;
+   -w)plotwidth=$2;shift 2;;
+   -h)plotheight=$2;shift 2;;
+   -widthbase)widthbase=$2;shift 2;;
+   -fontsize_tics)fontsize_tics=$2;dofontsize_tics=1;shift 2;;
+   -head)head=$2;shift 2;;
+   -showaxis)nox=0;shift;;   
+   -noshowaxis)nox=1;shift;;
+   -offset)offset=1;shift;;
+   -maxoff)maxoff=$2;shift 2;;
+   -offgroup)offgroup=$2;shift 2;;   
+   -nooffset)offset=0;shift;;
+   -rank)addrank=1;shift;;
+   -norank)addrank=0;shift;;
+   -sortbyrank)dosort=1;addrank=1;shift;;
+   -sortbysize)dosort=2;addrank=1;shift;;
+   -nosort)dosort=0;shift;;
+   -matrix)filetype=1;shift;;
+   -halfmatrix)filetype=4;shift;;
+   -map)filetype=3;shift;;
+   -cluster)filetype=0;shift;;
+   -sdf)filetype=2;shift;;
+   -mapnum)mapnum=$2;shift 2;;
+   -clusterstep)autoc=0;startc=$2;endc=$3;stepc=$4;shift 4;;
+   -autoc)autoc=1;shift;;
+   -cstep)autoc=1;cstep=$2;shift 2;;
+   -unicolor)unicolor=1;shift;;
+   -list)autoc=0;dostepc=0;list="$2";shift 2;;
+   -top)start=1;end=$2;shift 2;;
+   -range)start=$2;end=$3;shift 3;;
+   -nocontactmap)nocontactmap=1;cdisplay='-nognu';shift;;   
+   -xlabel)xlabel='set xlabel"'"$2"'"';shift 2;;
+   -ylabel)ylabel='set ylabel"'"$2"'"';shift 2;;
+   -extra)extraline=$extraline' '"$2"';';shift 2;;
+   -fill0)fill0=$2;shift 2;;
+   -fill1)fill1=$2;shift 2;;
+   -remote)runlocal=0;shift;;
+   -maxlength)maxlength=$2;shift 2;;
+   -digit)digit=$2;shift 2;;
+   -cutshow)cutshow=$2;docutshow=1;shift 2;;
+   -nocutshow)docutshow=0;shift;;
+   -distop)distop=$2;shift 2;;
+   -noplot)noplot=1;docutshow=1;shift;;
+   -less)less=1;shift;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+
+if [ -n "$1" ] ; then
+ input="$1"
+ [ -n "$2" ] && output=$2
+ [ -n "$2" ] && doout=1
+else
+cat << ttt
+
+ Use gnuplot to draw dendogram for cluster data. Support 3 types of map file.
+  To generate contact map plot of cluster data, use ./sdf_contactmap -map or -matrix
+  WARNing: dendoplot slightly depends on cluster cutoff/list :
+   At first cluster cutoff, data are clustered. Then sorted by clustersize 
+
+ gnuplot to draw horizental line:
+   plot [1:10] 5 w lines lt 2 lc 3 lw 3  #line at y=5, from xrange 1-10
+ Verticle line: http://stackoverflow.com/questions/4499998/gnuplot-vertical-lines-at-specific-positions/8562193#8562193
+   set arrow from $x1,$y1 to $x1,$y2 nohead lw 4 lt 2 lc rgb 'red'   #Use absolute coords
+   set arrow from 0.35,graph(0,0) to 0.35,graph(1,1) nohead   #Use relative y-range as full length of y-axis at x=0.35 
+   set arrow from 0.35,ymin to 0.35,ymax nohead
+
+ set style arrow {idx:index} [ nohead | head | backhead | heads ] 
+                            [ size {flt:length} [,{flt:angle}]  [,{flt:backangle}] ] 
+                            [ filled | empty | nofilled ] [ front | back ] 
+                            [ [ linetype | lt {idx:type} ] [ linewidth | lw {int:width} ] | [ linestyle | ls {idx:style} ] ] 
+
+Support 3 types of map file:
+ Type1: Input data file format as for clusterfile at -cluster option: w/ header
+  Rank | Name | Level 1 Cluster Rank | L2 Cluster | ...
+Rank Name 0.4 0.8 0.9 1.0
+0 QQ  1 1 1 1
+1 PP  1 1 1 1
+2 AA  1 1 1 1
+3 BCD 1 1 1 1
+4 CCC 2 1 1 1
+5 DD  3 2 1 1
+6 E   3 2 1 1
+7 F   4 2 1 1
+8 GGG 4 2 1 1
+9 TTT 5 3 2 2
+See Nuclease/nuclease_pure_RMSD_clu1.xls
+
+ Type 2: Input data file is Similarity/Distancs Matrix:  Ordered and complete of all pairs  -matrix. Half matrix use -map
+Rank1   Rank2   TanimotoScore   Name1   Name2   
+1       1       1.000   ALB-H01004747   ALB-H01004747   
+2       1       0.935   ALB-H01004281   ALB-H01004747  
+3       1       ....
+
+ Type 3: Input file can be half-matrix,  none-ordered and none-complete pairs. 
+   Missing pairs will check reverse pair or assign ScoreValue to 0: -map
+Rank1   Rank2   TanimotoScore   Name1   Name2   
+1       1       1.000   ALB-H01004747   ALB-H01004747   
+2       3       0.935   ALB-H01004281   ALB-H01004747  
+
+
+ Usage: $0 [Options] InfileFile(SDF, map file or matrix file or cluster file)
+   This will auto-replace empty space or _ in name to - for better display 
+ Options:
+  [-cluster] : Input file is clusterfile  
+  -map : Input file is None-complete or none-ordered Maxtrix/map file. Will convert to NxN matrix
+    Missing pairs will check reverse pair, or set ScoreValue as $fill1 for same rank pairs and $fill0 to other pairs
+   -fill0 fillValue/min/max : fill value for different rank pairs for -map   [$fill0]
+   -fill1 fillValue/mim/max : fill value for same rank pairs for -map   [$fill1]
+    fillValue=min/max : fill value is mimimum/maximum of input data
+  -matrix : Input file is Similarity/Distancs Matrix (must be completed and ordered)
+   -autoc : Will use max/min as startc/endc automatically and cluster steps as $cstep
+    When -smaller (for RMSD), will auto-change min/max as startc/endc   
+    -cstep Steps : steps for cluster. Will use max/min as startc/endc [$cstep]
+   -clusterstep startc endc stepc : Multiple-level Clustering cutoff from startc to endc at stepc steps[ $startc $endc $stepc ]
+   -list List : A list of cluster steps for Multiple-level Clustering. e.g. -list "0.75 0.5 0.3 0" from large to small!
+   -smaller | [ -larger ] : value smaller than cutoff data will be clustered. Default: value larger than cutoff will be clustered
+    -smaller for RMSD value: smaller RMSD will cluster together. Default: large value will cluster together
+  -halfmatrix : Input is a half-matrix. The other half is symetric. Do not use -map option for half-matrix, will be very slow  
+  -sdf : Input file is SDF file and need calcluate Similarity Matrix first
+   -mapnum 1|2 : -sdf to use original mapfile (1) or mapfile2 (Sorted based on cluster size. Better) [ $mapnum ]
+  -digit DigitalNum : how many digital to lable cluster level in graph [$digit] 0: no decimal for label. 1/2: two decimals
+  -maxlength maxNameLength : max length of name to display. Dendogram cannot display if name is too long [$maxlength]
+    Dendogram cannot handle cmpd name with % inside. Will correct it into -
+  -debug : debug model on
+  -less : less display
+  -cutshow Cutoff : display top $distop clusters at a cutoff [$cutshow]
+   -distop topNum : display top $distop clusters at a cutoff [$distop]
+   [-nocutshow] : will not display top $distop clusters at a cutoff
+  -noplot : will not display plot, but only display top $distop clusters at a cutoff
+  -w | -h Pixels : Plot width/height [$plotwidth / $plotheight ]
+                   90% w /80% h of  1024x768 is regular full screen size for computer. Best for ppt to insert since there is Title in ppt
+  -widthbase widthbase : Increase/Decrease this for long/short cmpd name [$widthbase]
+  -extra "Extra Gnuplot Setup" : for gnuplot extra commands
+  -xlabel | -ylabel "Axes Label"  : Labels for X/Y axis
+  -x | [-y] : Put data along x|y aixs and line along y|x axis
+  [-auto] : auto determine x/y orientation by data number comparing to $autonumber. Also re-scale plot size
+  -linelength linelength : Line length for each cluster level. [$linelength]
+  -linetype LineType :  Line type to draw dendogram [$linetype]
+  -linewidth LineWidth : line width [$linewidth]
+  -fontsize_tics fontsize_tics : Tics font size [$fontsize_tics]
+  -head HeadLines : Number of headers in input file. [$head]
+  -showaxis | -noshowaxis : show axis for cluster cutoff in header of Input or 1/Levels if no header
+  -remote : run in my remote workstation
+  -rank | -norank : add data rank of first col of InputFile to plot
+  -sortbyrank : sort Input data by cluster rank, so that plot looks better [default]
+   -sortbysize : sort Input data or sorted input by size of cluster for all cluster Levels + cluster name rank
+   -nosort : No sort of Input
+  -unicolor : draw lines with unique color [lc $linecolor] line only. Not multiple-color for each cluster
+   -linecolor ColorNumber : Color Number to draw for -unicolor Red:1 [$linecolor] 
+  -top topN : Only display dendogram for topN records
+  -range Start End : Only display dendogram for [Start End] records
+  -offset | -nooffset : offset pixe of each line for each cluster. Good for none-sorted Input
+   -maxoff MaxoffRatio : Ratio for maximum offset of total length of line  [$maxoff]
+   -offgroup Group : A group clusters will be offset to maxoff then periodic [$offgroup]
+  -out plotOutput : output plot of dendogram
+  -clusterout Output_Cluster : User defined cluster output: Rank Name ClusterRank1 ClusterRank2... . Default: Input_mclu.xls
+  -noVCN : will NOT convert CBIS_ID VCN-xxxx into NSC# by using NSC_VCN_map.txt: 
+                  ./sdf_getNameTag -name -nocheck NCI_CBIS.sdf NSC NSC_VCN_map.txt
+ 
+Example:
+  $0 -autoc -clusterout A_mclu.xls -unicolor -nooffset -sortbysize A.sdf
+   #Use unique-color to draw lines. No offset of lines for different clusters. Largest cluster shows first (-sortbysize) 
+  $0 -rank -x -nooffset -showaxis -head 0 test.xls
+   #x-orientation, no offset for lines. Show cluster cutoff as 1/ClusterLevel. Show original Rank of data. No header in Input test.xls
+  $0 -digit 0 -smaller -list "1 2 3 4 5 6 7 8 9 10" -map -fill0 10 -fill1 0 RMSD.map
+   #map file for RMSD. Must use -smaller for RMSD, as smaller RMSD will cluster together. Used in ./rmsd 
+   #display no decimal on graph
+  $0 -matrix -clusterstep 0.8 0 -0.1 ~/RLIP76/amri/rl_Site1_rl_Site1_amri_SP_2_top1000_div80_total100_XP_5_unique.rept_contact_s2_0.6_0.3.map 
+   # Input is Similarity Matrix (complete and ordered) file and multiple-cluster cutoffs as from 0.8 to 0 at -0.1 steps
+  $0 -matrix -smaller -head 0 -clusterstep 0 10 2 -xlabel "PDBs" -extra "set xlabel offset 1 tc lt 1" -ylabel "RMSD{\305}"  A_rmsd.dat
+   #Input is RMSD matrix for PDBs. -smaller: Smaller RMSDs will be culstered together
+  $0 -halfmatrix HalfMatrix.file
+    #Half-matrix file. Do not use -map option for half-matrix, will be very slow
+  $0 -map -fill0 0 -fill1 1 protein_sim.xls
+   #Input is Similarity map file (none-complete or none-order, e.g. from ./pdb_seq_align_PISCES) 
+   #Missing pairs will be filled as 0 for different rank and 1 for same rank pairs
+  $0 -list "0.8 0.7 0.6 0.5 0.3 0" -linelength 70 A.sdf
+   #Use list to define cutoff of multiple-level clustering. Enlong linelength
+  $0 -mapnum 1 A.sdf
+   #Use mapfile for dendogram instead of mapfile2. Different view!
+  $0 -top 30 ~/RLIP76/amri/rl_Site1_rl_Site1_amri_SP_2_top1000_div80_total100_XP_5_unique.rept.sdf
+   # Input is SDF file for similarity clustering. .sdf type is auto-determined. Only disply dendogram of top 30 cmpds
+  $0 -less -cutshow 0.6 -noplot matrix.txt  
+   #Show clusters only for a matrix file at cutoff=0.6
+
+  NOTE: Cluster output file -clusterout can be used to pick out clusters or diverse subset
+  WARNIng: tree-map display may depends on cutoff list! Manually adjust the cutoff list to get best display
+
+ttt
+  exit
+fi
+
+[ "$list" == 'NA' ] && dostepc=1
+[ ! -s $exe ] && exe='/usr/local/bin/gnuplot'
+[ ! -s $exe ] && exe='/usr/bin/gnuplot'
+[ ! -s $exe ] && exe='gnuplot'
+
+issdf=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".sdf"){print 1}else{print 0}}'`
+if [ $issdf -eq 1 ] && [ $filetype -ne 3 ] ; then
+ echo "Input is auto-determined as SDF file. Will generate Similarity Matrix first"
+ filetype=2
+fi
+
+ismap=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".map"){print 1}else{print 0}}'`
+if [ $ismap -eq 1 ] && [ $filetype -ne 3 ] ; then
+ echo "Input is auto-determined as Matrix map file"
+ filetype=1
+fi
+filetypeo=$filetype
+
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".sdf"){print substr($1,1,l-1)}else{print $1}}'`
+inputo=$input
+
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/sdf_contactmap .
+fi
+
+termo=`echo $term | awk '{print $1}'`
+[ $termo == "postscript" ] && termo='.ps'
+
+
+#None-complete or none-ordered map file: convert it to standard NxN matrix file
+if [ $filetype -eq 3 ] ; then
+ awk 'BEGIN{head='$head';n=0;max=0;small=999999;big=-999999;fill0s="'$fill0'";fill1s="'$fill1'";}{
+ if(NR>head){
+  n++
+  a1[n]=$1;a2[n]=$2;a3[n]=$3;a4[n]=$4;a5[n]=$5;use[n]=0
+  if($1>max){max=$1}
+  if($2>max){max=$2}
+  name[$1]=$4;name[$2]=$5
+  if($3>big){big=$3}
+  if($3<small){small=$3}
+ } else{
+  print $_
+ }
+}END{
+ fill0='$fill0';fill1='$fill1'
+ if(fill1s=="max"){fill1=big}
+ if(fill1s=="min"){fill1=small}
+ if(fill0s=="max"){fill0=big}
+ if(fill0s=="min"){fill0=small}
+ for (i=1;i<=max;i++){
+  for (j=1;j<=max;j++){
+   did=0
+   for(k=1;k<=n;k++){
+    if(use[k]<2){  #One pair only count twice as Rank1-Rank2 and Rank2-Rank1
+     if(a2[k]==i&&a1[k]==j){
+     did=1;use[k]++
+     print j,i,a3[k],a4[k],a5[k]
+     break
+     }
+     if(a1[k]==i&&a2[k]==j){  #Assume Rank1-Rank2 value = Rank2-Rank1 value 
+     did=1;use[k]++
+     print j,i,a3[k],a5[k],a4[k]
+     break
+     }
+    }
+   }
+   if(did==0){  #fill missing pair values
+    score=fill0
+    if(i==j){score=fill1}
+    print j,i,score,name[j],name[i]
+   }
+  }
+ }
+}' $input >  $temp6.inp
+ input=$temp6.inp
+ filetype=1
+fi
+
+#half-matrix file
+if [ $filetype -eq 4 ] ; then
+ awk 'BEGIN{head='$head';n=0;max=0;fill0='$fill0';fill1='$fill1';}{
+ if(NR>head){
+  n++
+  a1[n]=$1;a2[n]=$2;a3[n]=$3;use[n]=0
+  if($1>max){max=$1}
+  if($2>max){max=$2}
+  name[$1]=$4;name[$2]=$5;score[$1,$2]=$3;score[$2,$1]=$3
+ } else{
+  print $_
+ }
+}END{
+ for (i=1;i<=max;i++){
+  for (j=1;j<=max;j++){
+   print j,i,score[j,i],name[j],name[i]
+  }
+ } 
+}' $input >  $temp6.inp
+ input=$temp6.inp
+ filetype=1
+fi
+
+############# SDF file to generate Similarity Matrix
+if [ $filetype -eq 2 ] ; then
+  echo "Input is SDF file. Will generate Similarity Matrix first: "
+ ./sdf_contactmap $cdisplay -noshowcluster -nomanycluster -labelName $input | tee $temp
+ mapfile=`grep 'Similarity Matrix / Contact Map file' $temp | tail -1 | awk '{print $NF}'`
+ mapfile2=`grep 'Gnuplot-friendly/Sorted Matrix is'  $temp | tail -1 | awk '{print $NF}'`  
+ input=$mapfile2
+ [ $mapnum -eq 1 ] && input=$mapfile
+ echo "===> Similariy matrix / map file to be used is $input"
+ filetype=1; head=1
+ #if [ $mapnum -eq 1 ] ; then
+ #  dosort=0   #mapfile2 is already sorted for good display
+ #fi
+fi
+
+###### Convert Matrix file to the required firstCol increase first instead of 2ndCol increased first
+#if [ $filetype -eq 1 ] ; then
+# ord=`awk 'BEGIN{head='$head';s=0;}{if(NR>head){if(s==1){if(pre!=$1){d=1}else{d=0};print d; exit};if(s==0){pre=$1;s=1}}}' $input`
+# if [ $ord -eq 0 ] ; then
+#  echo "Revert matrix file:"
+#  awk 'BEGIN{head='$head';s=0;max1=0;max2=0}{if(NR>head&&NF>0){score[$1,$2]=$3;n1[$1]=$4;n2[$2]=$5;c1[$1]=$1;c2[$2]=$2
+#  if($1>max1){max1=$1}
+#  if($2>max2){max2=$2}
+#  }}END{
+#  for (i=1;i<=max1;i++){
+#   for (j=1;j<=max2;j++){
+#     print j,i,score[i,j],n2[j],n1[i]
+#   }
+#  }
+#  }' $input > $temp6.conv
+#  input=$temp6.conv
+# fi
+#fi
+
+########### For Matrix file to generate cluster file
+#cluster map file by many levels for dendogram
+# NOTE: This cluster for next level is ONLY cluster data points of this level, i.e. each cluster only pick out one data for next level cluster
+#format: Rank | Name | Level 1 Cluster Rank | L2 Cluster | ...
+if [ $filetype -eq 1 ] ; then
+ nox=0
+ clfile=$input
+ ismf=1 #Normal Input. Format as: Rank1   Rank2   TanimotoScore   Name1   Name2
+ if [ $filetypeo -eq 2 ] && [ $mapnum -ne 1 ] ; then
+  ismf=2 #mapfile2 format: Rank1   Rank2   TanimotoScore   Name1   Name2 OldRank1   OldRank2. Keep OldRank in label
+ fi
+ nsdf=`awk 'BEGIN{head='$head';n=0}{if(NR>head){if($1==1){n++}}}END{print n}' $clfile`
+ if [ $autoc -eq 1 ] ; then  #Use max/min as $startc/$endc
+  olin=`awk 'BEGIN{small=999999;big=-999999;head='$head';cstep='$cstep';smaller='$smaller'}{  
+ if(NR>head&&NF>0){
+  if($3>big){big=$3}
+  if($3<small){small=$3}
+ }}END{gap=(small-big)/cstep;if(smaller==1){print small-gap,big,-gap}else{print big+gap,small,gap}}' $clfile`
+  startc=`echo $olin | awk '{print $1}'`
+  endc=`echo $olin | awk '{print $2}'`
+  stepc=`echo $olin | awk '{print $3}'`
+  dostepc=1
+  echo "Auto determine cluster range as [ $startc $endc ] at steps=$cstep ($stepc)"
+ fi
+ [ $docout -eq 0 ] && mclusterfile=$inputo'_mclu.xls'
+ if [ $less -eq 0 ] ; then
+  [ $dostepc -eq 1 ] && echo "===> Multiple levels cluster at cutoff [ $startc $endc ] at step $stepc for $nsdf cmpds in $clfile"
+  [ $dostepc -eq 0 ] && echo "===> Multiple levels cluster at cutoffs= $list for $nsdf cmpds in $clfile"
+  echo "  Dendogram output is $mclusterfile"
+  echo "  Format: OriRank | Name | Level 1 Cluster Rank | L2 Cluster | ..."
+ fi
+ awk -v list="$list" '
+BEGIN{dostepc='$dostepc';head='$head';startc='$startc';endc='$endc';stepc='$stepc';nsdf='$nsdf';ismf='$ismf';nc=0;n=0;pre=-99999;ncluster=0;smaller='$smaller'}
+{if(NR>head&&NF>0){
+ score[$1,$2]=$3; scoreo[$1,$2]=$3; #TanScore
+ if(ismf==2){
+  nameo[$1]=sprintf("%s %s",$6,$4) #OldRank Name
+ }else{
+  nameo[$1]=sprintf("%s %s",$1,$4) #Rank Name
+ }
+ used[$1]=0;usedo[$1]=0
+ orio[$1]=$1
+ }
+}END{
+
+ #for(i=1;i<=nsdf;i++){
+ # print nameo[i]
+ #}
+
+ if (dostepc==1){
+  nlevel=int((endc-startc)/stepc)+1
+ }else{
+  nlevel=split(list,lev," ")
+ }
+ printf("Rank Name")
+ for(i=1;i<=nlevel;i++){
+  if(dostepc==1){printf(" %3.2f",startc+(i-1)*stepc)
+  }else{printf(" %f",lev[i])}
+ }
+ printf("\n")   #header: Rank Name Cutoff1 Cutoff2 ...
+ for(i=1;i<=nlevel;i++){  #cluster of many levels
+  nc=0
+  cut=startc+(i-1)*stepc
+  if(dostepc==0){cut=lev[i]}
+  #print "haha ",i,cut
+  if(i==1){
+   n=nsdf  #number of data for first level
+  } else {
+   n=nco #number of clusters
+  }
+  for(j=1;j<=n;j++){
+   if(used[j]==0){
+    npre=split(nameo[orio[j]],sp," ")
+    cpre=sp[npre]  #previous cluster rank
+    nc++
+    ori[nc]=orio[j]
+    for(k=j+1;k<=n;k++){
+     if(used[k]==0){
+      if((smaller==0&&score[j,k]>=cut)||(smaller==1&&score[j,k]<=cut)){
+       used[k]=1
+       npren=split(nameo[orio[k]],sp," ")
+       cpren=sp[npre]
+       nameo[orio[k]]=sprintf("%s %d",nameo[orio[k]],nc) #Rank | Name | Level 1 Cluster Rank
+       if(i>1){ #mark previous marked cmpds
+       for(m=1;m<=nsdf;m++){
+        npre2=split(nameo[m],sp2," ")
+        cpre2=sp2[npre2]
+        if(npre2==npren&&cpren==cpre2){
+         nameo[m]=sprintf("%s %d",nameo[m],nc)
+        }
+       }
+       } #i>1
+      }
+     }
+    }
+    used[j]=1
+    nameo[orio[j]]=sprintf("%s %d",nameo[orio[j]],nc) #Rank | Name | Level 1 Cluster Rank
+    if(i>1){
+    for(m=1;m<=nsdf;m++){   #mark previous marked cmpds
+     npre2=split(nameo[m],sp2," ")
+     cpre2=sp2[npre2]
+     if(npre2==npre&&cpre==cpre2){
+      #print "haha ",i,m,nameo[m]
+      nameo[m]=sprintf("%s %d",nameo[m],nc)
+     }
+    }
+    } #i>1
+   }
+  }
+  nco=nc
+  for(j=1;j<=nc;j++){  #next level cluster based on cluster of this level: each cluster in this level pick out first cmpd for next level
+   used[j]=0
+   for(k=j;k<=nc;k++){
+    score[j,k]=scoreo[ori[j],ori[k]]  #first level score is correct
+    #if(i==2){print j,k,ori[j],ori[k],score[j,k]}
+    orio[j]=ori[j]
+   }
+  }
+ }
+ for(i=1;i<=nsdf;i++){
+  print nameo[i]
+ }
+}' $clfile  > $mclusterfile
+head=1
+input=$mclusterfile
+[ $debug -eq 1 ] && cat $input
+fi
+
+
+#################################################
+####  Working on Cluster file:
+ndata=`wc -l $input | awk '{print $1-'$head'}'`
+[ $start -lt 1 ] && start=1
+if [ $end -lt 1 ] || [ $end -gt $ndata ] ; then
+ end=$ndata
+fi
+awk '{if(NR<='$head'||(NR>=('$head'+'$start')&&NR<=('$head'+'$end'))){print $_}}' $input > $temp
+mv $temp $input
+ndata=`wc -l $input | awk '{print $1-'$head'}'`
+nlevel=`awk '{if(NR>'$head'){print NF-2;exit}}' $input`
+if [ $doout -ne 1 ] ; then 
+ output=$input'.gif'
+ #[ $ismf -eq 2 ] && output=$input'_'$ismf'.gif' 
+fi
+
+#Sort input data file by order/cluster-rank of cluster level: Use cluster Rank to sort
+if [ $dosort -eq 1 ] ; then
+ #cat $input
+ [ $less -eq 0 ] && echo "Sort Input by cluster number/rank + Name rank:"
+  awk 'BEGIN{head='$head';level='$nlevel'+1;n=0;nc=0;}
+{if(NR>head&&NF>0){
+ n++;nc++
+ e[n]=$_;used[n]=0
+ for(i=1;i<level;i++){
+  c=i+2
+  d[n,i]=$c   #cluster Rank
+ }
+ d[n,level]=$1  #data Rank. Also sort by Rank
+
+ #accumulate cluster size of each level
+ for(i=1;i<level;i++){
+  did=0
+  for(j=1;j<=ncc[i];j++){
+   if(d[n,i]==crank[i,j]){
+    did=1;ncs[i,j]++   #cluster size increase
+   }
+  }
+  if(did==0){
+   ncc[i]++;ppp=ncc[i];ncs[i,ppp]=1;crank[i,ppp]=d[n,i]
+  } 
+ }
+}else{
+ if(NR<=head){print $_}
+}
+}END{
+
+ for(i=1;i<=nc;i++){
+  for(j=1;j<level;j++){
+   #if(i==1){print ncc[j]} 
+   for(k=1;k<=ncc[j];k++){
+    if(d[i,j]==crank[j,k]){
+     d[i,level+j]=ncs[j,k]  #cluster size
+     rk[i,level+j]=k #cluster rank
+     break
+    }
+   }
+  }
+  #print i,e[i],d[i,level+1],d[i,level+2],d[i,level+3]
+ }
+
+ for(i=1;i<n;i++){
+  for(j=i+1;j<=n;j++){
+   for(k=level-1;k>=0;k--){
+    did=0
+    if(k==0){  #Sort by name rank
+     kv=level
+     if(d[i,kv]<d[j,kv]){break}
+     if(d[i,kv]>d[j,kv]){did=1}
+    }
+    if(d[i,k]<d[j,k]){break}  #Sort by cluster rank
+    if(d[i,k]>d[j,k]){did=1}
+    if(did==1){
+     aaa=e[i];e[i]=e[j];e[j]=aaa
+     for(l=1;l<2*level;l++){
+      aaa=d[i,l];d[i,l]=d[j,l];d[j,l]=aaa
+     }
+     break
+    }
+   }
+  }
+ }
+
+ for(i=1;i<=n;i++){
+  print e[i]
+ }
+}' $input > $temp5
+ #cat $temp5; cat $input;exit
+ input=$temp5
+fi
+
+#Sort by cluster size of each level cluster
+if [ $dosort -eq 2 ] ; then
+ #cat $input
+ echo "Sort data by cluster size of each cluster level + Name Rank"
+  awk 'BEGIN{head='$head';level='$nlevel'+1;n=0;nc=0;}
+{if(NR>head&&NF>0){
+ n++;nc++
+ e[n]=$_;used[n]=0
+ for(i=1;i<level;i++){
+  c=i+2
+  d[n,i]=$c   #cluster Rank
+ }
+ d[n,level]=$1  #data Rank. Also sort by Rank
+
+ #accumulate cluster size of each level
+ for(i=1;i<level;i++){
+  did=0
+  for(j=1;j<=ncc[i];j++){
+   if(d[n,i]==crank[i,j]){
+    did=1;ncs[i,j]++   #cluster size increase
+   }
+  }
+  if(did==0){
+   ncc[i]++;ppp=ncc[i];ncs[i,ppp]=1;crank[i,ppp]=d[n,i]
+  } 
+ }
+}else{
+ if(NR<=head){print $_}
+}
+}END{
+
+ for(i=1;i<=nc;i++){
+  for(j=1;j<level;j++){
+   #if(i==1){print ncc[j]} 
+   for(k=1;k<=ncc[j];k++){
+    if(d[i,j]==crank[j,k]){
+     d[i,level+j]=ncs[j,k]  #cluster size
+     rk[i,level+j]=k #cluster rank
+     break
+    }
+   }
+  }
+  #print i,e[i],d[i,level+1],d[i,level+2],d[i,level+3]
+ }
+
+ #First sort: based on cluster size
+ for(i=1;i<nc;i++){
+  for(j=i+1;j<=nc;j++){
+   for(k=1;k<=level;k++){
+    did=0
+    lv1=level+k
+    if(k==level){ #Also compare Rank at last step
+     lv1=level
+     if(d[i,lv1]<d[j,lv1]){break} #by cluster size
+     if(d[i,lv1]>d[j,lv1]){did=1}          
+    } else {
+     if(d[i,lv1]>d[j,lv1]){break}
+     if(d[i,lv1]<d[j,lv1]){did=1}
+     if(d[i,lv1]==d[j,lv1]){  #by next levels of cluster size
+      if(lv1<(level-1)){
+       for(m=k+1;m<level;m++){
+        lvv=level+m
+        if(d[i,lvv]>d[j,lvv]){break}
+        if(d[i,lvv]<d[j,lvv]){did=1}
+       }
+      }
+     }
+    }
+    if(did==1){
+     aaa=e[i];e[i]=e[j];e[j]=aaa
+     for(m=1;m<2*level;m++){
+      aaa=d[i,m];d[i,m]=d[j,m];d[j,m]=aaa
+      aaa=rk[i,m];rk[i,m]=rk[j,m];rk[j,m]=aaa
+     }
+     break
+    }
+   }
+  }
+ }
+
+ #2nd sort: further based on cluster rank for same size cluster
+ for(i=1;i<nc;i++){
+  for(j=i+1;j<=nc;j++){
+   for(k=1;k<level;k++){
+    did=1
+    lv1=level+k
+    if(!(d[i,lv1]==d[j,lv1]&&rk[i,lv1]>rk[j,lv1])){break}
+    if(did==1){
+     aaa=e[i];e[i]=e[j];e[j]=aaa
+     for(m=1;m<2*level;m++){
+      aaa=d[i,m];d[i,m]=d[j,m];d[j,m]=aaa
+      aaa=rk[i,m];rk[i,m]=rk[j,m];rk[j,m]=aaa
+     }
+     break
+    }
+   }
+  }
+ }
+
+ #3rd sort: further based on data rank for same cluster rank
+ for(i=1;i<nc;i++){
+  for(j=i+1;j<=nc;j++){
+   for(k=1;k<level;k++){
+    did=1
+    lv1=level+k
+    if(!(d[i,lv1]==d[j,lv1]&&rk[i,lv1]==rk[j,lv1]&&d[i,level]>d[j,level])){break}
+    if(did==1){
+     aaa=e[i];e[i]=e[j];e[j]=aaa
+     for(m=1;m<2*level;m++){
+      aaa=d[i,m];d[i,m]=d[j,m];d[j,m]=aaa
+      aaa=rk[i,m];rk[i,m]=rk[j,m];rk[j,m]=aaa
+     }
+     break   
+    } 
+   }
+  }
+ }    
+
+ for(i=1;i<=nc;i++){
+  print e[i]
+ }
+}' $input > $temp3 
+input=$temp3
+fi
+
+#convert CBIS_ID VCN-xxxx into NSC# by using NSC_VCN_map.txt
+if [ $doVCN -eq 1 ] && [ -s $ed/NSC_VCN_map.txt ] ; then
+ hasVCN=`grep 'VCN-' $input | wc -l | awk '{print $1}'`
+ if [ $hasVCN -gt 0 ] ; then
+ echo "Convert $hasVCN CBIS_ID VCN-xxx to NSC#"
+ awk 'BEGIN{
+  file="'$ed/NSC_VCN_map.txt'";  n=0
+  while ((getline line < file) > 0) {
+   n++; nf=split(line,d," "); v[n]=d[1];s[n]=d[2]
+  }
+  close(file)
+ }{
+  did=0
+  if(substr($2,1,4)=="VCN-"){
+   for(i=1;i<=n;i++){
+    if($2==v[i]&&s[i]!="NA"){
+     printf("%s %s ",$1,s[i])  #printf("%s NSC%s ",$1,s[i])
+     for(i=3;i<NF;i++){printf("%s ",$i)};printf("%s\n",$NF)
+     did=1;break
+    }
+   }
+  }
+  if(did==0){print $_}
+ }' $input > $temp3.vcn
+ input=$temp3.vcn
+ fi
+fi
+
+#Cut too long name into max length as $maxlength. Otherwise cannot display
+#also replace % in name to -
+#also replace _ in name to -; otherwise subscript display
+#Rank Name 0.80 0.70 0.60 0.50 0.40 0.30 0.20 0.10 0.00
+#1 161181-1nM 1 1 1 1 1 1 1 1 1
+#11 127840-16nM 11 1 1 1 1 1 1 1 1
+awk 'BEGIN{max='$maxlength'}{if(NR==1){print $_}else{
+ printf("%s ",$1);printf("%s ",substr($2,1,max));for(i=3;i<NF;i++){printf("%s ",$i)};printf("%s\n",$NF)}}' $input > $temp3.cut2
+sed 's/%/-/g' $temp3.cut2 > $temp3.cut
+sed 's/_/-/g' $temp3.cut > $temp3.cut2 
+input=$temp3.cut2 
+
+if [ $docutshow -eq 1 ] ; then
+ co=`head -1 $temp3.cut2 | awk 'BEGIN{cut='$cutshow';min=99999;y=cut;x=3}{for(i=3;i<=NF;i++){a=$i-cut;if(a<0){a=-a};if(a<min){min=a;x=i;y=$i}}}END{print y,x}'`
+ cutreal=`echo $co | awk '{if(int($1)==$1){y=int($1)}else{y=sprintf("%3.2f",$1)};print y}'`
+ cutcol=`echo $co | awk '{print $2}'`
+ echo "=> Top $distop clusters at cutoff=$cutreal from $mclusterfile are:"
+ awk 'BEGIN{x='$cutcol';np=0}{if(NR>1){a=$x;n[a]++;if(n[a]==1){np++;name[a]=$2}else{name[a]=sprintf("%s|%s",name[a],$2)}}}
+ END{for(i=1;i<=np;i++){print n[i],name[i]}}' $mclusterfile | sort -nr -k 1 | head -$distop | grep '|' 
+  #Only show more than 1 proteins in cluster, controled by last grep '|'
+fi
+
+if [ $noplot -eq 1 ] ; then
+ echo " Cluster file $mclusterfile can be used to pick out clusters or diverse subset"
+ rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6*; exit
+fi
+
+##############################################################################
+##################################################### Plot
+
+#Auto expand XY plotsize for large data
+[ $ndata -gt $autonumber ] && autoxy=1
+if [ $autoxy -eq 1 ] ; then
+ if [ $ndata -gt $autonumber ] ; then
+  [ $nochangexy -eq 0 ] && orient='y'
+  dofontsize_tics=1;fontsize_tics=8  #fix font size 8
+  #plotheight=`echo $ndata $fontsize_tics | awk '{print $1*$2+20}'` #Each label use 12 pixel tall
+  plotheight=`echo $ndata $fontsize_tics $plotheight | awk '{y=int($1*$2*1.3);if(y<$3){y=$3};print y}'` #Each label use 12 pixel tall x1.2
+  plotwidth=`echo $nlevel $plotwidth $linelength $widthbase | awk '{n=$1*$3+$4;if(n>$2){n=$2};print n}'`
+  yyy=$ylabel;ylabel=$xlabel;xlabel=$yyy
+  #offset=0   #0 offset to avoid negative plot
+ else
+  [ $nochangexy -eq 0 ] && orient='x'
+  linelength=40 #reduce line length to 40pts
+  plotheight=`echo $nlevel $plotheight $linelength $widthbase | awk '{n=$1*$3+$4;if(n>$2){n=$2};print n}'`
+  plotwidth=`echo $ndata $fontsize_tics $plotwidth | awk '{n=$1*2*$2+80; if(n>$3){n=$3};print n}'` #Each label use 12 pixel tall
+ fi
+ echo "Auto determine x/y orientation as -$orient since data = $ndata to $autonumber . Resize plot $plotwidth $plotheight"
+fi
+
+#auto for offset
+offsetv=0
+if [ $offset -ne 0 ] ; then
+ offsetv=`echo $linelength $ndata | awk '{n=$1/$2;print n}'`  #offset pixels 
+ #echo " Offset of lines: $offsetv pixels"
+fi
+#if [ $ndata -gt $autonumber ] ; then
+# [ $offset -ne 0 ] && echo "Reset offset to 0 to avoid negative line drawing"
+# offset=0
+#fi
+
+if [ $dofontsize_tics -eq 0 ] ; then
+ [ $orient == 'x' ] && fontsize_tics=`echo $ndata $fontsize_tics | awk '{n='$plotwidth'/$1; if(n<9){n=9};if(n>$2){n=$2};printf("%d",n)}'`
+ [ $orient == 'y' ] && fontsize_tics=`echo $ndata $fontsize_tics | awk '{n='$plotheight'/1.2/$1; if(n<8){n=8};if(n>$2){n=$2};printf("%d",n)}'`
+ #echo "Fontsize resized to $fontsize_tics for $ndata"
+fi
+
+#plot range
+min=1;max=$ndata;level=$nlevel;reverse=''
+if [ $orient == "y" ] ; then
+ norient='x' ; reverse='reverse nowriteback' 
+fi
+[ $orient == "x" ] && norient='y'
+#Display range
+rang1='set '$orient'range ['$min':'$max'] '$reverse   #reverse y-axis
+rang2='set '$norient'range [0:'$level']'
+
+#label cluster cutoff
+unsetaxis='unset '${norient}'tics;'
+extraaxis=''
+if [ $nox -eq 0 ] ; then
+ unsetaxis=''
+ extraaxis=`awk 'BEGIN{digit='$digit';head='$head';orient="'$norient'";level='$nlevel';pre=0; printf("set %stics (",orient)}{
+  if(head==0){
+   for(i=1;i<=level;i++){
+    if(pre>0){printf(",")}
+    if(digit==2){
+     printf("\"%3.2f\" %d",i/level,i)
+    }else{
+     if(digit==1){
+      printf("\"%2.1f\" %d",i/level,i)
+     }else{
+      printf("\"%d\" %d",i/level,i)
+     }
+    }
+    pre=1
+   }
+   exit
+  }else{
+   if(NR==1){
+    for(i=1;i<=level;i++){
+     p=i+2
+     if(pre>0){printf(",")}
+     if(digit==2){
+      printf("\"%3.2f\" %d",$p,i)
+     }else{
+      if(digit==1){
+       printf("\"%2.1f\" %d",$p,i)
+      }else{
+       printf("\"%d\" %d",$p,i)
+      }
+     }
+     pre=1
+    }
+    exit
+   }
+  }
+ }END{
+ printf(");\n")
+}' $input`
+fi
+
+
+#Label y-axis by names: set ytics ("NA" 0,"Oxidoreductases" 1,"Transferases" 2,"Hydrolases" 3,"Lyases" 4,"Isomerases" 5,"Ligases" 6);
+extra=`awk 'BEGIN{head='$head';orient="'$orient'";pre=0;n=0; addrank='$addrank';printf("set %stics (",orient)}
+{if(NR>head){
+ n++
+ if(pre>0){printf(",")}
+ if(addrank==0){
+  printf("\"%s\" %d",$2,n)
+ } else {
+  printf("\"%3s %s\" %d",$1,$2,n)
+ }
+ pre=1
+}}END{
+ if(orient=="y"){
+  printf(");\n")
+ }else{
+  printf(") rotate by -90;\n")
+ }
+}' $input`
+
+
+#Draw lines as arrow:
+awk 'BEGIN{head='$head';orient="'$orient'";pre=0;min='$min';max='$max';level='$level';
+ linewidth='$linewidth';linetype='$linetype';offsetv='$offsetv';offset='$offset';maxoff='$maxoff';offgroup='$offgroup'
+ unicolor='$unicolor';linecolor='$linecolor';linelength='$linelength'
+ nlevel=0;n=0
+}
+{if(NR>head){
+ n++
+ for(i=1;i<=level;i++){
+  c=i+2
+  d[n,i]=$c;dori[n,i]=$c
+  #if(i==level){print $c}
+ }
+}
+nori=n
+}
+END{
+ for(i=1;i<=level;i++){
+  nnext=0
+   #Horizontal lines
+   for(j=1;j<=n;j++){
+    if(i==1){
+     y=j;xmin=i-1  #xmin starts from beginning at first level
+     color=d[j,i]
+     rank=j
+    }else{
+     xmin=cmaxx[j]  #xmin starts from xmax of last level
+     y=caveo[j];
+     color=cnno[j]
+     rank=cranko[j]
+     colornext=d[rank,i+1]
+    }
+    colornext=d[rank,i+1]
+    stepoff=(color-1) % offgroup    #offset to max for each offgroup lines, so that offset effect will be strong and good looking
+    #off=offset*offsetv*(color-1)/linelength*nori/n    #first cluster, smaller offset
+    #off=offset*offsetv*(n-color+1)/linelength*nori/n   #first cluster, larger offset
+    off=stepoff/offgroup*offset*maxoff
+    if(off>maxoff){off=maxoff}  #make sure keep 1-maxoff of length to avoid negtive lines 
+    xmax=i-off;
+    xmaxo=xmax
+    if(i==level){xmax=i}
+    ymin=y;ymax=y
+    if(orient=="x"){
+     a=xmin;xmin=ymin;ymin=a
+     a=xmax;xmax=ymax;ymax=a
+    }
+    if(unicolor==1){
+     printf("set arrow from %f,%f to %f,%f nohead lt %d lw %d lc %d\n",xmin,ymin,xmax,ymax,linetype,linewidth,linecolor)  #Horizotal line
+    }else{
+     printf("set arrow from %f,%f to %f,%f nohead lt %d lw %d lc %d\n",xmin,ymin,xmax,ymax,linetype,linewidth,color)  #Horizotal line
+    }
+    did=0
+    for(k=1;k<=nnext;k++){
+     if(color==cnext[k]){
+      did=1
+      cnum[k]++
+      cave[k]=cave[k]+y
+      if(y<cmin[k]){cmin[k]=y}
+      if(y>cmax[k]){cmax[k]=y}
+     }
+    }
+    if(did==0){
+     nnext++
+     crank[nnext]=rank
+     cnext[nnext]=color
+     cnn[nnext]=colornext
+     cmin[nnext]=y;cmax[nnext]=y;cave[nnext]=y;cnum[nnext]=1
+     cmaxx[nnext]=xmaxo
+    }
+   }
+   
+   #Verticle lines
+   for(j=1;j<=nnext;j++){
+    cave[j]=cave[j]/cnum[j]   #next horizental lines at average Y of this cluster 
+    xmin=cmaxx[j]
+    xmax=xmin;ymin=cmin[j];ymax=cmax[j]
+    if(orient=="x"){
+     #xmin=i;xmax=xmin
+     a=xmin;xmin=ymin;ymin=a
+     a=xmax;xmax=ymax;ymax=a
+    }
+    if(unicolor==1){
+     printf("set arrow from %f,%f to %f,%f nohead lt %d lw %d lc %d\n",xmin,ymin,xmax,ymax,linetype,linewidth,linecolor)  #Verticle line
+    }else{
+     printf("set arrow from %f,%f to %f,%f nohead lt %d lw %d lc %d\n",xmin,ymin,xmax,ymax,linetype,linewidth,cnext[j])  #Verticle line
+    }
+   }   
+
+  #reset data for next level
+  n=nnext
+  #print "Next Level: ",i, n
+  for(j=1;j<=n;j++){   
+   caveo[j]=cave[j]
+   cnno[j]=cnn[j]
+   cnexto[j]=cnext[j]
+   cranko[j]=crank[j]
+   #print "j=",j,cave[j],cnext[j],cnno[j]
+  }   
+ }
+}' $input > $temp4
+
+#############################################################################
+#################################### Start for gnuplot code: #############
+############################################################################
+temp2=`basename $temp2`
+cat << eee > $temp
+#!$exe
+
+#see http://cs.ecs.baylor.edu/~donahoo/tools/gnuplot/3Dex.html
+reset
+set terminal $term   size ${plotwidth},${plotheight} font '$font,$fontsize' # 'enhanced' can produce sub and superscripts
+set   autoscale                        # scale axes automatically
+set title "$title"
+set key $keyposition   #legand
+set xtics font '$font,$fontsize_tics'  #smaller font 
+set ytics font '$font,$fontsize_tics'  #smaller font 
+#set ztics font '$font,$fontsize_tics'  #smaller font 
+
+#set xdata time
+#set timefmt "%d/%m/%Y %H:%M:%S"
+#set format x "%H:%M"
+
+#set xlabel offset 1,0 ;  #offset ylabel to be more close to y-axis
+$xlabel
+$ylabel
+$rang1
+$rang2
+$extraline
+$extra
+
+${extraaxis}
+$unsetaxis
+unset y2tics; unset border   #No x-y axis box and tics
+set tic scale 0  #Remove tics, but keep tics label. Still dots left for tics though
+
+eee
+cat $temp4 >> $temp
+#Must draw dummy line to initial arrows ahead
+echo "plot -99999 w lines lt 1 lc 1 " >> $temp
+
+#make it executable
+chmod +x $temp
+
+#cp $temp i ; echo hahaha i
+ 
+#make sure output name has same extension as $termo
+output=`echo $output | awk '{p="'$termo'";a=split($1,b,".");if(b[a]==p){print $1}else{
+ d=b[1];for(i=2;i<a;i++){d=sprintf("%s.%s",d,b[i])};printf("%s.%s",d,p)}}'`
+
+#Generate plot file
+crd=`pwd`
+workdir=`echo $crd | sed 's/\/holi//' | sed 's/\/hongzhili//' | sed 's/\/flower_data//' | sed 's/\/isi-flower//' | awk '{print substr($1,2,length($1)-1)}'`
+workstationdir=$workstationdir'/'$workdir'/'
+
+#Find IP address:
+myIP=`/sbin/ifconfig | grep "inet addr" | awk -F: '{print $2}' | head -1 | awk '{print $1}'`
+if [ "$myIP" == "" ] ; then
+ myIP=`/sbin/ifconfig | grep "inet " | awk '{print $2}' | head -1 | awk '{print $1}'` #IP address of this machine for new 32-CPU machine
+fi
+workIP=`echo $workstation | awk '{split($1,a,"@");print a[2]}'`
+[ "$myIP" == "$workIP" ] && runlocal=1
+if [ $runlocal -eq 1 ] ; then
+ #echo "$0 running in local $myIP $workIP " 1>&2
+ $temp > $output
+else  #run in my newest workstation
+ rm $output
+ #echo "Use workstation $workstation:$workstationdir to run gnuplot :"
+ scp $temp $temp2 $workstation:$workstationdir
+ #echo "$0 Copied $temp $temp2 $workstation:$workstationdir " 1>&2
+ ssh $workstation "cd $workstationdir ; $temp > $output"
+ checktimes=5;nt=0
+ if [ ! -s $output ] && [ $nt -lt $checktimes ] ; then
+  sleep 5
+  scp "$workstation:$workstationdir$output" .
+  nt=`expr $nt + 1`
+ fi
+ [ ! -s $output ] && echo "WARNing @$0 $oldline: Not plot $output generated in remote machine $workstation" 1>&2
+ ssh $workstation "cd $workstationdir ; rm -f $temp $temp2"
+fi
+
+#display plot file
+if [ $display -eq 1 ] ; then
+ nohup display $output &
+ #display $output >& $temp6
+ sleep 2
+fi
+
+echo "=> Output dendogram  is $output"
+echo " Cluster file $mclusterfile can be used to pick out clusters or diverse subset"
+
+[ $debug -eq 1 ] && cat $temp
+
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6*; exit

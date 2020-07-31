@@ -1,0 +1,11 @@
+RefseqID	ProteinName	Species	Length	FullName
+NP_006006.3	ARID1A	H.sapiens	2285	 AT rich interactive domain 1A (SWI-like)
+XP_513235.4	ARID1A	P.troglodytes	2285	 AT rich interactive domain 1A (SWI-like)
+XP_002808326.1	LOC719949	M.mulatta	2224	 AT-rich interactive domain-containing protein 1A-like
+XP_005617799.1	ARID1A	C.lupus	2285	 AT rich interactive domain 1A (SWI-like)
+NP_001192714.1	ARID1A	B.taurus	2286	 AT rich interactive domain 1A (SWI-like)
+NP_001074288.1	Arid1a	M.musculus	2283	 AT rich interactive domain 1A (SWI-like)
+NP_001100105.1	Arid1a	R.norvegicus	1911	 AT rich interactive domain 1A (SWI-like)
+XP_417693.4	ARID1A	G.gallus	1350	 AT rich interactive domain 1A (SWI-like)
+XP_002934685.2	arid1a	X.tropicalis	2053	 AT rich interactive domain 1A (SWI-like)
+XP_696565.6	arid1ab	D.rerio	2261	 AT rich interactive domain 1Ab (SWI-like)

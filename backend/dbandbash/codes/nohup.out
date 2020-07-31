@@ -1,0 +1,77 @@
+./sdf_contactmap -reverse -fillpad 0 -zrange [0:100] -barcolor 1 -fontcolor blue -nodendo -fast -out Q17RS7_aln1_0_map.xls -fast -map -fill0 min -fill1 max -labelstep 1 -labeltic 5 -labelName -title Group Seq Identity Heatmap (%) 16467.tmp.matrix
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//similarity.spl': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//do_gnuplot': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getNthCompound': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getName': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getNCompound': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getFromName_many': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//cluster': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//lists_compare_different': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//mapfile_addpad': No such file or directory
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+Only display names of the first 10 chars to shorten display names and replace empty space and _ to -
+Sorting ./sdf_contactmap_16878.tmp2_map.txt2 based on cluster size at similarity(0) cutoff 0.6, then 0.35, then MaxTanScore/RMSD:
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+awk: fatal: cannot open file `symbol.txt' for reading (No such file or directory)
+./sdf_contactmap: line 881: ./lists_remove_duplicate: No such file or directory
+mv: cannot stat './sdf_contactmap_16878.tmp5': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+./do_gnuplot -plotsize size 921,615 -yreverse -out Q17RS7_aln1_0_map_map.gif -nosilence -xrange [1:7] -yrange [1:7] -zrange [0:100] -heatmap -header 1 -extra  set palette rgb -7,-5,-15 ; set cbtics 20;  set format cb "%2.1f"; set cbtics border in scale 0,0 mirror norotate  offset character 0, 0, 0 autojustify;   set xtics ("." 1,"GEN" 2,"FEN1" 3,"XRN1" 4,"RECB" 5,"RECC" 6,"." 7); set xtics border in scale 0,0 nomirror rotate by -45  offset character 0, 0, 0 autojustify ;  set ytics ("." 1,"." 1,"GEN" 2,"FEN1" 3,"XRN1" 4,"RECB" 5,"RECC" 6); ; set size square 1,1; set origin 0,0  -fontsize_tics 15 -zcol 3 -title Group Seq Identity Heatmap (%) -xlabel none -ylabel none ./sdf_contactmap_16878.tmp.mp
+ 
+ Similarity Matrix / Contact Map file is Q17RS7_aln1_0_map.map
+  Dendogram (Multiple-cluster) at cutoff [ 0.8 0 ] at step -0.1 output is Q17RS7_aln1_0_map_mclu.xls  .gif if -manycluster
+  Gnuplot-friendly/Sorted Matrix is ./sdf_contactmap_16878.tmp.mp
+   Graphy saved as Q17RS7_aln1_0_map_map.gif  
+
+ NOTE: Can adjust -cut 0.6 to view better cluster. Adjust -range X1 X2 to get detail view. -showcluster 4 to show top 4 clusters

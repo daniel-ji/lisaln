@@ -1,0 +1,176 @@
+#!/bin/sh 
+# Watch out empty entry in QikProp.CSV:
+#  "CMP-000032",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+thisfile=$0
+
+
+usemax=1 #=1: use min/max/BinNum to bin. Otherwise, user define startBin/endBin/stepBin
+head=0 #=0: No header for input CSV file
+leading=''
+outcount=1 #=0 Out-range data will not count in  =others: Out-range data will count into first/last bin
+col=1
+bin=10
+doout=0 #=1: user defined output name
+FieldSeprator=0  #seperator for fields. =0: space bar
+this_pid=$$
+temp=$thisfile'_'$$'.tmp'  #temp file required by DVS
+temp2=$temp'2'
+temp3=$temp'3'
+temp4=$temp'4'
+input_cvs=$temp4; dofile=0  #=0: read in pipe data. =1: read in InputFIle
+dohelp=0
+gnu=1
+nomine=0
+title='NA'
+
+oldline=$*   #all argvs
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [  "$*" != "" ] ; do
+  case $1 in
+  -help) dohelp=1;shift;;
+  -col) col=$2; shift 2;;
+  -binnum) bin=$2; usemax=1;shift 2;;
+  -head) head=1;shift ;;
+  -nohead) head=0;shift ;;
+  -outcount) outcount=1; shift ;;
+  -outdiscard) outcount=0; shift ;;
+  -binrange) usemax=0;startbin=$2;endbin=$3;stepbin=$4;shift 4;;
+  #-out) output=$2;doout=1;shift 2;;
+  -seperator) FieldSeprator=$2;shift 2;;
+  -input) input_cvs=$2;dofile=1;shift 2;;
+  -nognu)gnu=0;shift;;
+  -nomine)nomine=1;shift;;
+  -title)title="$2";shift 2;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!"; exit;;
+  esac
+  aaa=`echo "$1" | awk '{print substr($1,1,1)}'`
+ done
+else
+cat << ttt
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ Plot bin of pipe input data or  input file:
+
+ Usauge [Options] $0 
+
+ Options:
+  -help : show this help
+  -col Col : which col (see definition above)  to perform bin [default]=1
+  -binnum BinNum : number of bins. [default]=$bin 
+  -head | -nodead :  Yes | No [default] header for input CSV file
+  -outcount : [default] Out-range data will count into first/last bin
+  -outdiscard : Out-range data will not count in
+  -binrange startBin endBin stepBin : User defined startBin endBin stepBin. [default]: Use max/min value
+  X-out Output : Output for Bin file in xls format
+  -seperator FieldSeprator : Field seperator for Input file. [default]=0: space bar
+  -input InputFile : read in InputFile. Default: read in pipe data
+  -nognu : No gnuplot for bin plot
+  -nomine : No mine plot
+  -title "TITLE" : title for plot
+
+  NOTE: if error happens, it could be that data is <1!!!
+
+ e.g.  $0 -col 2 *.csv
+       $0 -co 3 -input A.xls
+        NOTE: For single file, MUST use -input !!!
+       grep 'Pipeline CPU time Is ' *.log | awk '{print \$7}' | $0   #pipe data
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ttt
+  exit
+fi
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/do_gnuplot .
+fi
+
+
+
+if [ $dofile -eq 0 ] ; then
+ echo -n > $input_cvs
+ while read data ; do
+  #echo $data
+  echo $data >> $input_cvs
+ done
+fi
+
+if [ $head -ne 0 ] ; then
+ colname=`head -1 $input_cvs | awk 'BEGIN{if('$FieldSeprator'!=0){FS="'$FieldSeprator'"};}{s='$col';print $s}'`
+ head=1
+else
+ colname=$col
+fi
+#output=$infile'_'$colname'.bin'
+
+ ra=`cat $input_cvs | awk 'BEGIN{if('$FieldSeprator'!=0){FS="'$FieldSeprator'"};t=0;n=0;h='$head';max=-999999;min=999999;c='$col'}
+   {if(NR>h){t++;if($c!=""){n++;if($c<min){min=$c};if($c>max){max=$c}}}}
+   END{fold=0;if(min!=0){fold=max/min};print min, max,n,t,fold}'`
+if [ $usemax -eq 1 ] ; then
+ startbin=`echo $ra | awk '{print $1}'`
+ endbin=`echo $ra | awk '{print $2}'`
+ stepbin=`echo $ra | awk '{a=strtonum($1);b=strtonum($2);print (b-a)/'$bin'}'`
+fi
+ min=`echo $ra | awk '{print $1}'`
+ max=`echo $ra | awk '{print $2}'`
+ fold=`echo $ra | awk '{print $5}'`
+ valid=`echo $ra | awk '{print $3}'`
+ record=`echo $ra | awk '{print $4}'`
+
+[ $FieldSeprator -ne 0 ] && echo "WARNing! FieldSeprator is not empty space. It is " $FieldSeprator
+
+bin=1
+[ "$min" != "$max" ] && bin=`awk 'BEGIN{e='$endbin';s='$startbin';p='$stepbin';bin=(e-s)/p+1;printf("%d",bin)}'`
+
+if [ $FieldSeprator -eq 0 ] ; then
+  ave=`cat $input_cvs | awk 'BEGIN{c='$col';n=0;ave=0;h='$head'}{if($c!=""&&NR>h){n++;ave=ave+$c;}}END{print ave/n }'`
+  dev=`cat $input_cvs | awk 'BEGIN{c='$col';n=0;ave='$ave';dev=0;h='$head'}{if($c!=""&&NR>h){n++;dev=dev+($c-ave)*($c-ave);}}END{print sqrt(dev/(n-1)) }'`
+else
+  ave=`cat $input_cvs | awk 'BEGIN{FS="'$FieldSeprator'";c='$col';n=0;ave=0;h='$head'}{if($c!=""&&NR>h){n++;ave=ave+$c;}}END{print ave/n }'`
+  dev=`cat $input_cvs | awk 'BEGIN{FS="'$FieldSeprator'";c='$col';n=0;ave='$ave';dev=0;h='$head'}{if($c!=""&&NR>h){n++;dev=dev+($c-ave)*($c-ave);}}END{print sqrt(dev/(n-1)) }'`
+fi
+cat $input_cvs | awk 'BEGIN{if('$FieldSeprator'!=0){FS="'$FieldSeprator'"};bin='$bin';h='$head'
+  for(i=1;i<=bin;i++){s[i]=0};o='$outcount';c='$col';n=0;stb='$startbin';stbn=strtonum(stb)}
+  {if($c!=""&&NR>h){
+    n++;v=$c;b=(v-stbn)/'$stepbin'+1;b=int(b)
+    if(b>0&&b<=bin){s[b]++}else{
+     if(b<0&&o!=0){s[1]++}
+     if(b>bin&&o!=0){s[bin]++}
+    }
+  }}
+   END{ for (i=1;i<=bin;i++){
+        printf("%8.2f %7d %5.2f\n", stbn+'$stepbin'*(i-1),s[i],s[i]/n*100)
+      }
+   }' > $temp
+
+#cat $temp
+format="|BinStart|BinCount|BinPercentage(%)|"
+
+#display rough image of distribution in dimension of 50 cols X bin rows
+displayCol=50  #50 cols to show percentage
+pmax=`cat $temp | awk 'BEGIN{max=0;d='$displayCol'}{if($3>max){max=$3}}END{printf("%5.2f",max/d)}'`
+pp=`echo $pmax`
+echo
+echo "Data from col $col of $input_cvs "
+echo "Plot Bins: each star counts $pmax% [ $startbin , $endbin ] at step $stepbin "
+echo "     Data range [ $min $max ] Average= $ave +/- $dev Max/Min= $fold  Showing the min value of each bin"
+[ $nomine -ne 1 ] && cat $temp | awk '{p='$pp';per=int($3/p);printf("%8.2f %-5.2f% |",$1,$3);for(i=1;i<=per;i++){printf("*")};printf("\n")}'
+
+if [ $gnu -eq 1 ] ; then
+ extra=' set style fill transparent solid 0.5  ; set boxwidth 0.9 relative ; ' #box color and width
+ [ "$title" == "NA" ] && extra=$extra' -notitle '
+ ./do_gnuplot -title "$title" -extra "$extra" $temp >& $temp2 
+ #./do_gnuplot -title "$title" -extra "$extra" -bin -binnum $bin $temp
+fi
+
+rm -f $temp $temp2 $temp4
+exit

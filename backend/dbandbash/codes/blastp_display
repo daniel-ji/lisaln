@@ -1,0 +1,222 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+cname=0;display=1;head=1;shortname=0
+alnonly=0
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -alnonly)alnonly=1;shift;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -change)cname=1;shortname=1;shift;;
+   -short)shortname=1;shift;;
+   -display)display=1;shift;;
+   -nodisplay)display=0;shift;;
+   -nohead)head=0;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+ Convert blastp output into friendly format: NP|StartResd|End(firstPiece)|Identity|Percent|Species|Name
+  But when there are more than 100 for Sequences producing significant alignments,
+   will use Sequences producing significant alignments for output as (unless -alnonly):
+     NP|NA|9999|9999*IdentityPercent|Percent|Species(may only partial)|Name
+
+ Blastp output can be from ./NCBI_blast, or manually save text format from balstp website
+ Example can be ARI1/ARI1A.fasta_blastp_refseq_protein.txt
+
+Sequences producing significant alignments:
+XP_016862233.1 protein polybromo-1 isoform X13 [Homo sapiens]      3509       0.0     100%
+XP_016862230.1 protein polybromo-1 isoform X11 [Homo sapiens]      3509       0.0     100%
+
+ALIGNMENTS
+>NP_006006.3 AT-rich interactive domain-containing protein 1A isoform a [Homo
+sapiens]
+Length=2285
+
+ Score = 4586 bits (11894),  Expect = 0.0, Method: Compositional matrix adjust.
+ Identities = 2285/2285 (100%), Positives = 2285/2285 (100%), Gaps = 0/2285 (0%)
+
+Query  1     MAAQVAPAAASSLGNPPPPPPSELKKAEQQQREEAGGEAAAAAAAERGEMKAAAGQESEG  60
+             MAAQVAPAAASSLGNPPPPPPSELKKAEQQQREEAGGEAAAAAAAERGEMKAAAGQESEG
+Sbjct  1     MAAQVAPAAASSLGNPPPPPPSELKKAEQQQREEAGGEAAAAAAAERGEMKAAAGQESEG  60
+
+
+
+ Usage: $0 [Options] Input
+ Options:
+  -debug : debug model on
+  -out Output : User defined output
+  -nodisplay | [-display] : No display output
+  -nohead : will not add header for format at firstline of output
+  -short : change name to shorter ones as abbreaviation as H.sapien M.M.cress
+  -change : change some species name to easy reading human, mouse, etc. Otherwise, shrink it as: H.sapien
+    NOTE: The name mapping is in species_mapping.txt
+  -alnonly : only use data in ALIGNMENTS to extract results. But may miss some aligned proteins as NCBI only return ALIGNMENTS for 100 seqs
+    [default]: if ALIGNMENTS has less than (Sequences producing significant alignments), will use the later
+
+ Example: 
+  $0 ~/PBRM1/PBRM1.fasta_blastp_landmark.txt
+   #more than 100 (Sequences producing significant alignments), will show all of them
+  $0 -alnonly -cname -short blastp.txt
+   #Also change some species name to easy reading human, mouse, etc.
+   #Only show seqs with ALIGNMENTS (at most 100)
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+#infile=`basename $input ${extension}`
+[ $doout -ne 1 ] && output=$infile'.xls'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/species_mapping.txt .
+fi
+
+#Check how many alignments (ALIGNMENTS) and how many (Sequences producing significant alignments)
+naln=`awk 'BEGIN{s=0;n=0}{if(s==1&&substr($1,1,1)==">"){n++};if($1=="ALIGNMENTS"){s=1}}END{print n}' $input`
+nsig=`awk 'BEGIN{s=0;n=0}{if($1=="ALIGNMENTS"){s=0;exit};if(s==1&&NF>1){n++};if($1=="Sequences"&&$3=="significant"){s=1}}END{print n}' $input`
+[ $naln -ge $nsig ] && alnonly=1
+
+if [ $alnonly -eq 1 ] ; then
+ if [ $head -ne 0 ] ; then
+  echo -e "NP\tStartResd\tEnd(firstPiece)\tIdentity\tPercent\tSpecies\tName" > $output
+ else
+  echo -n > $output
+ fi
+ cat $input | awk 'BEGIN{cname='$cname';shortname='$shortname';nft=0
+  file="'species_mapping.txt'";  n=0
+  while ((getline line < file) > 0) {
+   if (substr(line,1,1)!="#"){
+    n++; nf=split(line,d,"\t"); a[n]=d[1];b[n]=tolower(d[2])
+   }
+  }
+  close(file)
+ }{
+  nameline++
+  if(s==1&&$1=="Identities"){naln++;split($3,dd,"/");iden=iden+dd[1];iden2=iden2+dd[2];piden=sprintf("%3.1f%",iden/iden2*100)}
+  if(s==1&&$1=="Query"&&naln==1){if(dostart==0){start=$2;dostart=1};end=$NF}  #Only record first piece of aln
+  if(doname>0&&nameline==1){
+   if(doname==1){sn=index($_,"[");en=index($_,"]");species=substr($_,sn+1,en-sn-1)}
+   if(doname==2){en=index($_,"]");species=sprintf("%s %s",species,substr($_,1,en-1))}
+   doname=0
+   u=split(species,x," ");species=x[1];for(j=2;j<=u;j++){species=sprintf("%s %s",species,x[j])}  #remove extra spaces in name
+   species2=x[1];for(j=2;j<=u;j++){species2=sprintf("%s_%s",species2,x[j])} #In case species name seperated by _
+  }
+  if(substr($1,1,1)==">"){
+   nft++;s=1;dostart=0;doend=0;doname=0;nameline=0;naln=0;
+   if(nft>1){
+    if(cname==1){
+     didname=0
+     for(i=1;i<=n;i++){
+      if(tolower(species)==b[i]||tolower(species2)==b[i]){species=a[i];didname=1;break}
+     }  
+    }
+    if(shortname==1&&didname==0){
+     u=split(species,x," ");sn="";for(j=1;j<u;j++){sn=sprintf("%s%s.",sn,toupper(substr(x[j],1,1)))}
+     species=sprintf("%s%s",sn,x[u])
+    }
+    printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",NP,start,end,iden,piden,species,name)
+   }   
+   NP=substr($1,2,20);lNP=length($1)
+   sn=index($_,"[");en=index($_,"]")
+   if(sn>0&&en>0){species=substr($_,sn+1,en-sn-1);name=substr($_,lNP+1,sn-lNP-2)}
+   if(sn==0){doname=1;species="";name=substr($_,lNP+1,100)}
+   if(sn>0&&en==0){doname=2;species=substr($_,sn+1,length($_)-sn);name=substr($_,lNP+1,sn-lNP-2)}
+   iden=0;iden2=0;piden=0
+  }
+ }END{
+   didname=0
+   if(cname==1){
+    for(i=1;i<=n;i++){
+     if(tolower(species)==b[i]||tolower(species2)==b[i]){species=a[i];didname=1;break}
+    }      
+   }
+   if(shortname==1&&didname==0){
+     u=split(species,x," ");sn="";for(j=1;j<u;j++){sn=sprintf("%s%s.",sn,toupper(substr(x[j],1,1)))}
+     species=sprintf("%s%s",sn,x[u])
+   }
+   if(nft>0){printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",NP,start,end,iden,piden,species,name)}  #print last record
+ }' >> $output
+
+else #alnonly
+ if [ $head -ne 0 ] ; then
+  echo -e "NP\tStartResd(1)\tEnd(9999)\tIdentity\tPercent\tSpecies(may partial)\tName" > $output
+ else
+  echo -n > $output
+ fi
+ cat $input | awk 'BEGIN{cname='$cname';shortname='$shortname';nft=0
+  file="'species_mapping.txt'";  n=0;s=0;m=0
+  while ((getline line < file) > 0) {
+   if (substr(line,1,1)!="#"){
+    n++; nf=split(line,d,"\t"); a[n]=d[1];b[n]=tolower(d[2])
+   }
+  }
+  close(file)
+ }{
+  if($1=="ALIGNMENTS"){s=0;exit}
+  #NP_001074720.1 protein polybromo-1 isoform 1 [Mus musculus]        3445       0.0     97%
+  if(s==1&&NF>1){ #XP_006519474.1 PREDICTED: protein polybromo-1 isoform X8 [Mus ...  3453       0.0     98%
+   m++;x=NF-2
+   st=length($1)+1
+   ed=(index($_,$x)-1)-st+1
+   mid=substr($_,st,ed)
+   split(mid,z,"[")
+   name=z[1];spe=z[2]
+   per=strtonum(substr($NF,1,length($NF)-1))/100*9999
+   printf("%s\tNA\t9999\t%d\t%s\t%s\t%s\n",$1,per,$NF,spe,name)
+  }
+  if($1=="Sequences"&&$3=="significant"){s=1}  
+ }END{
+ }' >> $output
+
+fi #alnonly
+
+ if [ $display -eq 1 ] ; then
+  cat $output 
+  echo "ALIGNMENTS terms= $naln  [Sequences producing significant alignments] terms= $nsig"
+  echo "Output saved in $output"
+ fi
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders
+

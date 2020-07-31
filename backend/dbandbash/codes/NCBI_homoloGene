@@ -1,0 +1,246 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+ncol=1
+head=0
+urlbase='https://www.ncbi.nlm.nih.gov/homologene/?term='
+force=0 ; fforce=''
+doaln=1;rstart=1;rend=60;rhalf=30
+doless=0;noaln=0;change='-change'
+doout2=0
+plot=''
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -noplot)plot='-noplot -nosearchplot -nocutshow';shift;;
+   -nosearchplot)plot='-noplot -nosearchplot -nocutshow';shift;;
+   -nocutshow)plot='-noplot -nosearchplot -nocutshow';shift;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -out2)output2="$2"; doout2=1;shift 2;;
+   -head)head=1;shift;;
+   -ncol)ncol=$2;shift 2;;
+   -col)ncol=$2;shift 2;;
+   -force)force=1;fforce=$1;shift;;
+   -range)rstart=$2;rend=$3;shift 3;;
+   -center)rstart=`expr $2 - $rhalf`; [ $rstart -le 0 ] && rstart=1; rend=`expr $2 + $rhalf`;shift 2;;
+   -half)rhalf=$2;shift 2;;
+   -less)doless=1;shift;;
+   -noaln)noaln=1;shift;;
+   -change)change=$1;shift;;
+   -nochange)change='';shift;;
+  
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+ if [ -n "$2" ] ; then
+  output=$2; doout=1
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+
+  This is to download NCBI HomoloGene protein sequences for seq aln across species by $urlbase
+  It gives more mammals that ./NCBI_blast -species which against landmark database
+    So the best is to use both method together
+  It can also do Clustal seq alignment of the protein across species. 
+  It still works at 2019/8
+
+ Refseq ID : NP_xxx XP_xxx MN_xxx ...
+
+ NOTE: To download seq of virus(COVID-19) from different patient: https://www.gisaid.org/ EpiFluTM database has more cases than NCBI 
+
+Which database to use to align seq across species (Orthologs)?
+ refseq_protein is still too many returns. Most of them seq id >97%, not good to find other species
+ Use landmark database for 27 diverse species!
+  If too less, add more homology from NCBI HomoloGene
+ NOTE: SMARTblast is good to search species BUT underdevelopment: 
+     https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+
+One way to find sequences across species (Orthologs) is from Gene Tree:
+Gene tree: https://uswest.ensembl.org/Homo_sapiens/Gene/Compara_Tree?g=ENSG00000171105;r=19:7112266-7294045
+ Click on Orthologues to show all genes with same protein/gene name across species
+  1-to-1 is exact same, 1-to-many is with isomers
+  https://uswest.ensembl.org/Homo_sapiens/Gene/Compara_Ortholog?db=core;g=ENSG00000188130
+ Then click Download to download the Orthologues : select format as FASTA download aligned protein sequences (CLUSTRAL for DNA seq)
+ Use ./PDB_geneID_Uniprot_convert -i 1 -o 5 UniprotID  to convert Uniprot ID to Ensembl_gene_identifier(ENSG00000125084)
+Download Gene/Protein Tree by perl:
+ https://www.biostars.org/p/203266/
+ http://uswest.ensembl.org/info/docs/api/compara/compara_tutorial.html
+Use summer student Daniel in ~/summer_student/Daniel :
+http://www.ensembl.org/info/docs/api/api_installation.html
+Special Instructions: Replace src/ensembl-compara/modules/Bio/EnsEMBL/Compara/AlignedMember.pm with this modified file AlignedMember.pm
+Code to download Ensembl orthologues/paralogues: sampleCode.pl
+
+
+Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -species or ./NCBI_homoloGene
+ Genecard has limited (4 species) Orthologs : https://www.genecards.org/cgi-bin/carddisp.pl?gene=ARID1B#paralogs
+
+
+
+ Usage: $0 [Options] InputList/ProteinName/refseqID
+ Options:
+  -debug : debug model on
+  -out Output : User defined output
+  -out2 Output2 : aligned seqs at the range
+  -less : only display seq aln
+  -col | -ncol ColNum : Colnum for input list file with ProteinName/refseqID
+  -head : input list file has header line
+  -force : force to re-download even if exists
+  -range StartResid EndResid : display seq align resid range for alignment. [default] ${rstart}-${rend}aa
+  -half halfResidues : residue number around CenterResid. Must use before -center  [$rhalf]
+  -center CenterResid : display seq align range from CenterResid-$rhalf to CenterResid+$rhalf
+  -noaln : will not do Clustal seq alignments
+  -nochange | [-change] : will not change species name to simply one as human, mouse. Mapping file saved in species_mapping.txt 
+  -noplot : no heatmap and dendo-plot
+
+ Example: 
+   $0 -range 1000 1060 ARID1A        #Use protein name. Also display alignment in 1000-1060aa
+   $0 -half 30 -center 1050 NP_006006.3   #Use NCBI refseq ID. Also display aln in range 1020-1080aa
+   $0 -col 2 -head List  #Use list of protein names or refseq ID
+
+ NOTE: To convert between PDB IDs, UniProtID (Q9BVA2), HUGO_gene_symbol(PCNA), NCBI_Refseq_Protein_ID(NP_001005745), 
+   Ensembl_gene_identifier(ENSG00000125084), run ./IDs_gene_uniprot_convert ./PDB_geneID_Uniprot_convert 
+ NOTE: To convert between protein name, fasta file and NCBI refseq ID (NP_xxx, XP_xxx), uniprot, geneID  use ./protein_fasta_refseq_convert
+ NOTE: To find proteins across diverse species, run ./NCBI_blast -species
+
+ WARNing: Many proteins may not have homoloGene data by using refseq ID NP_xxx!
+ WARNing: this code cannot find homoloGene for FEN1
+ WARNing: this code cannot find homoloGene for DNA2
+ WARNing: Best result is using protein short name to access homoloGene db, as it usually can return results
+
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+#infile=`basename $input ${extension}`
+[ $doout -ne 1 ] && output=$infile'_homoloGene.xls'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/html_removebracket $ed/sequence_download $ed/clustal_seq_align $ed/seq_align_check .
+ cp -f $ed/NCBI_blast $ed/species_mapping.txt .
+fi
+
+if [ ! -s $input ] ; then
+ echo $input > $temp
+else
+ if [ "$extension" == ".csv" ] ; then
+  ./CSV_getCol -out $temp.xls $input
+  awk '{n='$ncol';h='$head';if(NR>h&&NF>0&&substr($1,1,1)!="#"){print $n}}' $temp.xls > $temp
+ else
+  awk '{n='$ncol';h='$head';if(NR>h&&NF>0&&substr($1,1,1)!="#"){print $n}}' $input > $temp
+ fi
+fi
+nr=`wc -l $temp | awk '{print $1}'`
+
+[ $doless -ne 1 ] && echo " $nr records in $input requested to get seq across species from NCBI HomoloGene saved in $output"
+echo -e "RefseqID\tProteinName\tSpecies\tLength\tFullName" | tee $output
+for (( i=1; i<=$nr ; i++ )) ; do
+ name=`head -$i $temp | tail -1`
+ outfasta=$name'_homoloGene.fasta.txt'
+ outalns=$name'_homoloGene_aln.txt'
+ echo "=> #$i $name : HomoloGene seqs saved in $outfasta . Clustal aln saved in $outalns"
+ name=`head -$i $temp | tail -1`
+ did=0
+ purl=$urlbase$name
+ wget -t 2 -O $temp3 -o $temp5 $purl >& $temp4
+ err=`grep 'ERROR 404: Not Found' $temp5 | wc -l | awk '{if($1>0){print 1}else{print 0}}'`
+ if [ $err -eq 1 ] ; then
+  echo "Failed to find NCBI HomoloGene page #$i: $name" 1>&2
+  did=1
+  #nerr=`expr $nerr + 1`
+  #fails=`echo -e $name'\n'$fails`
+ else
+  ./html_removebracket $temp3 > $temp2
+#Proteins    Proteins used in sequence comparisons and their conserved domain architectures.
+#ARID1A,&#160;  H.sapiens    AT rich interactive domain 1A (SWI-like)
+#NP_006006.3   2285 aa
+#ARID1A,&#160;  P.troglodytes    AT rich interactive domain 1A (SWI-like)
+#XP_513235.4   2285 aa
+#Protein Alignments    Protein multiple alignment, pairwise similarity scores and evolutionary distances.
+  #get RefseqID|ProteinName|Species|Length|FullName
+  awk '{
+   if(s==1&&$1=="Protein"&&$2=="Alignments"){s=0;exit}
+   if(s==1){
+    if(p==1){
+     n++;split($1,x,",");sname[n]=x[1];species[n]=$2
+     fname[n]="";for(i=3;i<=NF;i++){fname[n]=sprintf("%s %s",fname[n],$i)}
+     p=2
+    }else{
+     refseq[n]=$1;len[n]=$2
+     printf("%s\t%s\t%s\t%s\t%s\n",refseq[n],sname[n],species[n],len[n],fname[n])
+     p=1
+    }
+   }
+   if($1=="Proteins"&&$2=="Proteins"){s=1;p=1;n=0}
+  }' $temp2 >  $temp3
+  cat $temp3 >> $output 
+  [ $doless -ne 1 ] && cat $temp3
+
+  #Download seqs:
+  if [ $force -eq 1 ] || [ ! -s $outfasta ] ; then
+   ./sequence_download -gi -out $outfasta $temp3 > $temp5
+  else
+   echo " Use exisitng seqs fasta across species $outfasta"
+  fi
+
+  #Clustal seq aln
+  if [ -s $outfasta ] && [ $noaln -ne 1 ] ; then
+   #if [ $force -eq 1 ] || [ ! -s $outalns ] ; then
+    ./clustal_seq_align $plot $fforce -nopair -species -out $outalns $outfasta
+   #else
+   # echo " Use exisitng Clustal aln file across species $outalns"
+   #fi
+   #display seq aln
+   echo "=> Seq aln across species from NCBI HomoloGene  at range $rstart-$rend a.a. Use -range/-center to change:"
+   ./seq_align_check $change -less -cd -range $rstart $rend -out $temp $outalns
+   if [ $doout2 -eq 1 ] ; then
+    mv $temp $output2
+   fi  
+  else
+   [ ! -s $outfasta ] && echo "Fatal warning: Cannot find HomoloGene seqs for $input : do it manually or it is not at $urlbase"
+  fi #noaln
+
+  [ -s $outfasta ] && echo "=> Protein across species from NCBI HomoloGene saved as $outfasta"
+  [ -s $outalns ]  && echo "=> Clustal aln of HomoloGene seqs saved in $outalns"
+ 
+ fi
+done
+
+echo "=> HomoloGene output saved in $output"
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

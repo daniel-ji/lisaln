@@ -1,0 +1,881 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+ffmpeg='/opt/ffmpeg-4.0-64bit-static/ffmpeg'  #ffmpeg in my new 32 CPU machine
+[ ! -s $ffmpeg ] && ffmpeg='ffmpeg'  #ffmpeg in my old 16 CPU machine
+thisfile=$0
+doout=0;fdoout=0
+debug=0
+doslow=0;slow=2  #slow down times. =0.5: speed-up 2 times
+doimage=0;imagetime=-1
+imageext='jpg';
+dosingleimage=0; dointerval=0;interval=0;
+keeplast=1
+domovie=0;fps=30;dosubmovie=0;vframes=30
+ext='_s'$slow; extname='Slow-down '$slow' times'
+dobackward=0
+domerge=0
+doscale=0;scalefactor=1;scalef=1;scalewidth=640
+ss=0;t=2
+lead=''
+dosidebyside=0; doinside=0;do4movie=0
+insidemargin='70:70'  #small movie to edge of larger movie (70 pixels to left-top corner)
+insidescale=2   #reduce the screen size of small video to a factor of $insidescale
+watermark=0;wpos='br';wpic='watermark1.png';wmargin=10
+doconvert=0;dofilter=0;
+thumbnail=0; schange=0.4 #scence change compared to previous image
+width=640;height=480;doscreen=0;mscale=0.5
+drawtext=0;fontsize=25;fontcolor='blue';textpos='southeast';framefactor=0;mdtime=50
+slowconvert=0 #=1: will convert to imges, then convert to other format video. Slow but especially good quality for animated GIF
+final=0
+fade=''
+mix=0
+mfps=30 #When -movie -highq : each frame/image will last 1/mfps seconds. e.g. =0.25, each image last 4s
+quality=1 #video quality 1-31. =1 is the highest  =0: same quality as input
+qual=95 #quality for MPEG .mpg  [0-100]: 100 is the highest quality but larger size
+highq=0  #=1: default is .mp4 that has the highest quality  =[0]: default is low old and quality .mpg
+[ $highq -eq 1 ] && movieext='mp4'
+[ $highq -ne 1 ] && movieext='mpg'
+
+
+oldline=$*   #all argvs
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -debug) debug=1; shift;;
+   -out) foutput="$2"; fdoout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -slow)doslow=1;slow=$2;ext='_s'$slow;extname='Slow-down '$2' times';shift 2;;
+   -fast)doslow=1;slow=`echo $2 | awk '{printf("%4.3f",1.0/$1)}'`;ext='_f'$2;extname='Speed-up '$2' times';shift 2;;
+   -image)doimage=1;shift;;
+   -imagetime)imagetime=$2;doimage=1;shift 2;;
+   -movie)domovie=1;shift;;
+   -fps)fps=$2;lead=$lead' '$1' '$2;shift 2;;
+   -ss)ss=$2;lead=$lead' '$1' '$2;shift 2;;
+   -to)to=$2;lead=$lead' '$1' '$2;shift 2;;
+   -t)t=$2;lead=$lead' '$1' '$2;shift 2;;
+   -vframes)vframes=$2;lead=$lead' '$1' '$2;shift 2;;
+   -imageext)imageext=$2;shift 2;;
+   -movieext)movieext=$2;shift 2;;
+   -backward)dobackward=1;shift;;
+   -merge)domerge=1;shift;;
+   -submovie)dosubmovie=1;shift;;
+   -singleimage)dosingleimage=1;shift;;
+   -interval)dointerval=1;interval=$2;shift 2;;
+   -keeplast)keeplast=1;shift;;
+   -nokeeplast)keeplast=0;shift;;
+   -scalefactor)doscale=1;scalefactor=$2;scalef=`echo $2 | awk '{printf("%4.3f",1.0/$1)}'`;shift 2;;
+   -scalewidth)scalewidth=$2;doscale=1;shift 2;;
+   -scalef)doscale=1;scalefactor=$2;scalef=`echo $2 | awk '{printf("%4.3f",1.0/$1)}'`;shift 2;;
+   -scalew)scalewidth=$2;doscale=1;shift 2;;
+   -sidebyside)dosidebyside=1;mscale=1;shift;;
+   -inside)doinside=1;shift;;
+   -insidemargin)insidemargin=$2;doinside=1;shift 2;;  #small movie to edge of larger movie (70 pixels to left-top corner)
+   -insidescale)insidescale=$2;doinside=1;shift 2;;   #reduce the screen size of small video to a factor of $insidescale
+   -4movie)do4movie=1;mscale=0.5;shift;;
+   -mscale)mscale=$2;shift 2;;
+   -watermark)watermark=1;shift;;
+   -wpic)watermark=1;wpic=$2;shift 2;;
+   -wpos)watermark=1;wpos=$2;shift 2;;
+   -wmargin)watermark=1;wmargin=$2;shift 2;;
+   -convert)doconvert=1;shift;;
+   -filter)filter="$2";dofilter=1;shift 2;;
+   -thumbnail)thumbnail=$2;shift 2;;
+   -schange)schange=$2;shift 2;;
+   -width)width=$2;doscreen=1;shift 2;;
+   -height)height=$2;doscreen=1;shift 2;;
+   -drawtext)drawtext="$2";shift 2;;
+   -fontsize)fontsize=$2;shift 2;;
+   -fontcolor)fontcolor=$2;shift 2;;
+   -textpos)textpos=$2;shift 2;;
+   -framefactor)framefactor=$2;mdtime=0;shift 2;;
+   -mdtime)mdtime=$2;shift 2;;
+   -slowconvert)slowconvert=1;shift;;
+   -fastconvert)slowconvert=0;shift;;
+   -final)final=1;shift;;
+   -mix)mix=1;shift;;
+   -highq)highq=1;shift;;
+   -lowq)highq=0;shift;;
+   -mfps)mfps=$2;shift 2;;
+   -qual)qual=$2;shift 2;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then
+ input="$1"
+ input2=$input
+ input3=$input
+ input4=$input
+ mput=1;mixs='-i '$1;conc='concat:'$input
+ if [ -n "$2" ] ; then
+  mput=2;input2=$2;mixs=$mixs' -i '$2;conc=$conc'|'$2
+ fi
+ if [ -n "$3" ] ; then
+  mput=3;input3=$3;puts=$puts' -i '$3;conc=$conc'|'$3
+ fi
+ if [ -n "$4" ] ; then
+  mput=4;input4=$4;puts=$puts' -i '$4;conc=$conc'|'$4
+ fi
+ if [ -n "$5" ] ; then
+  mput=5;input5=$5;puts=$puts' -i '$5;conc=$conc'|'$5
+ fi
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+ Manuplate movie/video/audio files like slow down/speed up by ffmpeg
+ Download/Install ffmpeg from web required. My current version is old one since my Linux kernel is old
+ Order of steps:
+  . Convert Images into movie and vice versa: -movie / -image
+  . Convert single image into movie : -singleimage
+  . Merge/Concat videos: -merge
+  . Put two input movies side-by-side on screen: -sidebyside
+  . Put one video inside the master vedio : -inside
+  . Put 4 movies in 2x2 grid: -4movie
+  . Sub-videos : -submovie 
+  . Sampling movie (keep one frame every intercal frames): -interval
+  . Backward-play movie : -backward
+  . Slowdown/speedup movies: -slow / -fast
+  . Filters on movie, e.g. flip-vertical, fade, etc. : -filter
+  . Scale movie screen size: -scalewidth /-scalefactor
+  . Add watermark to movie: -watermark
+  . Draw text on movies : -drawtext 
+  . Mix a vedio and an audio : -mix
+  . Generate thumbnail pictures at scence change point : -thumbnail
+  . Convert one video format to another format: -convert
+
+ Usage: $0 [Options] InputMovie/ImagePrefix/MovieList [Input2] [Input3] [Input4] [Input5]
+  Input: can be any movie format, such as PyMol Movie .mpg, or .wmv   Check all supported videoformats: ffmpeg -formats
+      Or can be prefix for images as -movie: AA_ for all images AA_%d.imageext
+      Or MovieList file for -merge. Formatted as:
+# this is a comment
+file '/path/to/file1'
+file '/path/to/file2'
+file '/path/to/file3'
+
+ fps (frame per sec) for MPEG1 (PyMol movie .mpg) fixed=30
+
+ Options:
+  -quality Quality : Video quality for output. 1-31, =1 is the highest. =0: same quality as input. [5-7] worths try [$quality]
+  -highq | -lowq : Use high quality .mp4 (-highq) or old .mpg (-lowq) as intermediate file. Both are high-quality now when use convert for movie [$highq]
+  -debug : debug model on
+  -final : when call $0 inside this
+  -out Output : User defined output. Default: Input_s2
+  -slow | -fast Times : slow-down/speed-up Times times [$slow]
+  -imageext Ext : extension for image: PGM, PPM, PAM, PGMYUV, JPEG, GIF, PNG, TIFF, SGI. [$imageext]
+  -image : Convert movie into series images as Input%d.imageext (Input1.jpg, Input2.jpg...)
+   -ss StartTime : start time (s) to extract. e.g. -ss 01:30:15  1s=30frames for PyMol .mpg    Format: hh:mm:ss[.xxx]
+   -t DurationTime : duration time in s to extrac from  StartTime [$t]  Format: hh:mm:ss[.xxx]
+   -imagetime Time : Only export one image at time hh:mm:ss[.xxx]
+  -movie : Convert "Input" images into a movie and output as Input2. e.g. $0 -movie -mfps 5 -qual 90 "A_*.png" Out.mpg    (Must use "")
+     Input can be a file with list of images as well: each row has one image file name: $0 -movie -mfps 30 Image.List Out.mpg
+   -qual Quality : quality for MPEG .mpg when use images to generate movie.  [0-100]: [$qual]
+     =100 is the highest quality but large size and long time run.  
+     =95: 25% size left  =90: 10% size left, quality is OK and shorter time run
+   -mfps fps : each frame/image will last 1/mfps seconds. e.g. =0.25, each image last 4s.  [$mfps]
+   X-movieext Extension : Movie output extension if not defined by -out [$movieext]
+  -backward : Convert to a backward play movie. e.g. for Steering MD movie
+  -merge : Merge/Concat movies in InputList or Input1/2/3/4/5 movies to one output. Screen resolution adjusted to first input
+  -submovie : Create sub-movie/clip by -ss StartTime | -t DurationTime
+  -singleimage : Create movie for a single image with $vframes frames  [Not work for current ffmpeg]
+   -t DurationTime: duration time in s for still-image movie.  [$t] Format: hh:mm:ss[.xxx]
+  -interval Rate : sampling movie at one-frame-every-Rate_frames for a shorter movie [$interval]
+   [-keeplast] | -nokeeplast : always|not-always keep last frame in output even if it is supposed to be kept
+  -scalef|-scalefactor Factor : enlarge (shrink) movie screen size by xFactor. -scalefactor 0.5: shrink to half screen size  [$scalefactor]
+  -scalew|-scalewidth Width : scale screen to width as Width pixels and height auto-adjusted [$scalewidth]
+  -4movie : Put 4 movies together in 2x2 grids on a screen of ScreenWidth x ScreenHeight
+   -mscale Factor : =0.5 shrink input movies to half size [0.5]
+   -width ScreenWidth : Total width of screen [$width]
+   -height ScreenHeight : Total height of screen [$height]
+  -sidebyside : Put two input movies side-by-side on screen
+   -mscale Factor : =0.5 shrink input movies to half size [1]
+   NOTE: Put large screen movie as first Input to avoid video overlap
+  -inside:  Put one video inside the master/first  video
+   -insidemargin Margin : smaller video to edge(top-left corner) of large video. e.g. 0:0 [$insidemargin]
+   -insidescale Scale : Scale factor to reduce the screen of small vedio [$insidescale]
+  -watermark : Add watermark to movie (Note: to add watermark to image: ./watermark )
+   -wpic Picture : watermark picture to add [$wpic]
+   -wpos Position : watermark position - bl|br: bottom-left/right Corner; tl/tr: top-left/right corner [$wpos]
+   -wmargin Margin : margin in pixels for watermark to edge [$wmargin]
+  -drawtext "Text" : draw text on specific time defined by -ss -t of movie
+   -mdtime TotalTime : Total MD time (ns) to draw text (first frame=0ns; last frame=TotalTime) to cal -framefactor Factor  [$mdtime]ns
+    -framefactor Factor : display framexFactor to replace %X in Text when Factor!=0 for MD movies to show MD time [$framefactor]
+      e.g. -drawtext "MD Time: %Xns" -framefactor 0.1  will add text as "MD Time: 1.2ns" etc. for frame N is Nx0.1ns started from 0ns
+   -fontcolor Color : text color [$fontcolor]
+   -fontsize Size : text size [$fontsize]
+   -textpos Position : text position such as center, southeast, north etc. [$textpos]
+  -mix : Mix a video (Input1) with a sound file (Input2)
+  -convert: Convert one video format to another format: $0 -convert -out A_out.mpg A.gif   or $0 -convert A.gif A_out.mpg
+   [-slowconvert] | -fastconvert: convert to imges, then save to other format video. Slow but especially good quality for  GIF
+  -thumbnail NumberPics : Generate NumberPics thumbnails on scene changes (>$schange change compared to previous)
+   -schange ChangeFactor : Scence change factor compared to previous. =0.4 for 40% image change [$schange]
+  -filter "Filters" : Add filters on movie. Horizental flip and turn to black/white: "hflip, hue=s=0". etc.
+     See http://www.ffmpeg.org/ffmpeg-filters.html     http://trac.ffmpeg.org/wiki/FilteringGuide
+   e.g. scale=640:360, vflip, setpts=2*PTS (slow-down 50%); 
+    "select=not(mod(n,3))" : select one frame every 3 frames : select=eq(pict_type,I) [sample command: Select only I-frames] 
+        More select: http://www.ffmpeg.org/ffmpeg-filters.html#select_002c-aselect
+   More examples of filters:
+   Fade in/out: -filter "fade=in:0:30"  - fade in first 30 frames
+    "fade=in:5:20:color=yellow, fade=out:100:10" -first 5 frame is yellow, fade in 5-24 frames; fade out frame 100-109 frames
+   Contrast, brightness, saturation, and color balance: mp=eq2=gamma:contrast:brightness[0]:saturation:rg:gg:bg:weight
+    "mp=eq2=1:1.68:0.3:1.25:1.1:0.96:1" : 
+      Contrast[1] (negative for negative image): 1.68
+      brightness[0] : slightly increase brightness: 0.3    Saturation[1]: saturation enhanced to 1.25
+      Garmma value of RGB[1]: rg=1.1 to enhance red and gg=0.96 to remove a little Green color
+   Black/White Moive: "hue=s=0"    
+   Negative movie: "mp=eq2=1:-1:0:1:1.1:1:1"
+ 
+
+ Example: 
+   $0 -slow 6 DCD_PyMol.mpg   
+     #slow-down movie 6 times. Recommended for PyMol generated DCD movie, so output fps=5
+   $0 -merge A.mpg B.flv C.avi
+     #merge/concat 3 movies in series
+   $0 -image -ss 2.1 -t 0.5 -imageext jpg A.mpg  
+     #Convert movie into X images named as A_%d.jpg started from 2.1s and last 0.5s (15 images at 30fps) in movie
+   $0 -imagetime 00:00:01.5  A.mpg 
+     #Generate one image for video at time 1.5s from beginning
+   $0 -thumbnail 10 -schange 0.5 -out A_thumbnail A.avi
+     #Generate 10 thumbnail pictures at scence change (image change > 50%) and saved as A_thumbnail_NNN.jpg
+   $0 -singleimage -t 00:00:05 A.png
+     #Create A.mpg movie for single image A.png with 5s duration
+   $0 -movie -mfps -qual 95 30 Image.List Out.mpg
+     #Convert all images in Image.List (one row for one image file name) at fps=30. Quality=95 (=100 is default and highest)
+   $0 -movie -mfps 0.5 -qual 100 "A_*.png" Out.mpg   
+     #Convert all A_*.jpg images in folder into high quality movie A.mpg. Must use "" to quote Input. Each image last 2s (NOT for .mpg!)
+   $0 -submovie -ss 1:30:00 -t 5  A.wmv  #create sub-clip from 1:30:00 for 5s saved in A_sub.wmv   
+   $0 -watermark -wpos tr -wmargin 8 -wpic watermark2.png A.mpg
+     #Add watermark to top-right, 8 pixels to wdge with picture as watermark2.png 
+   $0 -drawtext "BIC HLi" -ss 00:00:02.5 -t 2 -fontcolor yellow -fontsize 30 -textpos southeast A.mpg
+     #Put Text as yellow color in bottom-right corner at 2.5s for 2s
+   $0 -drawtext "Time: %Xns" -mdtime 50 -fontsize 30 -textpos north DCD.mpg
+     #Display MD times (first frame is 0ns, last frame is 50ns) on movie at top-center
+   $0 -sidebyside -mscale 0.8  A.mpg B.mpg
+     #Put two input movies side-by-side after shrinked to 80% into one movie 
+   $0 -inside -insidescale 3 -insidemargin 0:0 A.mpg B.mpg
+     #Reduce B.mpg screen 3 times and put it inside A.mpg with edge to left-top corner  
+   $0 -4movie -width 1024 -height 780 A.mpg B.mpg C.mpg D.mpg  
+   $0 -4movie -mscale 0.25 A.mpg B.mpg C.mpg D.mpg   
+     #Put 4 movies together in 2x2 grids on 1024x780 screen or scaled down movies to 25%
+   $0 -convert A.gif A.mpg
+     #convert animated GIF to mpg
+   $0 -filter "hflip, hue=s=0" A.avi
+     #Black/White movie: Use filter -vf: horizental flip and color as black/white
+   $0 -filter "mp=eq2=1:-0.9:0.3:1.25:1:0.96:1" A.flv     #gamma[1]:contrast[1]:brightness[0]:saturation[1]:rg[1]:gg:bg:weight[1]
+     #Negative movie (-0.9), brightness slightly enhanced to 0.3, saturation to 1.25, remove a little green (0.96) 
+   $0 -filter "fade=in:5:20:color=yellow, fade=out:100:10"  A.wmv
+     #fade-in/out: first 5 frame is yellow, fade in 5-24 frames; fade out frame 100-109 frames
+   $0 -backward A.wmv  
+     #generate movie with backward play as A_bk.wmv. e.g. for Steering MD movie to show ligand enters protein
+   $0 -backward -fast 2 A.wmv  
+     #backward play and speed-up 2 times
+   $0 -mix -out video_finale.mpg video_origine.avi sound.wav
+     #Mix a video (first file) with a sound file (2nd file)
+   $0 -scalewidth 640 A.avi
+     #scale screen to 640 pixels in width and height as auto-adjusted
+   $0 -interval 6 -slow 6 -drawtext "MD Time: %Xns" -mdtime 50 -fontsize 30 -textpos south -fontcolor cyan -out DCD_o.mpg DCD.mpg
+     #Sample 1-frame-every-6-frames and slow down the sampling output 6 times. So the movie is same time as original one, but fps=5
+     #Out is high-quality .mpg. Add MD simulation time at bottom as "MD Time: %Xns" for last frame=50ns. See eIF4E/readme 
+
+  NOTE: Series steps can run one-by-one by following the orders of:
+  . Convert Images into movie and vice versa: -movie -mfps 1 -qual 95 "A_*.png" 
+       -image -ss 2.1 -t 0.5 -imageext jpg A.avi | -imagetime 00:00:01.5 A.avi
+  . Convert single image into movie : -singleimage -t 00:00:05 A.png
+  . Merge/Concat videos: -merge A.mpg B.gif
+  . Put two input movies side-by-side on screen: -sidebyside -mscale 0.5  A.mpg B.mpg
+  . Put one video inside the master vedio : -inside -insidescale 2 -insidemargin 0:0 A.mpg B.mpg
+  . Put 4 movies in 2x2 grid: -4movie -mscale 0.5 A.mpg B.mpg C.mpg D.mpg
+  . Sub-videos : -submovie -ss 1:30:00 -t 5  A.wmv
+  . Sampling movie (keep one frame every interval frames): -interval 6 DCD.mpg
+  . Backward-play movie : -backward A.mpg
+  . Slowdown/speedup movies: -slow 6 | -fast 2 A.mpg
+  . Filters: flip-vertical, fade-out, contrast, colors, etc. : -filter "fade=in:5:20:color=yellow, fade=out:100:10" A.mpg
+  . Scale movie screen size : -scalewidth 300 | -scalefactor 0.5 A.mpg
+  . Add watermark to movie: -watermark -wpos bl -wmargin 8 -wpic watermark2.png A.mpg
+  . Draw text on movies / Label MD time : -drawtext "Time: %Xns" -mdtime 50 -fontsize 30 -textpos north DCD.mpg 
+  . Mix a vedio and an audio : -mix -out video2.mpg video.avi sound.wav
+  . Generate thumbnail pictures at scence change point : -thumbnail -schange 0.5 -out A_thumbnail A.avi
+  . Convert one video format to another format: -convert  A.gif A_out.wmv
+
+ NOTE: To manipulate images: ./image_manipulate
+ NOTE: To generate movie from a list of images, use ./do_gnuplot -animate -picture gif -nframe 100 picture.list
+ NOTE: ffmpeg vedio quality for default mpeg (.mpg)  is old and low for VCD. So, intermediate files will use mpeg4 .mp4:
+        -q:v 0 -vcodec mpeg4 -r 20 -b 5000k     #bitrate 5000K is good for 760x size
+       MPEG-4 (H.264, .mp4) is the newest. Supported in PowerPoint 2013 (But not MovieMaker?). MPEG-2 for DVD quality.
+       Now it solved: use ImageMagick convert to get high-quality mpg movie (need install mpeg2encode) :  convert -quality 100 A_*.png t.mpg 
+ NOTE: ffmpeg can do fade etc. as well
+ NOTE: In case bad conversion of movie by -highq for .mp4, use -lowq .mpg for all steps by -movieext mpg -out Out.mpg  
+ NOTE: To view .mpg/.gif: animate A.mpg
+ NOTE: Use pymol to generate animations for fading/alignment/binding/zoom etc. Use ./pymol_movie
+ NOTE: Video pieces can be edited/merged in MS Movie Maker
+
+ WARNing: May need to run in my old 16 CPU machine as it has ffmpeg installed
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'` 
+infile=`basename $input ${extension}`
+[ $fdoout -ne 1 ] && foutput=$infile'_mani'$extension
+[ $fdoout -eq 1 ] && extension=`echo $foutput | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+
+# define v-codec for high quality .mp4
+# To find -vcodec options and its output format: ffmpeg -codecs   .....S = Lossless compression
+#  So, -vcodec rawvideo for .avi will NOT compress vedio. But this .avi cannot open in Window
+outext=`echo $foutput | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+if [ "$outext" == ".mp4" ] || [ $highq -eq 1 ] ; then
+ #vdeco='-q:v 0 -vcodec mpeg4  -b 5000k'
+ vdeco='-q:v 0 -vcodec libx264 -crf 0 '  #libx264 shoudl be better than mpeg4 for .mp4 output.  -crf 0 for uncompress 
+ echo "**** Use .mp4 as intermediate for high quality movie"
+ highq=1; movieext='mp4';extension='.'$movieext
+ #bitrate 5000k. Can increase for higher quality. Can also define r 20 for 20fps; -s 760x380 for screen size
+else
+ vdeco='';highq=0;
+ #movieext='mpg'
+ echo "**** Use $movieext for  movie intermediate. Also high-quality .mpg now when use convert (require mpeg2encode) to generate movie" 
+fi
+
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/get $ed/symbol.txt $ed/watermark1.png  $ed/image_manipulate $ed/pymol_movie .
+ #cp -f $ed/mmcat
+fi
+
+R='\033[31m';G='\033[32m';Y='\033[33m';B='\033[34m';M='\033[35m';C='\033[36m'; N='\033[m'  #Color text of RBG Yellow Magenta Cyan Normal for echo -e 
+HR='\033[41m';HG='\033[42m';HY='\033[43m';HB='\033[44m';HM='\033[45m';HC='\033[46m';  #High-light Color text of RBG Yellow Magenta Cyan for echo -e
+A=`awk '{print $1}' symbol.txt | head -1`;PM=`awk '{print $2}' symbol.txt | head -1`;BL=`awk '{print $11}' symbol.txt | head -1` #Symbol for Amstrong and +/- for cat/echo
+LE=`awk '{print $3}' symbol.txt | head -1`;GE=`awk '{print $4}' symbol.txt | head -1`;NE=`awk '{print $8}' symbol.txt | head -1` #Symbol for <= ; >= ;!=
+alpha=`awk '{print $20}' symbol.txt | head -1`; beta=`awk '{print $21}' symbol.txt | head -1`;
+#echo -e "$R ColorText $A $N"
+
+#ffmpge:
+#-y|-n: overwrite output files
+#-an: disable audio
+#-ss | -to Time : the start/stop time
+
+#Turn a video to X images
+if [ $doimage -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile
+ if [ $imagetime != "-1" ] ; then
+  outs=${output}'_'$imagetime'.'$imageext
+  $ffmpeg -y -i $input -ss $imagetime -frames:v 1 $outs >& $temp3
+  echo "=> Extract one image of $input at time $imagetime from start saved as $outs"
+ else
+  outs=${output}'_%06d.'$imageext  #output image names _XXXXXX.jpg
+  $ffmpeg $lead -an -y  -i $input $outs >& $temp3
+  nimage=`ls -l ${output}_*.${imageext} | wc -l | awk '{print $1}'`
+  echo "=> Extract $input into $nimage images w/ options $lead named as ${output}_*.$imageext"
+ fi 
+fi
+
+#Turn X images to a video sequence
+meth=1  #=1: best way and high quality  =others: another way
+if [ $domovie -eq 1 ] ; then
+ output=$foutput'_mov.'$movieext
+ [ $mput -eq 2 ]  && output=$input2
+ rm -f $output
+ iex=`echo "$input" | awk '{n=split($1,a,".");printf("%s",a[n])}'`
+ ipo=`echo "$input" | awk '{n=split($1,a,"*");printf("%s",a[1])}'`
+ iot=`echo $output | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ #nimage=`ls -l ${input}*.${imageext} | wc -l | awk '{print $1}'`
+ nimage=`ls -l ${input} | wc -l | awk '{print $1}'`
+ #cat COH20_XP_10.png  COH20_XP_2.png  COH20_XP_3.png  COH20_XP_4.png | ffmpeg -y -f image2 -i - $vdeco $output >& $temp3  #Not working
+ if [ $meth -ne 1 ] ; then
+  if [ $highq -eq 0 ] ; then  #can not take -r since .mpg only support fps=25. Not slow motion!
+   $ffmpeg -y -f image2 -i ${ipo}%d.${iex}  $output #>& $temp3
+  else
+   $ffmpeg -y -f image2 -r $mfps -i ${ipo}%d.${iex} $vdeco $output #>& $temp3
+   echo "  Each image will last 1/$mfps seconds" 
+  fi
+ else
+  #  A better way: 1. Convert to gif : convert  -delay 5 A_*.png A.gif  (each frame keep 5/100s, but will be discard -delay when converting to .wmv
+  #                 2. Convert gif to .wmv to use for PPT: $0 -convert -out A.wmv A.gif
+  #                 3. Slow-down: $0 -slow 5  A.wmv
+  sf=`echo $mfps | awk '{printf("%d",100/$1)}'`  #convert -delay Time   (Image keeping time is Time*0.01s)
+  if [ $iot == ".mpg" ] || [ $iot == ".gif" ] ; then 
+   #High quality .mpg/.gif (need install mpeg2encode) :
+   if [ -s "$input" ] ; then  #Input is image file
+    nimage=`wc -l $input | awk '{print $1}'`
+    echo "** May take long time to convert $nimage images in list $input to movie w/ quality=$qual: use -qual 90 or -highq to speedup. Check: tail -f $temp4"
+    convert -quality $qual -delay $sf @$input $output >& $temp4
+   else 
+    sf=`echo $mfps | awk '{printf("%d",30/$1)}'`
+    echo "** May take long time to convert $nimage images to movie w/ quality=$qual: use -qual 90 or -highq to speedup. Check: tail -f $temp4"
+    convert -quality $qual -delay $sf "$input" $output >& $temp4
+   fi
+  else
+   rm -f $temp.gif $temp.wmv
+   convert -quality $qual -delay $sf "$input" $temp.gif
+   $0 -final -convert -out $temp.wmv $temp.gif
+   $0 -final -slow $sf -out $output $temp.wmv
+  fi
+  echo " Quality for convert = $qual"
+ fi
+ echo "=> Merge $nimage images in $input w/ fps=${mfps}Hz into movie $output"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Turn single image into movie:
+#See http://forum.videohelp.com/threads/356606-Creating-a-video-file-with-FFMPEG-using-a-single-image-(Mask)
+#1 image + 1 audio, see http://stackoverflow.com/questions/5887311/ffmpeg-1-image-1-audio-file-1-video
+if [ $dosingleimage -eq 1 ] ; then
+ output=${infile}_st${t}.$movieext
+ $ffmpeg -y -loop 1  -t $t -i $input $vdeco $output
+ echo "=> Convert single image $input into ${t}s movie saved in $output"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Getting infos from a video file
+#$ffmpeg -i $input   #Not user friendly
+
+#Put two videos side-by-side into one movie
+#See: https://lists.ffmpeg.org/pipermail/ffmpeg-user/2013-June/015662.html
+#Filter: .. pad              V->V       Pad input image to width:height[:x:y[:color]] (default x and y: 0, default color: black).
+#Filter: T. overlay          VV->V      Overlay a video source on top of the input
+# If two videos have different screen size, see https://lists.ffmpeg.org/pipermail/ffmpeg-user/2013-June/015712.html
+if [ $dosidebyside -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_sbs'$extension
+ $ffmpeg -y -i $input -i $input2 -filter_complex \
+"[0:v]setpts=PTS-STARTPTS, scale=iw*${mscale}:ih*${mscale},pad=iw*2:ih[bg]; \
+ [1:v]setpts=PTS-STARTPTS, scale=iw*${mscale}:ih*${mscale} [fg]; [bg][fg]overlay=w" -q:v $quality $output #>& $temp3
+ echo "=> Put two movies $input and $input2 scaled down to $mscale by side-by-side in screen into $output"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+# Put one video inside the other
+#See http://www.daniel-mitchell.com/blog/video-in-a-video-ffmpeg/
+if [ $doinside -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_ins'$extension
+ $ffmpeg -y -i $input  -vf "movie=${input2}, scale=iw/${insidescale}:-1 [inner]; \
+  [in][inner] overlay=${insidemargin} [out]"  $output #>& $temp3
+ echo "=> Put $input2 (scaled down x${insidescale}, put at ${insidemargin}) inside $input into $output"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Put 4 movies in 2x2 grids
+#See http://trac.ffmpeg.org/wiki/Create%20a%20mosaic%20out%20of%20several%20input%20videos
+if [ $do4movie -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_4m'$extension
+ if [ $doscreen -eq 1 ] ; then
+  #Keep original movie size
+  width4=$width; height4=$height
+  hw=`echo $width4 | awk '{printf("%d",$1/2)}'`
+  hh=`echo $height4 | awk '{printf("%d",$1/2)}'`
+  s40=${width4}'x'${height4}
+  s4=${hw}'x'${hh}
+  $ffmpeg  -y -i $input -i ${input2} -i ${input3} -i ${input4}  \
+       -filter_complex " \
+               nullsrc=size=${s40} [base]; \
+               [0:v] setpts=PTS-STARTPTS, scale=${s4} [upperleft]; \
+               [1:v] setpts=PTS-STARTPTS, scale=${s4} [upperright]; \
+               [2:v] setpts=PTS-STARTPTS, scale=${s4} [lowerleft]; \
+               [3:v] setpts=PTS-STARTPTS, scale=${s4} [lowerright]; \
+               [base][upperleft] overlay=shortest=1 [tmp1]; \
+               [tmp1][upperright] overlay=shortest=1:x=${hw} [tmp2]; \
+               [tmp2][lowerleft] overlay=shortest=1:y=${hh} [tmp3]; \
+               [tmp3][lowerright] overlay=shortest=1:x=${hw}:y=${hh} \
+       "  $output
+  echo "=> Put 4 movies $input $input2 $input3 and $input4 as 2x2 grid in one screen ${s40} into $output"
+ else
+  #scale image to half-size then merge
+  $ffmpeg  -y -i $input -i ${input2} -i ${input3} -i ${input4}  \
+   -filter_complex "[0:0]scale=iw*${mscale}:ih*${mscale},pad=iw/${mscale}:ih/${mscale}[a]; \
+                    [1:0]scale=iw*${mscale}:ih*${mscale}[b]; \
+                    [2:0]scale=iw*${mscale}:ih*${mscale}[c]; \
+                    [3:0]scale=iw*${mscale}:ih*${mscale}[d]; \
+                    [a][b]overlay=w[x];[x][c]overlay=0:h[y];[y][d]overlay=w:h" $output
+  echo "=> Put 4 movies $input $input2 $input3 and $input4 as 2x2 grid when scaled down to $mscale into $output"
+ fi
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Merge/concatenate movie files
+# See http://trac.ffmpeg.org/wiki/How%20to%20concatenate%20%28join,%20merge%29%20media%20files
+#ffmpeg -i "concat:input1.mpg|input2.mpg|input3.mpg" -c copy output.mpg
+if [ $domerge -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_mg'$extension
+ rm -f $foutput
+ if [ $mput -eq 1 ] ; then  #Only one Input as movie list
+  $ffmpeg -y -f concat -i $input -c copy $foutput
+  echo "=> Merge several movies (Must be same screen size and same type!Otherwise larger size movie goes first) listed in $input to movie $foutput"
+ else
+  methodcon=1  #=1 works =2/3 NOT works
+  #Get resolution of first video: Stream #0:0[0x1e0]: Video: mpeg1video, yuv420p, 300x233 [SAR 1:1 DAR 300:233], 104857 kb/s, 25 fps, 25 tbr, 90k tbn, 25 tbc
+  $ffmpeg -i $input >& $temp4
+  reso=`cat $temp4 | grep 'Stream #0:0' | tail -1 | awk '{print $6}'`
+  resox=`echo $reso | awk '{split($1,a,"x");print a[1]}'`
+  resoy=`echo $reso | awk '{split($1,a,"x");print a[2]}'`
+  if [ $methodcon -eq 1 ] ; then
+   #echo "Movie resolution of first $input : $resox x $resoy will be used to resize all movies to be merged"
+   mn=''
+   mwidth=600
+   for (( i=1; i<=$mput; i++ )) ; do
+    [ $i -eq 1 ] && ip=$input
+    [ $i -eq 2 ] && ip=$input2
+    [ $i -eq 3 ] && ip=$input3
+    [ $i -eq 4 ] && ip=$input4
+    [ $i -eq 5 ] && ip=$input5
+    #ffmpeg -y -i $ip -vf scale=${resox}:${resoy} ${temp}_${i}.mpg
+    $ffmpeg -y -i $ip  ${temp}_${i}.mpg
+    mn=$mn' '${temp}_${i}.mpg
+   done
+   cat $mn | $ffmpeg -y -i - $foutput
+  fi
+  [ $methodcon -eq 2 ] && $ffmpeg -y -i "$conc" -c copy $foutput
+  if [ $methodcon -eq 3 ] ; then
+   $ffmpeg -i $input -i $input2 -filter_complex '[0:0] scale=500:300; [1:0] scale=500:300; concat=n=2:v=1 [v]' -map '[v]'  $foutput
+  fi
+  #addsilent=1
+  #if [ $addsilent -eq 1 ] ; then  #add silence audio to vedio
+  # $ffmpeg -f lavfi -i aevalsrc=0 -i $input -shortest -c:v copy -c:a aac -strict experimental $temp$extension
+  #fi
+  #./mmcat $temp$extension $conc $foutput
+  echo "=> Merge $mput movies (Screen resolution adjusted to first input ${resox}x${resoy}) $input $conc to movie $foutput"  
+ fi
+ input=$foutput
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+ rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit
+fi
+
+#Create sub-clip by -ss and -t
+if [ $dosubmovie -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_sub'$extension
+ $ffmpeg -y $lead -i $input -vcodec copy -acodec copy $output >& $temp3
+ echo "=> Sub-movie from ${ss}s w/ duration= ${t}s saved in $output"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#sampling movie 1-frame-per-Rate-frames: high-quality for .mpg w/ -qual 95
+# Or use filter: -vf "select=not(mod(n,3))"
+mycode=1  #=1: my own code, which can include last frame when -keeplast.   #=0: ffmpeg filters
+if [ $interval -gt 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_per'$interval$extension
+ iext=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ iot=`echo $output | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ if [ $mycode -eq 0 ] ; then
+  $ffmpeg -an -y -vf "select=not(mod(n,${interval}))" -i $input $output  #use filter select
+  echo "=> Sampling movie $input at every frame per $interval frames is $output"
+ else #mycode
+  outs=${infile}'.tmp_%06d.'$imageext  #output image names 
+  rm -f ${infile}.tmp_*.${imageext}
+  $ffmpeg -an -y -i $input $outs  >& $temp3 #dump images
+  ls  ${infile}.tmp_*.${imageext} | awk '{print $NF}' > $temp
+  nori=`wc -l $temp | awk '{print $1}'`
+ for (( i=1; i<=$nori; i++ )) ; do
+  thisim=`head -$i $temp | tail -1`
+  keept=0
+  nr=`echo $i $interval | awk '{print $1 % $2}'`
+  [ $nr -eq 0 ] && keept=1
+  if [ $keeplast -eq 1 ] && [ $i -eq $nori ] ; then   #keep last frame
+   keept=1
+  fi
+  #[ $keept -eq 1 ] && echo -n " "$i'-'$thisim
+  [ $keept -eq 0 ] && rm -f $thisim   #delete none-sampling images
+ done
+  nf=`ls  ${infile}.tmp_*.${imageext} | wc -l | awk '{print $1}'`
+  #cat $(ls ${infile}.tmp_*.${imageext}) | $ffmpeg -y -f image2pipe -vcodec mjpeg -i - $output #>& $temp3  #merge images
+  if [ $iot == ".mpg" ] || [ $iot == ".gif" ] ; then
+   #This guarrantee high quality .mpg/.gif   Need to install mpeg2encode
+   echo "** May take long time to convert $nf images to movie w/ quality=$qual: use -qual 90 or -highq to speedup. Check: tail -f $temp4"
+   convert -quality $qual "${infile}.tmp_*.${imageext}" $output   >& $temp4
+  else
+   convert -quality $qual "${infile}.tmp_*.${imageext}" $temp.gif  >& $temp4
+   $0 -final -convert $temp.gif $temp.mp4
+   $0 -final -convert $temp.mp4  $output
+  fi
+
+  echo "=> Sampling movie for $nori frames $input at every frame per $interval frames (keep-last-frame=$keeplast) is $nf frames $output"
+  rm -f ${infile}.tmp_*.${imageext}
+ fi #mycode
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#generate movie with backward play: high-quality for .mpg w/ -qual 95
+# See http://stackoverflow.com/questions/2553448/encode-video-is-reverse
+if [ $dobackward -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_bk'$extension
+ iext=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ iot=`echo $output | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ outs=${infile}'.tmp_%06d.'$imageext  #output image names
+ rm -f ${infile}.tmp_*.${imageext}
+ $ffmpeg -an -y -i $input $outs  #dump images
+ nf=`ls  ${infile}.tmp_*.${imageext} | wc -l | awk '{print $1}'`
+ if [ $iot == ".mpg" ] || [ $iot == ".gif" ] ; then
+   #This guarrantee high quality .mpg/.gif   Need to install mpeg2encode.
+   echo "** May take long time to convert $nf images to movie w/ quality=$qual: use -qual 90 or -highq to speedup. Check: tail -f $temp4"
+   ls -r ${infile}.tmp_*.${imageext} > $temp.tx
+   convert -quality $qual @$temp.tx $output  >& $temp4  #Use file input to avoid error: TokenLengthExceedsLimit `hbond.tmp_000522.jpg
+ else
+   cat $(ls -r ${infile}.tmp_*.${imageext}) | $ffmpeg -y -f image2pipe -vcodec mjpeg -i - $output #>& $temp3 #reverse images and merge for backward-play movie
+ fi
+ echo "=> Backward-play movie for $input is $output"
+ rm -f ${infile}.tmp_*.${imageext}
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Slow-down/Speed-up movie
+# See http://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video
+if [ $doslow -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile$ext$extension
+ #-qscale:v 7 : video quality 0-10. 10 is the highest
+ $ffmpeg -y -i $input -qscale:v $quality -filter:v "setpts=${slow}*PTS" $output #>& $temp
+ [ $debug -eq 1 ] && cat $temp
+ echo "=> Movie $extname saved in $output"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Add filters
+# See http://www.ffmpeg.org/ffmpeg-filters.html
+# See http://trac.ffmpeg.org/wiki/FilteringGuide
+if [ $dofilter -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_fl'$extension
+ iext=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ iot=`echo $output | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ $ffmpeg -y -i $input -vf "${filter}" $output >& $temp
+ [ $debug -eq 1 ] && cat $temp
+ echo "=> Filters added to $input as ${filter} saved in $output"
+ echo "  Filters definition can see http://www.ffmpeg.org/ffmpeg-filters.html and http://trac.ffmpeg.org/wiki/FilteringGuide"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Scale screen size:
+#See http://trac.ffmpeg.org/wiki/FilteringGuide
+#iw: screen width of current movie
+#Or scale=640:320
+#doscale=`echo $scale | awk '{if($1==1||$1<0){s=0}else{s=1};print s}'`
+if [ $doscale -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_s'$scale$extension
+ if [ "$scalefactor" != "1" ] ; then
+  $ffmpeg -y -i $input -vf scale=iw/${scalef}:-1 $output #>& $temp
+  echo "=> Scale screen size of $input to x$scalefactor saved in $output"
+ else
+  $ffmpeg -y -i $input -vf scale=${scalewidth}:-1 $output #>& $temp
+  echo "=> Scale screen size of $input to width $scalewidth pixels saved in $output"
+ fi
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Add watermark
+# See http://www.idude.net/index.php/how-to-watermark-a-video-using-ffmpeg/
+#the image is placed 10 pixels away from the sides (offset for desired padding/margin). 
+if [ $watermark -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_wm'$extension
+ wtx='main_w-overlay_w-'$wmargin':main_h-overlay_h-'$wmargin;  #watermark position
+ [ $wpos == "tl" ] && wtx=$wmargin':'$wmargin;
+ [ $wpos == "tr" ] && wtx='main_w-overlay_w-'$wmargin':'$wmargin;
+ [ $wpos == "bl" ] && wtx=$wmargin':main_h-overlay_h-'$wmargin;
+ [ $wpos == "br" ] && wtx='main_w-overlay_w-'$wmargin':main_h-overlay_h-'$wmargin;
+ $ffmpeg -y -i $input -vf "movie=${wpic} [watermark]; [in][watermark] overlay=$wtx [out]" $output #>& $temp3
+ echo "=> Add watermark $wpic at position $wpos for $input to $output" 
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Draw text on movie. 
+#No such filter: 'drawtext' in current version!
+#See https://sites.google.com/a/asu.edu/wireless-video-sensor/video/how-to-setup-full-ffmpeg-tools-in-ubuntu-11-10/useful-ffmpeg-commands
+mycode=1  #=1: Use my code. =0: ffmpeg does NOT work
+if [ "$drawtext" != "0" ] ; then
+ [ $doout -ne 1 ] && output=$infile'_txt'$extension
+ iext=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ iot=`echo $output | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+  #$ffmpeg -y -i $input -vf "drawtext=x=(w-tw)/2: y=h-(2*lh): fontcolor=white: box=1: boxcolor=0x00000000@1" $output
+ if [ $mycode -eq 0 ] ; then
+  textst=0;textet=9999  #Start/End Time in s of movie to draw text
+  txpos='(w-text_w)/2'; typos='h-(2*lh)' #position of text: x in center, y in bottom
+  boxcolor='black@0.5';  #color for text and box 
+  textbox=1  #=1: draw box around text
+  $ffmpeg -y -i $input -vf "drawtext=fontcolor=${fontcolor}: fontsize=${fontsize} \
+   x=${txpos}: y=${$typos}: text='hello ha' : \
+   boxcolor=${boxcolor}: box=${textbox}: \
+   enable='between(t,$textst,$textet)' \   
+  " $output #>& $temp3
+  echo "=> Draw text \"${drawtext}\" at position ($txpos,$typos) between [$textst,$textet]s for $input to $output"
+ else  #mycode : add text on each frame
+  [ $highq -eq 1 ] && output=$infile'_txt.mp4'
+  outs=${infile}'.tmp_%06d.'$imageext  #output image names 
+  rm -f ${infile}.tmp_*.${imageext}
+  echo $ffmpeg -an -y $lead -i $input $outs
+  $ffmpeg -an -y $lead -i $input $outs  >& $temp3 #dump images
+  ls ${infile}.tmp_*.${imageext} | awk '{print $NF}' > $temp
+  nori=`wc -l $temp | awk '{print $1}'`
+  hasX=`awk -v a="$drawtext"  'BEGIN{print index(a, "%X")}'`  #has %X inside to replace?
+  if [ $hasX -gt 0 ] ; then
+   [ $mdtime -gt 0 ] && framefactor=`echo $nori $mdtime | awk '{printf("%5.4f",$2/($1-1))}'` 
+   ttim=`echo $nori $framefactor | awk '{printf("%3.1f",($1-1)*$2)}'`
+   echo "Output: $output Total frames $nori to add text at each frame ${framefactor}ns with Total MD time=${ttim}ns"
+  fi
+  drawtexto=$drawtext
+  echo -n ""
+  for (( i=1; i<=$nori; i++ )) ; do
+   thisim=`head -$i $temp | tail -1`
+   if [ $hasX -gt 0 ] ; then
+    drawtext=`awk -v a="$drawtexto"  'BEGIN{b=sprintf("%4.1f",('$i'-1)*'$framefactor');gsub(/\%X/,b,a); print a}' `  #replace %X by time
+   fi
+   #echo ./image_manipulate  -text "$drawtext" -fontcolor $fontcolor -fontsize $fontsize -textbg none -position $textpos -out $temp.$imageext $thisim 
+   ./image_manipulate  -text "$drawtext" -fontcolor $fontcolor -fontsize $fontsize -textbg none -position $textpos -out $temp.$imageext $thisim > $temp4
+   #seems ./image_manipulate -text does not work from 2018/6
+   mv $temp.$imageext $thisim
+   echo -n " "$i
+  done
+  echo ""
+  nf=`ls  ${infile}.tmp_*.${imageext} | wc -l | awk '{print $1}'`
+  if [ $iot == ".mpg" ] || [ $iot == ".gif" ] ; then
+   #This guarrantee high quality .mpg/.gif   Need to install mpeg2encode
+   echo "** May take long time to convert $nf images to movie w/ quality=$qual: use -qual 90 or -highq to speedup. Check: tail -f $temp4"
+   convert -quality $qual "${infile}.tmp_*.${imageext}" $output >& $temp4
+  else
+   if [ $iot != ".mp4" ] ; then
+    $ffmpeg -y -f image2 -i ${infile}.tmp_%06d.${imageext}  -q:v $quality  $output
+   else
+    $ffmpeg -y -f image2 -i ${infile}.tmp_%06d.${imageext} $vdeco  $output #>& $temp3
+   fi
+  fi
+  #$ffmpeg -y -f image2  -i ${infile}.tmp_%06d.${imageext} $vdeco $output #>& $temp3
+  #cat $(ls ${infile}.tmp_*.${imageext}) | $ffmpeg -y -f image2pipe -vcodec mjpeg -i - $output #>& $temp3  #merge images
+  rm -f ${infile}.tmp_*.${imageext}  
+  echo "=> Draw text \"${drawtext}\" on $textpos at $lead w/ $nf frames for $input to $output"
+ fi #mycode
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#fade in/out
+if [ "$fade" != "" ] ; then
+  $doout -ne 1 ] && output=$infile'_fa'$extension
+ $ffmpeg -y -i $input -vf "$fade"  $foutput #>& $temp
+ [ $debug -eq 1 ] && cat $temp
+ echo "=> Fade in/out added to $input as ${fade} saved in $foutput"
+ input=$foutput
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+#Mix a video with a sound file
+if [ $mix -eq 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_mix'$extension
+ $ffmpeg -y $mixs $foutput #>& $temp
+ [ $debug -eq 1 ] && cat $temp
+ echo "=> Mixed a video file (Must be first input) and a sound file as ${mixs} saved in $foutput"
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+
+# Generate thumbnails at scence change
+# See http://sonnati.wordpress.com/2012/10/19/ffmpeg-the-swiss-army-knife-of-internet-streaming-part-vi/
+# select=gt(scene\,${schange}), scale=640:360   gt: greater than. Must has \,
+if [ $thumbnail -ge 1 ] ; then
+ [ $doout -ne 1 ] && output=$infile'_thu'
+ $ffmpeg -y -i $input -vf "select=gt(scene\,${schange})" -frames:v $thumbnail ${output}_%03d.$imageext #>& $temp3
+ echo "=> Generate $thumbnail thumbnail pictures at scene change of >$schange for $input to ${output}_NNN.${imageext}"
+fi
+
+#Convert video formats
+# See http://superuser.com/questions/556029/how-do-i-convert-a-video-to-gif-using-ffmpeg-with-reasonable-quality
+#See http://www.catswhocode.com/blog/19-ffmpeg-commands-for-all-needs
+if [ $doconvert -eq 1 ] ; then
+if [ $fdoout -eq 1 ] || [ $mput -eq 2 ]  ; then
+ output=$foutput
+ [ $mput -eq 2 ] && output=$input2
+ iext=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ iot=`echo $output | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ if [ $iext != $iot ] ; then
+  [ $iext == ".gif" ] && slowconvert=1  #GIF cannot convert to other format well by ffmpeg. So use slowconvert
+  if [ $slowconvert -ne 1 ] ; then 
+   if [ $highq -eq 1 ] ; then
+    if [ $iext == ".mp4" ] && [ $iot == ".mpg" ] ; then   
+     $ffmpeg -y -i $input -q:v $quality -b:v 50000K $output #>& $temp3
+    fi
+   else
+    $ffmpeg -y -i $input -q:v $quality $output #>& $temp3
+   fi
+  else
+   rm -f ${temp}_*.png
+   convert $input ${temp}_%06d.png  
+   #cat $(ls ${temp}_*.png ) | $ffmpeg -y -i ${temp}_%06d.png $output  
+   nf=`ls  ${temp}_*.png | wc -l | awk '{print $1}'`
+   if [ $iot == ".mpg" ] || [ $iot == ".gif" ] ; then
+    #This guarrantee high quality .mpg/.gif   Need to install mpeg2encode
+    echo "** May take long time to convert $nf images to movie w/ quality=$qual: use -qual 90 or -highq to speedup. Check: tail -f $temp4"
+    convert -quality $qual "${temp}_*.png" $output  >& $temp4
+   else
+    if [ $iot != ".mp4" ] ; then
+     $ffmpeg -y -f image2 -i ${temp}_%06d.png  -q:v $quality  $output
+    else
+     $ffmpeg -y -f image2 -i ${temp}_%06d.png $vdeco  $output #>& $temp3
+    fi
+   fi
+   rm  ${temp}_*.png
+   echo "  Use slow-convert (convert to images first) to generate good quality movie, especially for animated GIF conversion"
+  fi
+  echo "=> Convert video format: $input to $output"
+  echo "  NOTE: If failed, may need more commands. See http://www.catswhocode.com/blog/19-ffmpeg-commands-for-all-needs"
+ else
+  echo "=> Same video type: Only copy $input to $output"
+  cp -f $input $output
+ fi
+ input=$output
+ extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ infile=`basename $input ${extension}`
+fi
+fi
+
+[ "$lead" != "" ] && echo " Options: $lead     See: $ffmpeg -h"
+
+if [ $fdoout -eq 1 ] ; then
+ oext=`echo $foutput | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ iext=`echo $output | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+ if [ $oext == $iext ] ; then  #same format
+  [ $foutput != $output ] &&  mv $output $foutput
+ else 
+  [ $final -eq 0 ] && $0 -convert -final  $output $foutput #> $temp 
+  echo "=> Convert video format: $output to $foutput"
+ fi
+ echo "==> Final movie saved as $foutput"
+fi
+echo "  *** To view .mpg/.gif: animate $foutput"
+
+
+rm -rf $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit

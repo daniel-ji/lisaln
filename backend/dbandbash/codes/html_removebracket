@@ -1,0 +1,117 @@
+#!/bin/sh
+
+
+if [ -n "$1" ] ; then
+   infile=$1
+   brack=1
+   brack1='<'
+   brack2='>'
+ if [ -n "$2" ] ; then
+   brack=$2
+   [ $brack -eq 2 ] && brack1='('
+   [ $brack -eq 2 ] && brack2=')'
+   [ $brack -eq 3 ] && brack1='['
+   [ $brack -eq 3 ] && brack2=']'
+   [ $brack -eq 4 ] && brack1='{'
+   [ $brack -eq 4 ] && brack2='}'
+ fi
+else
+cat << title 
+Remove content inside pairs of bracket <> or {}, [], () of input text file
+ line by line. Only output contents outside of the pairs.
+ Half bracket will remove appending part after first bracket <(after removed)
+                   remove prefix part before last bracket (before removed)>
+ One example is to extract vendor info from NCBI PubChem Search-Result in 
+   /home/holi/siRNA/PubChem_search
+
+Usage:
+  $0 InputFile(full name) [Bracket]
+ Bracket: =[default], <>
+         =2, ()
+         =3, []
+         =4, {}
+e.g.  $0 pubchem.html [2]
+
+NOTE: ./html_strip is a worse code that needs <> on the same line
+
+title
+exit
+fi
+
+
+
+
+
+nl=`wc -l $infile | awk '{print $1}'`  #how many lines in file?
+
+#cat << first
+#  Input file = $infile
+#    Lines # = $nl
+#  Bracket pair = $brack1 $brack2  
+#first
+
+temp=$$'.tmp'
+temp2=$temp'2'
+temp3=$temp'3'
+
+
+old=0  #=0: old slow code
+
+#First: remove whole brackets in a line
+# sed '/^$/d' to remove empty linetion without it and see what you get.
+# sed -e 's/^[ \t]*//' to remove leading spaces
+#s/<[^>]*>/ /g all text that begins with a '<', is followed by zero or more characters not a '>', and then followed by a '>'.
+
+[ $brack -eq 1 ] && awk -v RS="\r" -v ORS="" {print}  $infile | sed 's/<[^>]*>/ /g' | sed -e 's/^[ \t]*//' | sed 's/&nbsp/ /g' | sed '/^$/d' > $temp
+[ $brack -eq 2 ] && awk -v RS="\r" -v ORS="" {print}  $infile | sed 's/([^)]*)/ /g' | sed -e 's/^[ \t]*//' | sed 's/&nbsp/ /g' | sed '/^$/d' > $temp
+[ $brack -eq 3 ] && awk -v RS="\r" -v ORS="" {print}  $infile | sed 's/\[[^\]]*\]/ /g' | sed -e 's/^[ \t]*//' | sed 's/&nbsp/ /g' | sed '/^$/d' > $temp
+[ $brack -eq 4 ] && awk -v RS="\r" -v ORS="" {print}  $infile | sed 's/{[^}]*}/ /g' | sed -e 's/^[ \t]*//' | sed 's/&nbsp/ /g' | sed '/^$/d' > $temp
+
+
+
+if [ $old -eq 0 ] ; then
+
+cat $temp | awk 'BEGIN{ ba="'$brack1'";bb="'$brack2'";now=0;pnow=0}
+{ a=$_; nb=index(a,bb);len=length(a)
+  nb=index(a,bb)
+  if(nb>0&&pnow==1){a=substr(a,nb+1,len-nb);pnow=0}  #Half bracket. before> matching <> pairs will be removed
+  na=index(a,ba)
+  if(na>0){pnow=1;a=substr(a,1,na-1)}
+  if(a!=""&&pnow!=1){print a}
+  #if(na>0){print substr($_,1,na-1)} #Half bracket. after < will be removed
+  #if(nb>0){print substr($_,nb+1,len-nb)}  ##Half bracket. before> will be removed
+}'
+
+
+else #old slow code
+nl=`wc -l $temp | awk '{print $1}'`  #how many lines in file?
+
+
+#processing line by line
+for (( i = 1; i <= nl ; i++ )); do
+
+a=`head -$i $temp | tail -1`
+echo $a | awk '
+END{
+  ba="'$brack1'";bb="'$brack2'";a=$0
+  na=1;nb=1;pair=0;pa=0;pb=0;pc=0
+  na=index(a,ba); nb=index(a,bb);
+  while (na !=0 || nb !=0 ) {
+    len=length(a)
+    if(nb>na&&na>1){pair++;print substr(a,1,na-1); a=substr(a,nb+1,len-nb)} #normal paired,na>1
+    if(nb>na&&na==1){pair++;a=substr(a,nb+1,len-nb)} #normal paired,na=1 (< started)
+    if(na>0&&nb==0){pa++;print substr(a,1,na-1);a=""}  #Half bracket. after < will be removed
+    if(nb>0&&na==0){pb++;print substr(a,nb+1,len-nb);a=""} #Half bracket. before> will be removed
+    if(na>nb&&nb>0){pc++;print substr(a,nb+1,na-nb-1);
+      a=substr(a,na,len-na+1)} #back to back bracket. Remove (before)> and keep <(after)
+    na=index(a,ba); nb=index(a,bb);
+  }
+  if(a!=""){print a}
+}
+'
+#exit
+done
+fi #old
+
+rm -f $temp $temp2 $temp3
+

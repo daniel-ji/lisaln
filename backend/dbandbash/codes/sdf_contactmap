@@ -1,0 +1,1330 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script
+# Script template is ./template 
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+force=0
+nognu=0
+xlable='none';
+ylable='none';
+font='courbd'  #default is VeraBd as defined in .bashrc  But use courbd for residue name purpose
+[ ! -d /usr/share/fonts/msttcorefonts ] && font='VeraBd'  #In case no arial font, use VeraBd
+[ ! -d /usr/share/fonts/bitstream-vera ] && font='/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf' #otherwise, use DejaVuSans-Bold.ttf
+
+autoxy=0;autonumber=70
+fontauto=1   #=1: auto determine fontsize
+fontsize_xtics=15   #font size for tics
+fontsize_ytics=15   #font size for tics
+fontcolor='blue'  #font color for tics
+nobold='' #font default is bold
+cut=0.6  #Similarity cutoff for first-level cluster
+cut2=0.35
+autocut=0
+leftover=0
+#zrange='[0.2:0.8]' #heatmap plot zrange cutoff
+zrange=0  
+nolabt=1
+labelres=1
+topN=0
+labelcmpd=0
+maxlabel=50  #max number of cmpds to label cmpd name in gnuplot when labelcmpd=0
+dosort=2 #=0: No sort   =1: Sort cmpds based on score  =2: Sort cmpds based on cluster cutoff at $cut
+dorange=0
+showcluster=5;doshclus=0
+onlymap=0
+manycluster=1;startc=0.8;endc=0;stepc=-0.1;ismf=2
+plotwidth=921 #921: 90% w /80% h of  1024x768 is regular full screen size for computer. Best for ppt to insert since there is Title in ppt. 
+              #800: roughly square plot good for contactmap
+#plotwidth=737 #XThis gives roughly width=height(615) for a square heatmap. No, cannot get square heatmap!
+plotheight=615 
+dorank=1
+sidecolor=1 #Color for palette =1:dark =2:hot
+sidetics=0.2;ticnum=5;doticnum=1
+xstart=0;xend=0
+list='NA'
+filetype=0  #0: SDF File  1:Distance/Similarity Matrix file  2. None-complete or none-ordered Maxtrix/map file 3. Half-matrix
+head=1
+title='AUTO'
+allmax=500
+term=0
+labelName=0
+labeltic=5
+labelstep=0
+noarrange=0;plotonly=0
+cblabel=''
+fill0='min'  #filling value for missing pairs of different rank when -map
+fill1='max'  #filling value for missing pairs of same rank when -map
+fillpad=$fill0;dopad=0;padlead='' #filling for edge-padding, so that no cut of edge display. 
+score=0;scorefile='';namecol=1;scorecol=2;largefirst=0;topscore=1
+less=0;
+reverse=""  #reverse y-axis for more nature plot
+symmetric=1  #force to make symtric data for -map
+simple=0
+donamemap=0;namemap=''
+maxlength=10 #maxlength of name for heatmap
+maxlength2=15 #maxlength of name for dendo
+nohyphen=0
+doVCN=1
+clusterdendo=0
+lessforce=0
+fast=0
+nodendo=0
+cbformat='%2.1f'
+others="";labeldata=0
+ labeldataoffset='char 0,0' #no data label offset measured by char size   ='char 1,1' : offset by 1 char
+ labeldatadig=0  #decimal/digit for data label
+ labeldataexcld=0  #exlcude label the data with value = labeldataexcld
+ labeldatacolor=3 #label color =3:blue =2:green =1:red =5:orange  [=4]:black 
+
+oldline=$*   #all argvs
+echo $0 $oldline
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+  case $1 in
+   -labeldata)labeldata=1;shift;;
+   -nolabeldata)labeldata=0;others=$others' '$1;shift;;
+   -labeldatadig)labeldatadig=$2;others=$others' '$1' '$2;shift 2;;
+   -labeldataexcld)labeldataexcld=$2;others=$others' '$1' '$2;shift 2;;
+   -labeldatacolor)labeldatacolor=$2;others=$others' '$1' '$2;shift 2;;
+   -autocut)autocut=1;shift;;
+   -autocut2)autocut=2;shift;;
+   -barformat)cbformat="$2";shift 2;;
+   -cbformat)cbformat="$2";shift 2;;
+   -nodendo)nodendo=1;shift;;
+   -fast)fast=1;shift;;
+   -lessforce)lessforce=1;shift;;
+   -noVCN)doVCN=0;shift;;
+   -maxlength)maxlength=$2;shift 2;;
+   -maxlength2)maxlength2=$2;shift 2;;
+   -nohyphen)nohyphen=1;shift;;
+   -namemap)donamemap=1;namemap=$2;shift 2;;
+   -less)less=1;shift;;
+   -scorefile)score=1;scorefile="$2";shift 2;;
+   -namecol)namecol=$2;shift 2;;
+   -scorecol)scorecol=$2;shift 2;;
+   -topscore)topscore=$2;shift 2;;
+   -largefirst)largefirst=1;shift;;
+   -cblabel)cblabel="$2";shift 2;;
+   -plotonly)noarrange=1;dosort=0;shift ;;
+   -noarrange)noarrange=1;shift ;;
+   -labelName)labelName=1;shift;;
+   -labeltic)labeltic=$2;shift 2;;
+   -labelstep)labelstep=$2;shift 2;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c';./template -i "$d" will give i='a b c' instead i='a'
+   -force)force=1;shift;;
+   -nognu)nognu=1;shift;;
+   -font)font="$2";shift 2;;
+   -fontsize_xtics)fontsize_xtics="$2";fontauto=0;shift 2;;
+   -fontsize_ytics)fontsize_ytics="$2";fontauto=0;shift 2;;
+   -auto)autoxy=1;shift;;
+   -fontcolor)fontcolor="$2";shift 2;;
+   -cut)cut=$2;docut=1;shift 2;;   
+   -cut2)cut2=$2;docut=1;shift 2;;
+   -xlable)xlable="$2";dolablex=1;shift 2;;
+   -ylable)ylable="$2";dolabley=1;shift 2;;
+   -xlabel)xlable="$2";dolablex=1;shift 2;;
+   -ylabel)ylable="$2";dolabley=1;shift 2;;
+   -zrange)zrange=$2;shift 2;;
+   -top)topN=$2;shift 2;;
+   -cluster)dosort=2;shift;;
+   -showcluster)dosort=2;showcluster=$2;doshclus=1;shift 2;;
+   -noshowcluster)showcluster=0;shift;;
+   -left)leftover=1;shift;;
+   -sort)dosort=1;shift;;
+   -nosort)dosort=0;shift;;
+   -range)xstart=$2;xend=$3;dorange=1;shift 3;;
+   -label)labelcmpd=1;shift;;
+   -nolabel)labelcmpd=-1;shift;;
+   -onlymap)onlymap=1;shift;;
+   -manycluster)manycluster=1;shift;;
+   -nomanycluster)manycluster=0;shift;;
+   -clusterfile)ismf=$2;shift 2;;
+   -rank)dorank=1;shift;;
+   -norank)dorank=0;shift;;
+   -nobold)nobold=$1;font='/usr/share/fonts/dejavu/DejaVuSans.ttf';shift;;
+   -barcolor)sidecolor=$2;shift 2;;
+   -bartics)sidetics=$2;doticnum=0;shift 2;;
+   -ticnum)ticnum=$2;doticnum=1;shift 2;;
+   -list)list="$2";shift 2;;
+   -matrix)filetype=1;shift;;
+   -map)filetype=2;shift;;
+   -nosym)symmetric=0;padlead=$padlead' '$1;shift;;
+   -halfmatrix)filetype=3;shift;;
+   -title)title="$2";shift 2;;
+   -fill0)fill0=$2;padlead=$padlead' '$1' '$2;shift 2;;
+   -fill1)fill1=$2;padlead=$padlead' '$1' '$2;shift 2;;
+   -nohead)head=0;padlead=$padlead' '$1;shift;;
+   -pad)dopad=1;shift;;
+   -nopad)dopad=0;shift;;
+   -fillpad)dopad=1;fillpad=$2;padlead=$padlead' '$1' '$2;shift 2;;
+   -reverse)reverse="-yreverse";shift;;
+   -noreverse)reverse="";shift;;
+   -simple)simple=1;shift;;
+   -clusterdendo)clusterdendo=1;shift;;
+   -max)allmax=$2;shift 2;;
+
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+
+if [ -n "$1" ] ; then
+ input="$1"
+else
+cat << ttt
+ NOTE: This script can show heatmap for any matrix data
+  WARNing: should use -nosort for arbitary maxtrix data. Then manually arrange order of data for better clustering, see ./TM_align and JMJD1B/readme
+ Calculate Similarity Matrix / Contact map of compounds based on Tanimoto scores
+   Also calculate top N clusters and cmpds by -showcluster N. 
+   Selected cmpds will NOT be shown and counted in later clusters (by calling ./cluster , which is a strict cluster algorithm)
+   XSelected cmpds tried NOT be shown in other clusters. But the algorithm is not good and some cmpds shows in more than one cluster. See S100B/readme
+   XThe size of each cluster is defined as at cutoff, the number of cmpds near the center. All the cmpds are counted in this stage without deletion.
+   X When print out the clusters, if the center cmpd that has been shown in previous larger cluster, this new cluster will be discard.
+   X  (This is NOT a perfect algorithm. Since none-centered cmpds may be shown in more than one cluster and some cmpds may never be shown in any clusters) 
+ Can also generate contact map for general/any similarity map file
+   NOTE: For dendogram to show cluster, run ./gnuplot_dendogram -map or -matrix
+
+ To define side-bar/palette color: set pal def (0 "white",0.3 "yellow",0.7 "red",1 "blue") ; set cbtics 0.2 #label sidebar tics by 0.2
+         WARNing: cbtics affect final heatmap!!! Small cbtics, more colors for heatmap
+     set cbrange [0:1]  #range of sidebar
+     set format cb "%2.1f"   #cb format
+     set cblabel "Similarity"  #Use label instead of tics
+     set cbtics border in scale 0,0 mirror norotate  offset character 0, 0, 0 autojustify    #remove sidebar box
+
+ Usage: $0 [Options] Input(SDF or matrix or map file)
+   SDF file : will calculate similarity of SDF compounds and cluster them
+   This will auto-replace empty space or _ in name to - for better display 
+
+   Matrix File: -matrix option (completed and ordered data pairs) formatted as Rank1 Rank2 TanimotoScore Name1 Name2 with header
+    e.g. Rank1   Rank2   Identity        PDB1    PDB2   (protein similarity file from ./pdb_seq_align_PISCES
+         1       1        1.00   2A14A   2A14A
+         2       1        0.21   3B6HA   2FDVA
+         3       1        ......
+   Map File: -map option : half-matrix, none-completed or ordered pairs with header similar to Matrix File: Use -nosym for none-symetric map
+    e.g. Rank1   Rank2   TanimotoScore   Name1   Name2   
+         1       1       1.000   ALB-H01004747   ALB-H01004747   
+         2       3       0.935   ALB-H01004281   ALB-H01004747  
+
+ Options:
+  -matrix : Input is a similarity matrix file (completed and ordered data pairs) formatted as Rank1 Rank2 TanimotoScore Name1 Name2 with header
+    No need be symetric [i,j]!=[j,i]
+  -halfmatrix : Input is a half-matrix. The other half is symetric. Do not use -map option for half-matrix, will be very slow
+  -map : Input file is None-complete or none-ordered Maxtrix/map file. Will force file to be symetric as [i,j]=[j,i] if no -nosym
+    Missing pairs will check reverse pair, or set ScoreValue as $fill1 for same rank pairs and $fill0 to other pairs
+    WARNing:  Need manually adjust order of input to get a better cluster/heatmap view. See JMJD1B/ if use -nosort. Recommend use default sort
+   -fill0 fillValue : fill value for different rank pairs for -map   [$fill0]
+   -fill1 fillValue : fill value for same rank pairs for -map   [$fill1]
+     fillValue = min/max : fillValue is minimum or maximum of input data
+   -nosym : will NOT force to make file symetric as [i,j]!=[j,i]. Only none exisitng data set value to $fill1 or $fill1
+   -pad | [-nopad] : will add extra edge/border as value of $fill0 to data file so that the heatmap display will not cut at edge.
+     Note: cannot combine with -range as padding on edge is gone in this case. Also cannot combine with -cluster
+     -fillpad padValue : assign value for pad cells 
+     -fillpad min/max : assign minumum or maximum value in matrix to pad edges. Use -fillpad max for RMSD 
+  -namemap NameMappingFile : change the name in mapfile/input to display. Must be as: OriginalInputName | DisplayName  
+  -maxlength maxNameLength : max length of name for heatmap in case name too long to display [$maxlength]
+     WARNing: may need use extremely long length if output is used by other codes, 
+      otherwise trimmed name caused trouble in ./induceFitDock ./glide_mae2pdb_many
+  -maxlength2 maxNameLength2 : max length of name for dendoplot in case name too long to display [$maxlength2]
+  -max MaxLigands : will not calculate ligand RMSD contactmap when number larger than the maximum [$allmax] 
+  -nohyphen : Only display the first part of name before hyphen - in case name is too long
+  -debug : debug model on
+  -fast : if mapfile, mapfile2 and heatmap plot exisits, will directly display heatmap plot and exit
+  -force : force to recalculate Tanimoto file for SDF file even if exists
+  -lessforce : will not reculate mapfile2 even if exists
+  -top topN : Only analyze topN cmpds in InputSDF. 
+  -noarrange : No sort of data
+  -nognu : No gnuplot
+  -nodendo : No dendogram
+   [-auto] : auto expand plot size when data number > $autonumber
+   -font FontName : Available fonts: "Vera" "VeraMono" "DejaVuLGCSans-ExtraLight" "bchbi" etc. See /usr/share/fonts/ for available fonts
+     default is "VeraBd" as defined in .bashrc as GNUPLOT_DEFAULT_GDFONT as:
+       export GDFONTPATH='/usr/share/fonts/dejavu'
+       export GDFONTPATH=$GDFONTPATH':/usr/share/fonts/default'
+       export GNUPLOT_DEFAULT_GDFONT=DejaVuSans-Bold.ttf
+   -fontsize_xtics | -fontsize_ytics FontSize: fontsize for X/Y tics
+   -fontcolor Color : fontcolor as blue/black/red [$fontcolor]
+   -nobold : font will be plain, not default bold
+   -xlabel | -ylabel Label : Label for X|Y axis. Default: None
+   -zrange Zrange : zrange to display heatmap for gnuplot for similarity matrix e.g. [0:5]  =0: auto-determined. Default: $zrange .
+   -label : force to label cmpd name in gnuplot. Otherwise, will do so only when cmpds < $maxlabel
+   -nolabel : No cmpd name labeled. Only label Rank
+   -range Start End : rank range to display cmpds of mapfile2
+   -rank | -norank : Put cmpd rank in plot
+   -barcolor ColorNum : sidebar/palette color:=1:blue-yellow(smaller blue) =2:hot(red-white) =3:grey. =4:blue-red($cut)-yellow($cut2)-white
+      =5: reverse of =1 (larger value now yellow) [$sidecolor]  WARNing: be careful to use =4!
+   -bartics BarTics : tics for sidebar. WARNing: cbtics affect final heatmap!!! Small cbtics, more colors for heatmap [$sidetics]
+    -ticnum NumberTics : Number of tics for sidebar, will overtake BarTics
+   -barformat|-cbformat "SideBarFormat" : label format for side-bar number. e.g. %2.0f will only show digit [$cbformat]
+   -reverse | [-noreverse] : reverse y-axis plot. More nature to human view
+   -labeldata | [-nolabeldata] : will label data in col 3 of input to heatmap and exlcude the data point=pad $fillpad
+    -labeldatadig Digital : how many digitals/decimals to label  [$labeldatadig]
+    -labeldataexcld ExcludValue : exlcude label the data with value = labeldataexcld, expecially for heatmap pad value. [$labeldataexcld]
+    -labeldatacolor LabelColor : label color =3:blue =2:green =1:red =5:orange =4:black  [$labeldatacolor]
+ -sort : Sort cmpds based on largest TanScore in first pair. Display largest score first in heatmap
+ -nosort : No sort. Keep original order as inputSDF in heatmap
+ -cluster : For heatmap rank: Sort cmpds based on cluster at similarity cutoff $cut. Largest cluster first, then $cut2 2nd level cluster, 
+            then sorted by largest TanScore in first pair [default] And only top topCluster (by -showcluster) will be used
+            -cut/-cut2 determine if better score is larger or smaller (backward=0/1. Default: larger score is better, e.g. Similarity)
+  -cut Cutoff : Similarity cutoff for first-level cluster. Lower cutoff will show first level cluster cmpds together in map [ $cut ]
+  -cut2 Cutoff2 : Similarity cutoff for 2nd-level cluster. Lower cutoff will show 2nd level cluster cmpds together in map [ $cut2 ]  
+    For compound similarity-like data: Cutoff > Cutoff2. For RMSD cluster-like data: Cutoff < Cutoff2
+   -autocut : automatically determine cut for cmpd-simi data : Cutoff will be average of none-self pair data. cut2=Cutoff-(Cutoff-min)/2
+   -autocut2 : automatically determine cut for RMSD data: Cutoff will be average of none-self pair data. cut2=Cutoff+(max-Cutoff)/2
+  -out ClusterOutput : Output for top topCluster (by -showcluster) clusters 
+  -left : also generate and display the leftover cmpds that are not included among top clusters
+ -less : less display
+ -noVCN : will NOT convert CBIS_ID VCN-xxxx into NSC# by using NSC_VCN_map.txt: 
+             ./sdf_getNameTag -name -nocheck NCI_CBIS.sdf NSC NSC_VCN_map.txt
+ -scorefile ScoreFile: Use extra score file to sort cmpds in cluster and add scores to cluster output
+  -namecol NameCol : Col number to have cmpd names in ScoreFile [$namecol]
+  -scorecol ScoreCol : Col number to have score [$scorecol]
+  -topscore TopScoreCmpds : Top cmpds to display w/ scores in each cluster [$topscore]
+  -largefirst : will sort cmpds in cluster based on largest score value first. Default: smallest score (more negative) will be first
+ X-plotonly : only plot matrix/half-matrix/contact map file. No sort and re-arange of input
+ -showcluster topCluster : Sort cmpds based on cluster size and top topCluster clusters. Also show top cluster images if SDF input [$showcluster]
+  -noshowcluster : No show cluster cmpd images
+ -onlymap : Only calculate Similarity Matrix / Contact map and top $showcluster clusters. Good for large size cmpds
+ -sidecolor ColorNumber : sidebar/palette color: =1: blue-yellow =2: hot(red-white) =3: grey. =4:blue-red($cut)-yellow($cut2)-white [$sidecolor]
+    =4 is more brightness and colorful. Need work together with $cut and $cut2
+ -title "Title" : User defined Title for plot.
+ -cblabel "Side-Bar-Label" : Label of Side-Bar for heatmap 
+ -labelName : Use NameCol 4 and 5 in Input file to label X/Y-axis
+  -labeltic TicsNum : Show TicsNum-1 tics when -labelName. default $labeltic
+  -labelstep TicsStep : Show one tics every TicsStep data point. Has priority on -labeltic 
+  X-simple : will not use label name and other plot controls, as sometimes not working  This is becuase sidecolor cannot =4 for RMSD heatmap!
+ -manycluster | -nomanycluster : generate multiple-level cluster file for dendogram  at cutoff [ $startc $endc ] at step $stepc
+  -clusterfile 1|2 : Use 1 or 2 map file for -manycluster
+  -list ListofCutoff : A list of cluster steps for Multiple-level Clustering. e.g. -list "0.75 0.5 0.3 0" from large to small for similarity!
+  -clusterdendo : also show dendogram of clusters (takes long time. No neccsary)
+ 
+ Example: 
+   $0 -reverse -pad -map -fill1 1 -noarrange -nosort -labelName -labelstep 100 -labeltic 101 protein_sim.xls
+    #Show contact map from protein similarity file based on seqence identity from ./pdb_seq_align_PISCES (none-completed or none-ordered pair data)
+    #Use col 4 and 5 to label X/Y-axis with tics shown every 100 data point. Formatted as: Rank1 Rank2 RMSD Time1 Time2
+    #fill same-name pair score as 1. Label up to 100 names
+    #-pad to full show edge points
+    NOTE: To show heatmap of NxM matrix data, use ./do_gnuplot -heatmap directly!
+    WARNing: should use -nosort for arbitary maxtrix data. Then manually arrange order of data for better clustering, see ./TM_align and JMJD1B/readme
+   $0 -nosym -reverse -nosort -map -fill0 0 -fill1 1 -labelstep 1 -labeltic $npdb -labelName -title "TMScore Heatmap" jmjc_TMscore_new2.xls
+    #No symmetric of input data needed as it is not symmetric [i,j]!=[j,i]. Called by ./TM_align 
+   $0 -map -reverse -barcolor 5 -showcluster 5 -cut 3 -cut2 6 -title "RMSD Heatmap" -labelName -labeltic 100 RMSD_map.file
+    #Sort map file sorted by clustering by first cluster as 3A, then 6A in RMSD. And only cluster into top 5 groups. Other none-cluster data as group 6
+    # -reverse : reverse/rotate X/Y. -barcolor 5 : larger data/RMSD, yellower. Used in ./rmsd
+   $0 -matrix -nosort -title "RMSD Map" -labelName -labeltic 100 RMSD_Matrix.file
+    #Show RMSD contact map from matrix files of completed and ordered data pairs and header. Total label by name number is 100. No sort of original data
+    X# For RMSD cluster: First-level cluster is RMSD<0.5; 2nd-level 0.5<RMSD<1.0 NOT work yet. MUST use -nosort
+   $0 -matrix Full_Similarity.file
+    #Full matrix Show contact map from map files of completed and ordered data pairs 
+   $0 -halfmatrix HalfMatrix.file
+    #Half-matrix file. Do not use -map option for half-matrix, will be very slow
+   $0 -labelName -left -less -showcluster 3 -cut 0.75 B.sdf
+     #calculate/show top 3 clusters at similairty cutoff 0.75 for SDF file. -left: display leftover cmpds
+   $0 -nosort -top 20 ~/RLIP76/t3.sdf 
+     #Analyze top 20 cmpds. Plot data is not sorted and original rank is kept
+   $0 -list "0.9 0.8 0.7 0.5 0.3" -noshowcluster -cut 0.8 -cut2 0.6 Combi.sdf
+     #draw dendogram at cutoffs defined in -list. -noshowcluster to speed up calculation
+   $0 -showcluster 3 -cut 0.6 -cut2 0.3 -range 1 30 ~/RLIP76/amri/rl_Site1_rl_Site1_amri_SP_2_top1000_div80_total100_XP_5_unique.rept.sdf
+     #sorted based on two-level cluster size at similarity=0.6/0.3 cutoff to show all cluster cmpds together at lower s=0.6. Only show cmpds #1-30 after sort
+     #For Similarity cluster: First-level cluster is Similarity>0.6; 2nd-level 0.3<Similarity<0.6
+     #Make sure cut>cut2 to allow larger Similarity is the best score  
+   $0 -less -scorefile S100B_Chembridge_Hits_sort.txt -namecol 5 -scorecol 4 -topscore 2 -showcluster 20 -cut 0.7 HTSall.sdf
+     #Also use score file to sort cmpds in one cluster and show top scored cmpds
+   $0 -labeldata -labeldataexcld 0 ...  
+     #label each data point value, exclude to label points w/ value=0 (to avoid label pad). called example as ./lists_compare
+   $0 -fast ...
+     #quick replot of heatmap w/o calculations
+
+   NOTE: -cut 0.6 generates best gnuplot view, since platte blue color cuts at 0.6
+   NOTE: Use -onlymap to calculate matrix and top $showcluster clusters for SDF larger than $allmax compounds! Otherwise, very long waiting and messy contact map
+   NOTE: To find similar analogues from a SDF file, run ./pipe_similarity_many
+   NOTE: ./gnuplot_dendogram can also deal with matrix/map file for dendogram cluster
+   NOTE: The strict/perfect cluster algorithm is ./cluster and called by this script
+   NOTE: To show heatmap of NxM matrix data, use ./do_gnuplot -heatmap directly!
+   To call by other script for cmpd similarity-like data: See ./lists_compare
+
+   WARNIng: now the edge datapoint display is cut. Need to finish writing for dopad=1 to solve the problem (add rows to expand edge points)
+ttt
+  exit
+fi
+
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".sdf"){print substr($1,1,l-1)}else{print $1}}'`
+if [ $doout -ne 1 ] ; then
+ ap='';
+ [ $topN -gt 0 ] && ap='_'$topN
+ output=$infile$ap'_cluster.xls' 
+fi
+ap2=$dosort
+[ $dosort -eq 2 ] && ap2=$ap2'_'$cut'_'$cut2
+backward=`echo $cut $cut2 | awk '{a=$2-$1;s=0;if(a>0){s=1};print s}'` #=1: RMSD cluster. =0: Similarity cluster
+outputpre=`echo $output | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+mapfile=${outputpre}.map
+mapfile2=${outputpre}'_s'$ap2'.map'
+mclusterfile=${outputpre}'_mclu.xls'
+plotout=${outputpre}'_map.gif'
+
+temp=$0'_'$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'; temp7=$temp'7'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/back $ed/similarity.spl $ed/do_gnuplot $ed/sdf_getNthCompound $ed/sdf_getName $ed/sdf_getNCompound  .
+ cp -f $ed/sdf_getFromName_many $ed/gnuplot_dendogram $ed/symbol.txt $ed/cluster $ed/lists_compare_different $ed/mapfile_addpad .
+ [ ! -s sdf2images ] && cp $ed/sdf2images .
+fi
+
+R='\033[31m';G='\033[32m';Y='\033[33m';B='\033[34m';M='\033[35m';C='\033[36m'; N='\033[m'  #Color text of RBG Yellow Magenta Cyan Normal for echo -e 
+HR='\033[41m';HG='\033[42m';HY='\033[43m';HB='\033[44m';HM='\033[45m';HC='\033[46m';  #High-light Color text of RBG Yellow Magenta Cyan for echo -e
+A=`awk '{print $1}' symbol.txt | head -1`;PM=`awk '{print $2}' symbol.txt | head -1`;   #Symbol for Amstrong and +/- for cat/echo
+LE=`awk '{print $3}' symbol.txt | head -1`;GE=`awk '{print $4}' symbol.txt | head -1`;NE=`awk '{print $8}' symbol.txt | head -1`  #Symbol for <= ; >= ;!=
+
+nopass=1
+if [ $fast -eq 1 ] && [ $force -eq 0 ] ; then
+ if [ -s $mapfile ] && [ -s $mapfile2 ] ; then
+  nopass=0
+  nsdf=`awk 'BEGIN{max=0;head='$head'}{if(NR>head){if($1>max){max=$1};if($2>max){max=$2}}}END{print max}' $mapfile2`
+  [ $nsdf -gt 20 ] && labeltic=20
+  mapfileori=$mapfile
+  dosort=0;dopad=0
+  #cp $mapfile2 $temp4
+  echo " Use exisitng mapfile/mapfile2/heatmapPlot $mapfile $mapfile2 $plotout directly for $nsdf heatmap plot as -fast" 1>&2
+  display $plotout
+  exit
+ fi
+fi
+
+#if [ $nopass -eq 1 ] ; then
+
+if [ $filetype -eq 0 ] ; then  #SDF
+ input=$infile.sdf
+ echo "==> Similarity Matrix / Contact Map file will be $mapfile"
+ nsdf=`grep '$$$$' $input | wc -l | awk '{print $1}'`
+ #Get required SDF
+ if [ $topN -gt 0 ] && [ $topN -lt $nsdf ] ; then
+  ./sdf_getNCompound $input 1 $topN $temp2.sdf > $temp
+  input=$temp2.sdf
+  echo "Get $topN compounds from $input"
+  nsdf=`grep '$$$$' $input | wc -l | awk '{print $1}'`
+ fi
+ if [ $labelName -eq 1 ] ; then  #In case use cmpd names for plot tics, increase it
+  labeltic=$nsdf
+  [ $nsdf -gt 20 ] && labeltic=20
+ fi
+fi #$filetype -eq 0
+
+#calculate Tanimoto score file
+# Format of mapfile from tripos:
+#fromRegid,similarity,slnid
+#"NSC405929",NSC405929, 1.000,0
+#"NSC692937",NSC405929, 0.247,3
+doit=0
+if [ ! -s $mapfile ] ; then
+ doit=1
+else
+ maperr=`grep -i error $mapfile | wc -l | awk '{print $1}'`
+ if [ $maperr -gt 0 ] ; then
+  echo " There are $maperr errors in exsiting $mapfile. Will regenrate it!"
+  doit=1
+ fi
+fi
+if [ $filetype -ne 0 ] ; then
+  doit=0; manycluster=0
+  [ $doshclus -eq 0 ] && showcluster=0
+  nsdf=`awk 'BEGIN{max=0;head='$head'}{if(NR>head){if($1>max){max=$1};if($2>max){max=$2}}}END{print max}' $input`
+else
+ ./sdf_getName $input > $temp5
+ awk '{print $1,NR}' $temp5 > $temp4
+ cp $temp4 $temp7.list
+fi
+if [ -s $mapfile ] && [ $lessforce -eq 0 ] ; then
+ doit=0
+ #echo " Use exsiting mapfile $mapfile : otherwise -lessforce"
+ if [ -s $mapfile2 ] ; then
+  echo " Also use exsiting mapfile2 $mapfile2 : otherwise -lessforce"
+  dosort=0;dopad=0
+ fi
+fi
+[ $force -eq 1 ] && doit=1
+
+if [ $doit -eq 1 ] ; then
+ echo -e "Rank1\tRank2\tTanimotoScore\tName1\tName2" > $mapfile
+ starts=`date +%s` ; starttime=`date`;
+ hrs=`echo $nsdf | awk '{printf("%2.1f",$1/250*$1/250*2091/3600)}'` #Takes 2091s on 250 cmpds on 32-CPU BR11159, N2 order
+ echo -n " Working ${hrs}hrs on pair-wise Tanimoto Score of Total $nsdf compounds... $starttime "
+ savederr=0
+ #This part is very slow: may use ./similarity.spl $input $input. Then maniplate the output .map file to extract similarity matrix as $mapfile
+ # The above fast version does not work: Can only show one cmpd to all others. See ./pipe_similarity_many of slow and fast version
+ for (( i=1 ; i<=$nsdf ; i++ )) ; do   #here double-count the score as a full matrix
+  ./sdf_getNthCompound $input $i > $temp.sdf
+  ./similarity.spl -out $temp3 $input $temp.sdf 0 >& $temp2
+  nm=`wc -l $temp3.map | awk '{print $1}'`
+  [ $nm -le 1 ] && echo "Fatal error @$0 $oldline : No Tanimoto score for $i of ./similarity.spl -out $temp3 $input $temp.sdf 0" 1>&2
+  awk 'BEGIN{ file="'$temp4'";  n=0
+ while ((getline line < file) > 0) {
+  n++; nf=split(line,d," "); name[n]=d[1]
+ }
+ close(file)
+}
+{if(NR>1){split($_,a,",");l=length(a[1]);a[1]=substr(a[1],2,l-2);
+ did1=0;did2=0
+ for(i=1;i<=n;i++){
+  if(name[i]==a[1]){did1=i}
+  if(name[i]==a[2]){did2=i}
+ }
+ if(did1==0||did2==0){
+  print "Error to get name for ", $_
+ } else {
+  printf("%d\t%d\t%4.3f\t%s\t%s\n",did1,did2,a[3],a[1],a[2])
+ }
+}}' $temp3.map >> $mapfile
+# $temp3.map:
+#fromRegid,similarity,slnid
+#"1310568-360nM",1310568-360nM, 1.000,0
+#"3185736-150nM",1310568-360nM, 1.000,7
+#"1081188-260nM",1310568-360nM, 0.752,11
+ if [ $savederr -eq 0 ] ; then
+  nmaperr=`grep -i error $mapfile | wc -l | awk '{print $1}'`
+  if [ $nmaperr -gt 0 ] ; then
+   cp $temp3.map i ; cp $temp4 j  #save one case error files in i and j for check
+   savederr=1
+  fi
+ fi
+ echo -n " "$i
+ done  #loop for each pair
+ echo " "
+ grep -i error $mapfile | tail
+ nmaperr=`grep -i error $mapfile | wc -l | awk '{print $1}'`
+ if [ $nmaperr -gt 0 ] ; then
+  echo "***Fatal WARNing : $nmaperr errors to get name at $0 for mapfile i and name file j. Check it!"
+ fi
+ rm $temp3.* $temp.*
+ endtime=`date` ;starts2=`date +%s` ; runs=`awk 'BEGIN{print '$starts2'-'$starts'+1}'` ;
+ hrs=`awk 'BEGIN{printf("%3.2f", '$runs'/3600)}'` ; days=`awk 'BEGIN{printf("%3.2f", '$runs'/3600/24)}'`
+ echo "  Runs $runs secs $hrs hrs $days days for Similarity Matrix of $nsdf cmpds"
+
+else #$doit -eq 1
+ if [ $filetype -eq 0 ] ; then
+  echo "Use exisitng Tanimoto score file $mapfile"
+ else #$filetype -eq 0
+  if [ $filetype -eq 2 ] ; then 
+
+#None-complete or none-ordered map file: convert it to standard matrix file
+if [ $dopad -eq 1 ] && [ $dosort -lt 1  ]  ; then  #Add two rows as padding. So display will have padding and no edge cut. Working but ugly. dosrt=2 added after sort
+ nsdf=`expr $nsdf + 2`  #Must increase nsdf by 2 here for heatmap plot
+ if [ $dorange -eq 1 ] ; then #padding will not work as edge 0/(max+1) is gone
+  xstart=`expr $xstart + 1` 
+  xend=`expr $xend + 1`  #Increase range by two
+ fi
+ ./mapfile_addpad $padlead $input $mapfile
+
+else #dopad no edge padding points added. Edge of data point will be cut. Original code
+ awk 'BEGIN{head='$head';n=0;max=0;fill0s="'$fill0'";fill1s="'$fill1'";fillpad='$fillpad';symmetric='$symmetric'
+  small=999999;big=-999999
+ }{
+ if(NR>head){
+  n++
+  a1[n]=$1;a2[n]=$2;a3[n]=$3;a4[n]=$4;a5[n]=$5;use[n]=0
+  if($1>max){max=$1}
+  if($2>max){max=$2}
+  name[$1]=$4;name[$2]=$5
+  if($3>big){big=$3}
+  if($3<small){small=$3}
+ } else{
+  print $_
+ }
+}END{
+ fill0='$fill0';fill1='$fill1'
+ if(fill1s=="max"){fill1=big}
+ if(fill1s=="min"){fill1=small}
+ if(fill0s=="max"){fill0=big}
+ if(fill0s=="min"){fill0=small}
+ for (i=1;i<=max;i++){
+  for (j=1;j<=max;j++){
+   did=0
+   for(k=1;k<=n;k++){
+    if(use[k]<2){  #One pair only count twice as Rank1-Rank2 and Rank2-Rank1
+     if(a2[k]==i&&a1[k]==j){
+     did=1;use[k]++
+     print j,i,a3[k],a4[k],a5[k]
+     break
+     }
+     if(a1[k]==i&&a2[k]==j&&symmetric==1){  #Assign Rank1-Rank2 value = Rank2-Rank1 value when symmetric=1
+     did=1;use[k]++
+     print j,i,a3[k],a5[k],a4[k]
+     break
+     }
+    }
+   }
+   if(did==0){
+    score=fill0
+    if(i==j){score=fill1}
+    if(name[i]==""){name[i]="."}
+    if(name[j]==""){name[j]="."}
+    print j,i,score,name[j],name[i]
+   }
+  }
+ }
+}' $input >  $mapfile
+fi #dopad
+
+ filetype=1
+  if [ $debug -eq 1 ] ; then
+    echo "map file prepared as $mapfile"
+    [ $debug -eq 1 ] && cat $mapfile
+  fi
+
+  else
+#Half-matrix for symetric NxN matrix
+   if [ $filetype -eq 3 ] ; then
+ awk 'BEGIN{head='$head';n=0;max=0;fill0='$fill0';fill1='$fill1';}{
+ if(NR>head){
+  n++
+  a1[n]=$1;a2[n]=$2;a3[n]=$3;use[n]=0
+  if($1>max){max=$1}
+  if($2>max){max=$2}
+  name[$1]=$4;name[$2]=$5;score[$1,$2]=$3;score[$2,$1]=$3
+ } else{
+  print $_
+ }
+}END{
+ for (i=1;i<=max;i++){
+  for (j=1;j<=max;j++){
+   print j,i,score[j,i],name[j],name[i]
+  }
+ } 
+}' $input >  $mapfile
+    filetype=1
+   else
+    mapfile=$input
+   fi # filetype -eq 3
+  fi  # $filetype -eq 2
+ fi #$filetype -eq 0
+fi #$doit -eq 1
+
+#[ $debug -eq 1 ] && cat $mapfile
+
+# Above is to pre-processing mapfile
+# Convert CBIS_ID VCN-xxx into NSC#
+#remove hyphen in compound name in case name is too long to display
+mapfileori=$mapfile
+if [ $doVCN -eq 1 ] && [ -s $ed/NSC_VCN_map.txt ] ; then
+ hasVCN=`grep 'VCN-' $mapfile | wc -l | awk '{print $1}'`
+ if [ $hasVCN -gt 0 ] ; then
+ hrs=`echo $hasVCN | awk '{printf("%2.1f",$1/60000*7200/3600)}'` #120 mins on 250
+ echo "Convert $hasVCN CBIS_ID VCN-xxx to NSC#. Wait for $hrs hrs..."
+ date
+ awk 'BEGIN{
+  file="'$ed/NSC_VCN_map.txt'";  n=0
+  while ((getline line < file) > 0) {
+   n++; nf=split(line,d," "); v[n]=d[1];s[n]=d[2]
+  }
+  close(file)
+ }{
+  did=0
+  printf("%s %s %s ",$1,$2,$3)
+  if(substr($4,1,4)=="VCN-"){
+   for(i=1;i<=n;i++){
+    if($4==v[i]&&s[i]!="NA"){
+     printf("%s ",s[i])  #printf("NSC%s ",s[i])
+     did=1;break
+    }
+   }
+  }
+  if(did==0){printf("%s ",$4)}
+  did=0
+  if(substr($5,1,4)=="VCN-"){
+   for(i=1;i<=n;i++){
+    if($5==v[i]&&s[i]!="NA"){
+     printf("%s\n",s[i])
+     did=1;break
+    }
+   }
+  }
+  if(did==0){printf("%s\n",$5)}  
+ }' $mapfile > $temp3.vcn.map
+ mapfile=$temp3.vcn.map
+ date
+ fi
+fi #doVCN
+if [ $nohyphen -eq 1 ] ; then
+ echo "Only keep name before hyphen to shorten display names"
+ awk '{printf("%s %s %s ",$1,$2,$3);split($4,a,"-");printf("%s ",a[1]);split($5,a,"-");printf("%s\n",a[1]);}' $mapfile > $temp.map
+ mapfile=$temp.map
+fi
+#Cut name if longer than $maxlength. Also replace % and _ to -
+echo "Only display names of the first $maxlength chars to shorten display names and replace empty space and _ to -"
+awk 'BEGIN{max='$maxlength'}{printf("%s %s %s ",$1,$2,$3);
+printf("%s ",substr($4,1,max));printf("%s\n",substr($5,1,max))}' $mapfile > ${temp2}_map.txt2
+sed 's/%/-/g' ${temp2}_map.txt2 > ${temp2}_map.txt
+sed 's/_/-/g' ${temp2}_map.txt > ${temp2}_map.txt2
+mapfile=${temp2}_map.txt2
+
+###### Convert Matrix file to the required firstCol increase first instead of 2ndCol increased first
+if [ $filetype -eq 1 ] ; then
+ ord=`awk 'BEGIN{head='$head';s=0;}{if(NR>head){if(s==1){if(pre!=$1){d=1}else{d=0};print d; exit};if(s==0){pre=$1;s=1}}}' $mapfile`
+ if [ $ord -eq 0 ] ; then
+  echo "Revert matrix file:"
+  awk 'BEGIN{head='$head';s=0;max1=0;max2=0}{if(NR>head&&NF>0){score[$1,$2]=$3;n1[$1]=$4;n2[$2]=$5;c1[$1]=$1;c2[$2]=$2
+  if($1>max1){max1=$1}
+  if($2>max2){max2=$2}
+  }}END{
+  for (i=1;i<=max1;i++){
+   for (j=1;j<=max2;j++){
+     print j,i,score[j,i],n2[j],n1[i]
+   }
+  }
+  }' $mapfile > $temp6.conv
+  input=$temp6.conv
+ fi
+fi
+
+#mapping/change display name in $mapfile
+if [ $donamemap -eq 1 ] ; then
+ echo "Change display names based on name-mapping file $namemap : must be OriginalInputName | DisplayName"
+ echo "  NOT done for this yet"
+fi
+
+#fi #nopass
+
+############# prepare mapfile2 for plot
+if [ $nognu -ne 1 ] ; then
+
+if [ $autocut -ge 1 ] ; then
+ aveline=`awk 'BEGIN{n=0;ave=0;max=-999999;min=-max}{if(NR>'$head'&&$1!=$2){ave=ave+$3;n++;if($3>max){max=$3};if($3<min){min=$3};}}
+ END{if(n>0){ave=ave/n}else{ave=(max+min)/2};print ave,min,max}' $mapfile`
+ avcut=`echo $aveline | awk '{printf("%4.3f",$1)}'`
+ avmin=`echo $aveline | awk '{print $2}'`
+ avmax=`echo $aveline | awk '{print $3}'`
+ cut=$avcut
+ if [ $autocut -eq 1 ] ; then
+  cut=`echo $avcut $avmax | awk '{printf("%4.3f",$1+($2-$1)*0.15)}'`  #100% of ave+15%(max-ave)
+  cut2=`echo $cut $avmin | awk '{printf("%4.3f",$1-($1-$2)/2)}'`
+ else
+  cut=`echo $avcut $avmin | awk '{printf("%4.3f",$1+($2-$1)*0.15)}'`  #100% of ave-15%(ave-min)
+  cut2=`echo $cut $avmax | awk '{printf("%4.3f",$1+($2-$1)/2)}'`
+ fi
+ echo " Automatically adjust cluster cutoff to cut=$cut cut2=$cut2 for none-self data $avcut [$avmin,$avmax]"
+fi
+
+extra=' ; '
+#Sort mapfile for gnuplot
+#[ ! -s $mapfile2 ] && doit=1
+#[ $force -eq 1 ] && doit=1
+#[ $showcluster -gt 0 ] && doit=1
+#if [ $doit -eq 1 ] ; then
+
+#if [ $nopass -eq 1 ] ; then
+#Sort cmpds from highest similarity to lowest in matrix (can be any matrix file, not only SDF)
+[ $dosort -eq 0 ] && cp $mapfile $temp4
+if [ $dosort -eq 1 ] ; then
+ echo "Sorting $mapfile based on similarity score:"
+ awk '{if(NR>'$head'){print $_}}' $mapfile > $temp
+ if [ $backward -eq 1 ] ; then
+  sort -n -k 3 $temp > $temp6
+ else
+  sort -nr -k 3 $temp > $temp6
+ fi
+ cat $temp6 | awk 'BEGIN{nsdf='$nsdf';n=0}{
+ if($1!=$2){  #no self
+  did=0
+  for(i=1;i<=n;i++){
+   if(a1[i]==$1){did=1;break}
+  }
+  if(did==0){
+   n++;a1[n]=$1
+   print $4,$1,$3   #cmpdName | OldRank | Score
+  }
+}}' > $temp4
+ [ $debug -eq 1 ] && cat $temp4
+fi #[ $dosort -eq 1 ]
+
+#Sort cmpds based on cluster size at similarity cutoff $cut. Largest cluster first, then sorted by first TanScore
+#Mapfile:
+#Rank1   Rank2   TanimotoScore   Name1   Name2
+#1       1       1.000   AM404   AM404
+#314     1       0.517   CMP-077659      AM404
+
+if [ $dosort -eq 2 ] ; then
+  #cut2=`echo $cut | awk '{printf("%3.2f",$1*2/3)}'`
+  echo "Sorting $mapfile based on cluster size at similarity($backward) cutoff $cut, then $cut2, then MaxTanScore/RMSD:"
+
+#Old code is not good: one cmpd may show in different clusters. Now use strict algorithm ./cluster to replace
+ oldcode=0  #=1: Use old but bad code
+ if [ $oldcode -ne 1 ] ; then
+  topcls=$showcluster
+  [ $showcluster -eq 0 ] && topcls=3
+  ./cluster -out $output -full -top $topcls -cut $cut -cut2 $cut2 $mapfile > $temp7
+  clusterout=`grep 'clusters saved in' $temp7 | grep 'Top' | tail -1 | awk '{print $NF}'`
+  cp $clusterout $temp4
+#$temp4 formatted as: But may have duplicate name for unknown reason
+#DataName        DataRank        ClusterRank     Score
+#NR1H2   8       1       8.09
+#NR1H3   24      1       66.67
+#WARNing: $temp4 may have only 3 cols when there is no first level but only 2nd level clusters
+  #cat $temp7
+  [ $debug -eq 1 ] && cat $temp4
+ else #oldcode
+ awk 'BEGIN{cut='$cut'; cut2='$cut2';nsdf='$nsdf';nc=0;n=0;pre=-99999;ncluster=0;showcluster='$showcluster';backward='$backward'}
+{if(NR>1){  #bypass header Rank1   Rank2   TanimotoScore   Name1   Name2
+ if(NR==2){pre=$2;nc++;a[nc]=$2;b[nc]=$5;c[nc]=0;c2[nc]=0;ncc=0;d[nc]="";e[nc]="";d2[nc]="";e2[nc]="";u[nc]=0;s[nc]=0;sum[nc]=0;rank[nc]=$2} 
+ if(pre!=$2){  #new cmpd
+  pre=$2;nc++;a[nc]=$2;b[nc]=$5;c[nc]=0;c2[nc]=0;ncc=0;d[nc]="";e[nc]="";d2[nc]="";e2[nc]="";u[nc]=0;s[nc]=0;sum[nc]=0;rank[nc]=$2
+ }
+ ttt=strtonum($1)
+ if (backward==1){ #RMSD
+  if($3<=cut&&$1!=$2){ttt=strtonum($2);use[ttt]=1;ncc++;c[nc]++;d[nc]=sprintf("%s %s",d[nc],$1);e[nc]=sprintf("%s %s",e[nc],$4)}
+  if($3<=cut2&&$3>cut&&$1!=$2){c2[nc]++;d2[nc]=sprintf("%s %s",d2[nc],$1);e2[nc]=sprintf("%s %s",e2[nc],$4);}  #2nd level cluster
+ } else{ #Similarity
+  if($3>=cut&&$1!=$2){ttt=strtonum($2);use[ttt]=1;ncc++;c[nc]++;d[nc]=sprintf("%s %s",d[nc],$1);e[nc]=sprintf("%s %s",e[nc],$4)}
+  if($3>=cut2&&$3<cut&&$1!=$2){c2[nc]++;d2[nc]=sprintf("%s %s",d2[nc],$1);e2[nc]=sprintf("%s %s",e2[nc],$4);}  #2nd level cluster
+ }
+ #if(s[nc]<$3&&$1!=$2&&use[ttt]!=1){s[nc]=$3}  #Check TanScore without first level cluster (get max TanScore below first cluster level : cut
+ if(s[nc]<$3&&$1!=$2){s[nc]=$3}  #Get maximum TanScore without first level cluster (get max TanScore below first cluster level : cut
+}
+}END{
+ #First sort based on cluster size, then first Tanscore
+ for(i=1;i<nc;i++){
+  for(j=i+1;j<=nc;j++){
+   if((c[j]>c[i])||(c[j]==c[i]&&(c2[j]>c2[i]||(c2[j]==c2[i]&&((backward==0&&s[j]>s[i])||(backward==1&&s[j]<s[i])))))){  #two-level cluster size or first Tanscore + data rank
+    kk=a[i];a[i]=a[j];a[j]=kk
+    kk=b[i];b[i]=b[j];b[j]=kk
+    kk=c[i];c[i]=c[j];c[j]=kk
+    kk=c2[i];c2[i]=c2[j];c2[j]=kk
+    kk=d[i];d[i]=d[j];d[j]=kk
+    kk=e[i];e[i]=e[j];e[j]=kk
+    kk=d2[i];d2[i]=d2[j];d2[j]=kk
+    kk=e2[i];e2[i]=e2[j];e2[j]=kk    
+    kk=s[i];s[i]=s[j];s[j]=kk
+    kk=rank[i];rank[i]=rank[j];rank[j]=kk
+   }
+  }
+ }
+
+ #2nd sort: further sort based on data rank
+# for(i=1;i<nc;i++){
+#  for(j=i+1;j<=nc;j++){
+#   if(c[j]==c[i]&&s[j]==s[i]&&rank[i]<rank[j]){  #two-level cluster size or first Tanscore + data rank
+#    kk=a[i];a[i]=a[j];a[j]=kk
+#    kk=b[i];b[i]=b[j];b[j]=kk
+#    kk=c[i];c[i]=c[j];c[j]=kk
+#    kk=c2[i];c2[i]=c2[j];c2[j]=kk
+#    kk=d[i];d[i]=d[j];d[j]=kk
+#    kk=e[i];e[i]=e[j];e[j]=kk
+#    kk=d2[i];d2[i]=d2[j];d2[j]=kk
+#    kk=e2[i];e2[i]=e2[j];e2[j]=kk    
+#    kk=s[i];s[i]=s[j];s[j]=kk
+#    kk=rank[i];rank[i]=rank[j];rank[j]=kk
+#   }
+#  }
+# }
+
+ used=0
+ for(i=1;i<=nc;i++){
+  did=0
+  if(u[i]==1){did=1}
+  if(did==0){  #When this compound is NOT shown in previous clusters
+   if(d[i]!=""){
+    ncluster++
+    
+   print b[i],a[i],ncluster #cmpdName | Rank | ClusterNumber
+   }else{
+    print b[i],a[i] #cmpdName | Rank 
+   }
+   u[i]=1
+   nnn=split(d[i],dn," ")
+   nnn=split(e[i],en," ")
+   if(d[i]!=""){  #There is other cmpds in cluster
+    for(j=1;j<=nnn;j++){   #first level cluster
+     print en[j],dn[j],ncluster  #print cluster inside: cmpdName | Rank | ClusterNumber (3 cols)
+     for(k=1;k<=nc;k++){
+      if(en[j]==b[k]&&dn[j]==a[k]){   #This way to eliminate clusters is dangrous and cannot gurantee one cmpd only shows up in one cluster. See S100B/readme
+       u[k]=1;break    #One cmpd in cluster, the cluster that centered by this cmpd will be eliminated
+      }
+     }
+    }
+   } else {  #No similar cmpds in first level
+   nnn=split(d2[i],dn," ")
+   nnn=split(e2[i],en," ")
+   #print "lalal ",nnn
+   for(j=1;j<=nnn;j++){   
+    pit=0
+    for(k=1;k<=nc;k++){
+     if(en[j]==b[k]&&dn2[j]==a[k]&&u[k]==0){
+      u[k]=1;pit=1;break
+     }
+    }
+    if(pit==1){print en[j],dn[j]}  #print 2nd-level cluster inside cmpdName | Rank (2 cols) when no first level cluster
+   }   
+   } #d[i]
+   } #did
+  } #i
+}' $mapfile > $temp4
+ fi #oldcode
+fi #[ $dosort -eq 2 ]
+
+
+#remove duplicates of $temp4
+./lists_remove_duplicate -out $temp5 -col 1 $temp4 > $temp
+mv $temp5 $temp4 
+
+#Generate cmpd images for top clusters of SDF files
+#$temp4 :
+#CMP-078890 59 1
+#CMP-079926 376 1
+if [ $showcluster -ge 1 ] && [ $filetype -eq 0 ] ; then  # only for SDF input
+ echo "*** Top $showcluster clusters at similarity cutoff $cut :"
+ if [ $score -eq 1 ] ; then
+  echo "  Cmpds in cluster will be sorted based on scores in $scorefile in col $scorecol w/ names in col $namecol"
+  if [ $largefirst -eq 1 ] ; then
+   echo "    Largest score cmpds will be in first rows. Cmpds SDF are in same order as score sorted."
+  else
+   echo "    Smallest score cmpds will be in first rows. Cmpds SDF are in same order as score sorted."
+  fi
+  if [ ! -s $scorefile ] ; then
+   echo "WARNing: Score file  $scorefile does not exists. Will NOT add score to cmpds in cluster and sorted by scores"
+   score=0
+  fi
+ fi
+ echo -n > $temp7.left
+ nshow=0;nsdfct=0
+ for (( i=1 ; i<=$showcluster ; i++ )) ; do
+  clusterfile=$infile'_s'$cut'_c'$i
+  awk 'BEGIN{c='$i'}{if($3==c){print $1}}' $temp4 > $clusterfile.txt
+  ncl=`wc -l ${clusterfile}.txt | awk '{print $1}'`
+  nshow=`expr $nshow + $ncl`
+  if [ $ncl -gt 0 ] ; then
+   if [ $score -eq 1 ] ; then   #add scores and sort cmpds by scores
+    awk 'BEGIN{file="'$scorefile'";  n=0;m='$namecol';r='$scorecol'
+     while ((getline line < file) > 0) {
+      n++; nf=split(line,d," "); a[n]=d[m];s[n]=d[r]
+     }
+     close(file)
+    }{
+     score="NA"
+     for(i=1;i<=n;i++){
+      if($1==a[i]){score=s[i];break}
+     }
+     printf("%s\t%s\n",$1,score)
+    }' $clusterfile.txt > $temp2
+    if [ $largefirst -eq 1 ] ; then
+     sort -nr -k 2 $temp2 > $clusterfile.txt
+    else
+     sort -n -k 2 $temp2 > $clusterfile.txt
+    fi
+   fi
+
+   ./sdf_getFromName_many -out $clusterfile.sdf $input $clusterfile.txt > $temp2
+   ./sdf_getName $clusterfile.sdf >> $temp7.left
+   nsdfc=`grep '$$$$' $clusterfile.sdf | wc -l | awk '{print $1}'`
+   nsdfct=`expr $nsdfct + $nsdfc`   
+   maxcmpd=$nsdfc ; [ $maxcmpd -gt 500 ] && maxcmpd=500
+   ./sdf2images -maxc $maxcmpd -nocluster -nohtml -auto -col 5 -rankfile $temp7.list -rankcol 1 -rankcol2 2 -title "Cluster $i" $clusterfile.sdf >& $temp2
+   nshowp=`echo $nsdfct $nsdf | awk '{printf("%3.2f",$1/$2*100)}'`
+   echo "==> Cluster #$i w/ $nsdfc cmpds (accum $nshowp %) saved in ${clusterfile}.txt and .sdf"
+   [ $less -ne 1 ] && grep '===> Output Image' $temp2
+   if [ $nognu -eq 0 ] && [ $clusterdendo -eq 1 ] ; then  #takes long time to generate dedogram
+    #echo "Use ${mapfile2} for dendogram :"
+    ./gnuplot_dendogram -title "Compound Cluster Dendogram" -maxlength $maxlength2 -list "0.95 0.9 0.85 0.8 0.75 0.7 0.65 0.6 0.5 0"  -showaxis  -rank  -nooffset  $clusterfile.sdf >& $temp2
+    [ $less -ne 1 ] && grep 'Output dendogram' $temp2 | tail -1
+   fi
+   if [ $score -eq 1 ] ; then
+    head -$topscore  $clusterfile.txt
+   fi
+  else #ncl
+   echo "==> Cluster #$i has no cmpds"
+  fi #ncl
+ done
+ nshowp=`echo $nsdfct $nsdf | awk '{printf("%3.2f",$1/$2*100)}'`
+ echo "*** Top $showcluster clusters has a total of $nsdfct cmpds for $nsdf ($nshowp %)"
+ if [ $leftover -eq 1 ] ; then  #leftover cmpds
+  clusterleft=$infile'_s'$cut'_cleft'
+  #echo ./lists_compare_different -out k j i 
+  #cp $temp7.list i ; cp $temp7.left j ; cp $temp7.over k ; echo hahaha
+  ./lists_compare_different -out $temp7.over $temp7.left $temp7.list > $temp2
+  ./sdf_getFromName_many -out ${clusterleft}.sdf $input $temp7.over > $temp2
+  ncleft=`grep '$$$$' ${clusterleft}.sdf | wc -l | awk '{print $1}'`
+  ./sdf2images -nocluster -nohtml -auto -col 5 -rankfile $temp7.list -rankcol 1 -rankcol2 2 -title "Leftover" ${clusterleft}.sdf >& $temp2
+  echo "==> $ncleft cmpds not among top $showcluster clusters saved in ${clusterleft}.sdf"
+  if [ $nognu -eq 0 ] && [ $clusterdendo -eq 1 ] ; then
+   ./gnuplot_dendogram -title "Compound Cluster Dendogram" -maxlength $maxlength2 -list "0.95 0.9 0.85 0.8 0.75 0.7 0.65 0.6 0.5 0"  -showaxis  -rank  -nooffset  ${clusterleft}.sdf >& $temp2
+  fi
+ fi
+fi #[ $showcluster -ge 1 ] && [ $filetype -eq 0 ]
+
+if [ $onlymap -eq 1 ] ; then
+ echo "Similarity Matrix / Contact map is $mapfileori"
+ echo -e "Format: Rank1\tRank2\tTanimotoScore\tName1\tName2"
+ rm -f $temp $temp.sdf $temp2 $temp2.sdf $temp3 $temp4 $temp5 $temp6 $temp7*; exit
+fi
+
+if [ $nsdf -gt $allmax ] ; then
+ echo "Will not calculate sorted RMSD contactmap $mapfile as it will take very long time to calculate $nsdf (> $allmax) cmpds. "
+ echo " Otherwise, run as: $0 -max $nsdf $oldline "
+ echo " Or for unsorted contactmap: $0 -nosort $oldline"
+ rm -f $temp*
+ exit
+fi
+
+#Sort mapfile for gnuplot based on $temp4 rank/order
+[ ! -s $mapfile2 ] && doit=1
+[ $force -eq 1 ] && doit=1
+[ $showcluster -gt 0 ] && doit=1
+[ $filetype -ne 0 ] && doit=1
+if [ $lessforce -eq 0 ] && [ -s $mapfile2 ] ; then
+ #echo " Use exisitng mapfile2 $mapfile2 . Otherwise, -lessforce"
+ doit=0
+ #cp $mapfile $temp4
+fi
+if [ $doit -eq 1 ] ; then
+
+if [ $dosort -eq 1 ] || [ $dosort -eq 2 ] ; then  #sort by cluster Rank
+
+#Convert mapfile to mapfile2 by using sort file $temp4
+ awk 'BEGIN{
+ file="'$temp4'";  n=0; k=0;nt=0   #DataName    DataRank        ClusterRank     Score: LY270    14      1       9.80
+ while ((getline line < file) > 0) {
+  k++
+  if(k>1){n++; nf=split(line,d," "); a[n]=d[1];b[n]=d[2]}  #bypass header. debuged this in 2017/12
+ }
+ close(file) 
+}
+{
+ if(NR==1){tit=sprintf("%s\tOldRank1\tOldRank2",$_)}  #do NOT add \n here!
+ if(NR>1){
+  nt++
+  c1[nt]=$1;c2[nt]=$2;c3[nt]=$3;c4[nt]=$4;c5[nt]=$5;use[nt]=0
+ }
+}END{
+ np=0
+ print tit
+ for(i=1;i<=n;i++){
+  for(j=1;j<=n;j++){
+   for(k=1;k<=nt;k++){
+    if(use[k]==0&&c2[k]==b[i]&&c1[k]==b[j]){
+     use[k]=1;np++
+     printf("%d\t%d\t%s\t%s\t%s\t%s\t%s\n",j,i,c3[k],c4[k],c5[k],c1[k],c2[k])
+     break
+    }
+   }
+  }
+ }
+ if(np!=nt){print "Error! Not same number in sorting!",np,nt}
+}' $mapfile > $mapfile2
+
+ grep -i error $mapfile2
+
+ if [ $dopad -eq 1 ] ; then   #add pad: Add two rows as padding. So display will have padding and no edge cut. 
+  nsdf=`expr $nsdf + 2`  #Must increase nsdf by 2 here for heatmap plot
+  if [ $dorange -eq 1 ] ; then #padding will not work as edge 0/(max+1) is gone
+   xstart=`expr $xstart + 1`
+   xend=`expr $xend + 1`  #Increase range by two
+  fi
+  ./mapfile_addpad $padlead $mapfile2 $temp.mp
+  mapfile2=$temp.mp
+ fi #dopad
+
+fi #dosort 1/2
+
+
+if [ $dosort -eq 0 ] ; then
+ #re-arrange for gnuplot. No real sort
+if [ $noarrange -ne 1 ] ; then
+awk 'BEGIN{nsdf='$nsdf';n=0}
+{if(NR==1){printf("%s\tOldRank1\tOldRank2\n",$_)}
+ if(NR>1){
+  n++
+  a1[n]=strtonum($1);a2[n]=$2;a3[n]=$3;a4[n]=$4;a5[n]=$5
+  if(n==nsdf){
+   for(i=1;i<nsdf;i++){
+    for(j=i+1;j<=nsdf;j++){
+     if(a1[i]>a1[j]){
+      kk=a1[j];a1[j]=a1[i];a1[i]=kk
+      kk=a2[j];a2[j]=a2[i];a2[i]=kk
+      kk=a3[j];a3[j]=a3[i];a3[i]=kk
+      kk=a4[j];a4[j]=a4[i];a4[i]=kk
+      kk=a5[j];a5[j]=a5[i];a5[i]=kk
+     }
+    }
+   }
+   for(i=1;i<=nsdf;i++){
+    printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",a1[i],a2[i],a3[i],a4[i],a5[i],a1[i],a2[i])
+   }
+   printf("\n")
+   n=0
+  }
+ }
+}' $mapfile > $mapfile2
+else
+ cp $mapfile $mapfile2
+fi #$noarrange -ne 1
+fi #dosort=0
+
+fi  #doit
+
+
+#fi #nopass
+
+#Cut too long name into max length as $maxlength. Otherwise cannot display
+#also replace % in name to -
+#also replace _ in name to -; otherwise subscript display
+#Rank Name 0.80 0.70 0.60 0.50 0.40 0.30 0.20 0.10 0.00
+#1 161181-1nM 1 1 1 1 1 1 1 1 1
+#11 127840-16nM 11 1 1 1 1 1 1 1 1
+#echo "Only display names of the first $maxlength chars to shorten display names"
+#awk 'BEGIN{max='$maxlength'}{printf("%s %s %s ",$1,$2,$3);
+#printf("%s ",substr($4,1,max));printf("%s\n",substr($5,1,max))}' $mapfile > ${temp3}_map.txt2
+#sed 's/%/-/g' ${temp3}_map.txt2 > ${temp3}_map.txt
+#sed 's/_/-/g' ${temp3}_map.txt > ${temp3}_map.txt2
+#mapfile=${temp3}_map.txt2
+
+
+#######################################################
+#Plot of heatmap
+#######################################################
+zmax=`awk '{if(NR>1){if($3>max){max=$3}}}END{print max}' $mapfile`
+zmin=`awk 'BEGIN{max=99999}{if(NR>1){if($3<max){max=$3}}}END{print max}' $mapfile`
+if [ $zrange != '0' ] ; then
+ a=`echo $zrange $ticnum | awk '{split($1,a,":");l=length(a[1]);min=substr(a[1],2,l-1);min=strtonum(min);l=length(a[2]);max=substr(a[2],1,l-1);max=strtonum(max);print min, max}'`
+ zmax=`echo $a | awk '{print $2}'`
+ zmin=`echo $a | awk '{print $1}'`
+fi
+[ $doticnum -eq 1 ] && sidetics=`echo $zmin $zmax $ticnum | awk '{print ($2-$1)/$3}'` 
+xlab="$xlable"
+ylab="$ylable"
+pmin=1;pmax=$nsdf
+if [ $dorange -eq 1 ] ; then
+ pmin=$xstart;pmax=$xend
+fi
+disp=`echo $pmax $pmin | awk '{print $1-$2+1}'`
+if [ $disp -gt $maxlabel ] && [ $labelcmpd -ne 1 ] ; then
+ labelres=0
+fi
+[ $labelcmpd -eq -1 ] && labelres=0
+
+#XIncrease plotwidth/height slightly so all cubic are same size, edge is not cut: Not work as label occupy space as well
+#nblocs=`echo $pmax $pmin | awk '{printf("%d",$1-$2+1)}'`
+#plotwidth=`echo $plotwidth $nblocs | awk '{i=sprintf("%d",$1/$2);w=i*$2;print w}'`
+#plotheight=`echo $plotheight $nblocs | awk '{i=sprintf("%d",$1/$2);w=i*$2;print w}'`
+#XPlot half more one minx and miny to display full for edge, otherwise edge is cut. Not working
+# minx=`echo $minx | awk '{print $1-1}'`
+# maxx=`echo $maxx | awk '{print $1+1}'`  
+# doxrange=1; xrange='['${minx}':'${maxx}']'
+# miny=`echo $miny | awk '{print $1-1}'`
+# maxy=`echo $maxy | awk '{print $1+1}'`
+# doyrange=1; yrange='['${miny}':'${maxy}']'
+
+#Auto expand XY plotsize for large data. Added on 2019/2
+[ $disp -gt $autonumber ] && autoxy=1
+if [ $autoxy -eq 1 ] ; then
+ if [ $disp -gt $autonumber ] ; then
+  fontauto=0;fontsize_xtics=8;fontsize_ytics=8  #fix font size
+  #NOTE: not sure why, but seems $plotheight and $plotwidth are exchanged in code! So $plotheight is for X length
+  plotheight0=$plotheight
+  plotheight=`echo $disp $fontsize_ytics $plotheight0 | awk '{y=int($1*$2*1.7);if(y<$3){y=$3};print y}'` #Each label use 12 pixel tall x1.7
+  plotwidth=`echo $plotwidth $plotheight $plotheight0 $disp | awk '{n=int($1*$2/$3);if(n<$1){n=$1};print n}'` #This is for Y length, height!
+ fi
+ echo "Auto expand plotsize to $plotwidth $plotheight since data = $pmax >= $autonumber"
+fi
+
+
+if [ $fontauto -eq 1 ] ; then 
+ fontsize_xtics=`echo $disp $fontsize_xtics  | awk '{n='$plotwidth'*0.4/$1*0.9; if(n<8){n=8};if(n>$2){n=$2};printf("%d",n)}'`
+ fontsize_ytics=`echo $disp $fontsize_ytics | awk '{n='$plotheight'*0.4/$1*0.9; if(n<8){n=8};if(n>$2){n=$2};printf("%d",n)}'`
+ [ $fontsize_xtics -gt $fontsize_ytics ] && fontsize_xtics=$fontsize_ytics
+ #echo "fONT size: $fontsize_xtics $fontsize_ytics for $nsdf"
+ #fontsize_xtics=`echo $disp $fontsize_xtics | awk '{printf("%f",$2-$1/6)}'`
+ #fontsize_ytics=`echo $disp $fontsize_ytics | awk '{printf("%f",$2-$1/6)}'`
+fi
+xran='['$pmin':'$pmax']'
+yran=$xran
+extra=' set palette rgb -7,-5,-15 ;'  # palette / side-bar  Color runs from black-blue-red-yellow (traditional): 7,5,15. -7,-5,-15: reverse
+[ $sidecolor -eq 2 ] && extra=' set palette rgb -21,-22,-23 ;'  #  hot (black-red-yellow-white)
+[ $sidecolor -eq 3 ] && extra=' set palette define (0 "white",1 "black") ;'  # grey
+[ $sidecolor -eq 4 ] && extra=' set palette define (0 "white",'$cut2' "yellow",'$cut' "red",1 "blue") ;'  # blue-yellow
+[ $sidecolor -eq 5 ] && extra=' set palette rgb 7,5,15 ;' #reverse color of 1 
+extra=$extra' set cbtics '$sidetics'; '  #label sidebar tics by 0.2 and bold or not
+extra=$extra' set format cb "'$cbformat'"; ' #set sidebar format
+extra=$extra'set cbtics border in scale 0,0 mirror norotate  offset character 0, 0, 0 autojustify; '  #remove sidebar border and tics
+extr1=$extra
+if [ $labelres -eq 1 ] ; then
+#label X/Y axises by cmpd name
+ #cat $temp4
+ extra1=`cat $temp4 | awk 'BEGIN{m='$pmin';n='$pmax';o=n-m;dorank='$dorank';printf("set xtics (");dd=0}
+  {if(NR==m){printf("\"%s\" %f",$1,m+dd)}else{if(NR<=n&&NR>m){printf(",\"%s\" %f",$1,m+(NR-m)/o*(n-m)+dd)}}}END{printf("); ")}'`
+ extra2=`cat $temp4 | awk 'BEGIN{m='$pmin';n='$pmax';o=n-m;dorank='$dorank';printf("set ytics (");dd=0}
+  {t=$1;if(dorank==1){t=sprintf("%-3s %s",$2,t)};if(NR==m){printf("\"%s\" %f",t,m+dd)}else{if(NR<=n&&NR>m){printf(",\"%s\" %f",t,m+(NR-m)/o*(n-m)+dd)}}}END{printf("); ")}'`
+ #extra=$extra' '$extra1' '$extra2' set xtics border in scale 0,0 nomirror rotate by -45 offset character 0, 0, 0 autojustify font "'$font','$fontsize_xtics'" ;'   #rotation works
+ extra=$extra' '$extra1' '$extra2' set xtics border in scale 0,0 nomirror rotate by -45 offset character 0, 0, 0 autojustify ; '
+ extra=$extra' set tics textcolor rgb "'$fontcolor'" ;'
+ #extra=$extra' set ytics font "'$font','$fontsize_ytics'" ;'
+ 
+ #extra=$extra' set palette rgbformula -7,2,-7 ;'  # palette / side-bar  Color runs from white to green: -7,2,-7
+ #extra=$extra' set cblabel "Similarity Tanimoto Score" ;' #palette / side-bar  label
+ #extra=$extra' unset cbtics ;' #palette / side-bar  tics unset
+#else
+ #echo " Warning: Label by residue number is inaccurate when residues are not continue."
+# extra=$extra' set xrange [1:'$nsdf'] ; '
+# extra=$extra' set yrange [1:'$nsdf'] ; '
+fi #[ $labelres -eq 1 ]
+
+ #label each data point with data value in col 3 
+ if [ $labeldata -eq 1 ] ; then
+  #For heatmap in ./do_gnuplot, it was converted as 
+  others=' -labeldata 1 2 3 -labeldatadig '$labeldatadig' -labeldataexcld '$labeldataexcld' -labeldatacolor '$labeldatacolor' '$others  
+ fi
+
+ tlab=""; [ $dosort -eq 2 ] && tlab="(Cutoff ${cut}, Rank changed)"
+ plot=$mapfile2'_'$pmin'_'$pmax
+ plotsize='size '${plotwidth}','${plotheight}
+ tit='Similarity Map '$tlab
+ [ "$title" != 'AUTO' ] && tit=$title
+ #set xtics ("NA" 0,"Oxidoreductases" 1,"Transferases" 2,"Hydrolases" 3,"Lyases" 4,"Isomerases" 5); 
+ if [ $labelName -eq 1 ] ; then
+  xmaxl=`tail -5 $mapfile2 | awk '{if(NF>1){s=$1}}END{print s}'`
+  ymaxl=`tail -5 $mapfile2 | awk '{if(NF>1){s=$2}}END{print s}'`
+  xlabs=`awk 'BEGIN{head='$head';prex=-9999.9;xmaxl='$xmaxl';labeltic='$labeltic';step='$labelstep';if(step<1){step=int(xmaxl/labeltic)};n=0;}
+   {if(prex!=$1&&NR>head&&n<=labeltic){if(NR==(head+1)){printf(" set xtics (\"%s\" %s",$4,$1);n=0}else{if((step*(n+1)-$1)<=0){printf(",\"%s\" %s",$4,$1);n++}};prex=$1;}}
+   END{printf("); set xtics border in scale 0,0 nomirror rotate by -45  offset character 0, 0, 0 autojustify ;")}' $mapfile2`
+  ylabs=`awk 'BEGIN{head='$head';prex=-9999.9;xmaxl='$ymaxl';labeltic='$labeltic';step='$labelstep';if(step<1){step=int(xmaxl/labeltic)};n=0;}
+   {if(prex!=$1&&NR>head&&n<=labeltic){if(NR==(head+1)){printf(" set ytics (\"%s\" %s",$5,$2);n=0}else{if((step*(n+1)-$2)<=0){printf(",\"%s\" %s",$5,$2);n++}};prex=$2;}}END{printf(");")}' $mapfile2`
+  extra=$extra' '"$xlabs"' '"$ylabs"' '$cblabel
+ fi
+ #echo $xmaxl $ymaxl $labeltic $labelstep; echo "hahaha: "$extra
+ #echo $xlabs ; echo $ylabs ; echo hahaha ; cp $mapfile2 i 
+ extra=$extra'; set size square 1,1; set origin 0,0 '  #make the plot as square for heatmap
+ extra=$extr1' '"$xlabs"' '"$ylabs"' '$cblabel'; set size square 1,1; set origin 0,0 '  #Sometimes plot does not work for labelName. Now fixed
+ echo ./do_gnuplot $others -plotsize "$plotsize" $nobold $reverse -out $plotout -nosilence -xrange $xran -yrange $yran -zrange $zrange -heatmap -header 1  -extra "$extra" -fontsize_tics $fontsize_xtics -zcol 3  -title "$tit" -xlabel "$xlab" -ylabel "$ylab" $mapfile2
+ ./do_gnuplot -showdata $others -plotsize "$plotsize" $nobold $reverse -out $plotout -nosilence -xrange $xran -yrange $yran -zrange $zrange -heatmap -header 1  -extra "$extra" -fontsize_tics $fontsize_xtics -zcol 3  -title "$tit" -xlabel "$xlab" -ylabel "$ylab" $mapfile2  >& $temp4
+  [ $debug -eq 1 ] && cat $temp4  
+fi
+
+
+#cluster map file by many levels for dendogram
+#format: Rank | Name | Level 1 Cluster Rank | L2 Cluster | ...
+if [ $manycluster -eq 1 ] && [ $nodendo -eq 0 ] ; then
+ clfile=$mapfile2   
+ [ $ismf -eq 1 ] && clfile=$mapfile
+ [ $clfile == $mapfile2 ] && ismf=2
+ echo "Multiple levels cluster at cutoff [ $startc $endc ] at step $stepc for $nsdf cmpds in $clfile"
+ echo " Dendogram output is $mclusterfile"
+ echo " Format: Rank | Name | Level 1 Cluster Rank | L2 Cluster | ..."
+ awk 'BEGIN{startc='$startc';endc='$endc';stepc='$stepc';nsdf='$nsdf';ismf='$ismf';nc=0;n=0;pre=-99999;ncluster=0;}
+{if(NR>1&&NF>0){
+ score[$1,$2]=$3; scoreo[$1,$2]=$3; #TanScore
+ if(ismf==2){
+  nameo[$1]=sprintf("%s %s",$6,$4) #OldRank Name
+ }else{
+  nameo[$1]=sprintf("%s %s",$1,$4) #Rank Name
+ }
+ used[$1]=0;usedo[$1]=0
+ orio[$1]=$1
+ }
+}END{
+ nlevel=int((endc-startc)/stepc)+1
+ printf("Rank Name")
+ for(i=1;i<=nlevel;i++){
+  printf(" %3.2f",startc+(i-1)*stepc)
+ }
+ printf("\n")   #header: Rank Name Cutoff1 Cutoff2 ...
+ for(i=1;i<=nlevel;i++){  #cluster of many levels
+  nc=0
+  cut=startc+(i-1)*stepc
+  if(i==1){
+   n=nsdf
+  } else {
+   n=nco
+  }
+  for(j=1;j<=n;j++){
+   if(used[j]==0){
+    npre=split(nameo[orio[j]],sp," ")
+    cpre=sp[npre]
+    nc++
+    ori[nc]=orio[j]
+    for(k=j+1;k<=n;k++){
+     if(used[k]==0){
+      if(score[j,k]>=cut){
+       used[k]=1
+       npren=split(nameo[orio[k]],sp," ")
+       cpren=sp[npre]
+       nameo[orio[k]]=sprintf("%s %d",nameo[orio[k]],nc) #Rank | Name | Level 1 Cluster Rank
+       if(i>1){ #mark previous marked cmpds
+       for(m=1;m<=nsdf;m++){
+        npre2=split(nameo[m],sp2," ")
+        cpre2=sp2[npre2]
+        if(npre2==npren&&cpren==cpre2){
+         nameo[m]=sprintf("%s %d",nameo[m],nc)
+        }
+       }
+       } #i>1
+      }
+     }
+    }
+    used[j]=1
+    nameo[orio[j]]=sprintf("%s %d",nameo[orio[j]],nc) #Rank | Name | Level 1 Cluster Rank
+    if(i>1){
+    for(m=1;m<=nsdf;m++){   #mark previous marked cmpds
+     npre2=split(nameo[m],sp2," ")
+     cpre2=sp2[npre2]
+     if(npre2==npre&&cpre==cpre2){
+      #print "haha ",i,m,nameo[m]
+      nameo[m]=sprintf("%s %d",nameo[m],nc)
+     }
+    }
+    } #i>1
+   }
+  }
+  nco=nc
+  for(j=1;j<=nc;j++){  #next level cluster based on cluster of this level: each cluster in this level pick out first cmpd for next level
+   used[j]=0
+   for(k=j;k<=nc;k++){
+    score[j,k]=scoreo[ori[j],ori[k]]  #first level score is correct
+    #if(i==2){print j,k,ori[j],ori[k],score[j,k]}
+    orio[j]=ori[j]
+   }
+  }
+ }
+ for(i=1;i<=nsdf;i++){
+  print nameo[i]
+ }
+}' $clfile  > $mclusterfile
+
+if [ $nognu -eq 0 ] && [ $nsdf -le $allmax ] ; then
+  #echo "Use ${mapfile2} for dendogram :"
+  #./gnuplot_dendogram -maxlength 15 -list "$list" -nocontactmap -mapnum 2 -showaxis  -rank  -range $xstart $xend $input >& $temp
+  #grep 'Output dendogram' $temp | tail -1
+  echo "Use ${mapfile} for dendogram :" 
+  ./gnuplot_dendogram -title "Compound Cluster Dendogram"  -smaller -maxlength $maxlength2 -list "$list" -nocontactmap -mapnum 1 -showaxis  -rank  -range $xstart $xend $input >& $temp
+  grep 'Output dendogram' $temp | tail -1
+  ./gnuplot_dendogram -smaller -title "Compound Cluster Dendogram" -maxlength $maxlength2 -list "$list" -showaxis  -rank  -offset -range $xstart $xend $mclusterfile >& $temp 
+fi
+
+fi #[ $manycluster -eq 1 ] && [ $nodendo -eq 0 ]
+
+
+#echo "Number of cmpds = $nsdf"
+cat << ttt
+ 
+ Similarity Matrix / Contact Map file is $mapfileori
+  Dendogram (Multiple-cluster) at cutoff [ $startc $endc ] at step $stepc output is $mclusterfile  .gif if -manycluster
+  Gnuplot-friendly/Sorted Matrix is $mapfile2
+   Graphy saved as $plotout  
+
+ NOTE: Can adjust -cut $cut to view better cluster. Adjust -range X1 X2 to get detail view. -showcluster 4 to show top 4 clusters
+ttt
+
+
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* $temp* ; exit

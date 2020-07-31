@@ -1,0 +1,43 @@
+#!/bin/sh 
+
+thisfile="sdf_getNthCompound"
+if [ -n "$1" ] ; then
+         infile=$1
+         num1=$2
+  if [ -n "$3" ] ; then
+         num2=$3
+         num3=$4
+  else
+         num2=0
+         num3=0
+  fi
+else
+  echo " Readme in /home/holi/database/diversity_workflow.txt" 
+cat << ttt
+  Get the whole record (SDF) of the Nth Compound (up to 3 compounds)
+    e.g. $0  /home/tripos/hongzhi/database/*.sdf  100 [101 102]  > output.sdf
+  Output is screen dump 
+ttt
+  exit
+fi
+
+
+#echo $num1 $num2 $num3 record in $infile
+#echo "Format: Num|Lines|Contents|"
+#echo "=====================================>"
+
+awk 'BEGIN{new=1;n=0;tot='$num1';t2='$num2';t3='$num3'
+  max=tot;if(t2>max){max=t2};if(t3>max){max=t3}
+}
+{
+ if(new==1){n++;new=0;}
+ #if(n==tot||n==t2||n==t3){print n, NR, $_}
+ if(n==tot||n==t2||n==t3){print $_}
+ if(substr($1,1,4)=="$$$$"){new=1;if(n>max){exit}}
+}' $infile 
+#echo "=====================================>"
+#echo $num1 $num2 $num3 record in $infile
+#echo "Format: Num|Lines|Contents|"
+
+
+exit

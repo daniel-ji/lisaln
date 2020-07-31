@@ -1,0 +1,247 @@
+CLUSTAL O(1.2.4) multiple sequence alignment
+
+
+sp|Q17RS7|GEN_HUMAN       MGVNDL------------------------------------------------------	6
+sp|P39748|FEN1_HUMAN      MGIQGL------------------------------------------------------	6
+sp|Q8IZH2|XRN1_HUMAN      MGVPKFYRWISERYPCLSEVVKEHQIPEFDNLYLDMNGIIHQCSHPNDDDVHFRISDDKI	60
+sp|P08394|RECB_ECOLI      ------------------------------------------------------------	0
+sp|P07648|RECC_ECOLI      ------------------------------------------------------------	0
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------------------------------------------------------	6
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	6
+sp|Q8IZH2|XRN1_HUMAN      FTDIFHYLEVLFRIIKPRKVFFMAVDGVAPRAKMNQQRGRRFRSAKEAEDKIKKAIEKGE	120
+sp|P08394|RECB_ECOLI      ------------------------------------------------------------	0
+sp|P07648|RECC_ECOLI      ------------------------------------------------------------	0
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------------------------------------------------------	6
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	6
+sp|Q8IZH2|XRN1_HUMAN      TLPTEARFDSNCITPGTEFMARLHEHLKYFVNMKISTDKSWQGVTIYFSGHETPGEGEHK	180
+sp|P08394|RECB_ECOLI      ------------------------------------------------------------	0
+sp|P07648|RECC_ECOLI      ------------------------------------------------------------	0
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------------------------------------------------------	6
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	6
+sp|Q8IZH2|XRN1_HUMAN      IMEFIRSEKAKPDHDPNTRHCLYGLDADLIMLGLTSHEAHFSLLREEVRFGGKKTQRVCA	240
+sp|P08394|RECB_ECOLI      ------------------------------------------------------------	0
+sp|P07648|RECC_ECOLI      ------------------------------------------------------------	0
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       -----------------------------------------WQI---------LEPVKQ-	15
+sp|P39748|FEN1_HUMAN      -----------------------------------------AKL---------IADVAPS	16
+sp|Q8IZH2|XRN1_HUMAN      PEETTFHLLHLSLMREYIDYEFSVLKEKITFKYDIERIIDDWILMGFLVGNDFIPHLPHL	300
+sp|P08394|RECB_ECOLI      -------------------------------------------------MSDVAETLDPL	11
+sp|P07648|RECC_ECOLI      ------------MLRVYHSNRLDVLEALMEFIVE--------------------------	22
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ---HIPLRNLGGKTIAVDLS----LWVCEA-------QTVKKMMGSVMKPHLRNLFFRIS	61
+sp|P39748|FEN1_HUMAN      AIRENDIKSYFGRKVAIDAS----MSIYQFLIAVRQGGDVLQNEEGETTSHLMGMFYRTI	72
+sp|Q8IZH2|XRN1_HUMAN      HINHDALPLLYGTYVTILPE----L-----------GG-YINESGHLNLPRFEKYLVKLS	344
+sp|P08394|RECB_ECOLI      -----RLPLQGERLIEASAGTGKTFTIAALYL-----RLLLGLGGSAAFPRPL-------	54
+sp|P07648|RECC_ECOLI      ---RERLDDPFEPEMILVQSTGMAQWLQMTL------SQKFGIAANIDFPLPASFIWDM-	72
+                                :       :                                             
+
+sp|Q17RS7|GEN_HUMAN       YLTQMDVKLVFVM----EGE---PPKLKADVISKRNQSRYGSS-----------------	97
+sp|P39748|FEN1_HUMAN      RMMENGIKPVYVF----DGK---PPQLKSGELAKRSERRAEAE-----------------	108
+sp|Q8IZH2|XRN1_HUMAN      DFDREHFSEVFVDLKWFESKVGNKYLNEAAGVAAEEARNYKEK-----------------	387
+sp|P08394|RECB_ECOLI      ------TVEELLVVTFTEAAT--------AELRGRIRSNIHELRIACLRETTDNPLYERL	100
+sp|P07648|RECC_ECOLI      ------FVRVL------------------PEIPKES------------------------	84
+                                                         :  .                         
+
+sp|Q17RS7|GEN_HUMAN       ---------GKSWS-QKTG----------------------RSHFKSVLREC--LHMLEC	123
+sp|P39748|FEN1_HUMAN      ---------KQLQQAQAAGAE----QEVEKFTKRL------VKVTKQHNDEC--KHLLSL	147
+sp|Q8IZH2|XRN1_HUMAN      -KKLKGQENSLCWTALDKNEG----EMI-TSKDNLEDETEDDDLFETEFRQYKRTYYMTK	441
+sp|P08394|RECB_ECOLI      LEEIDDKAQAAQWLLLAERQM----D--------------EAAVF-TIHGFCQRMLNLNA	141
+sp|P07648|RECC_ECOLI      ----AFNKQSMSWKLMTLLPQLLEREDFTLLRHYLTDDSDKRKLFQLSSKAA------DL	134
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       LGI------PWVQAA-------GEAEAMCAYLNAGGHV-DGCLTNDGDTFLYGAQTVYRN	169
+sp|P39748|FEN1_HUMAN      MGI------PYLDAP-------SEAEASCAALVKAGKV-YAAATEDMDCLTFGSPVLMRH	193
+sp|Q8IZH2|XRN1_HUMAN      MGV------DVVSDD-------FLADQAACYVQAIQWI-LHYYYHGVQSWSWYYPYHYAP	487
+sp|P08394|RECB_ECOLI      FESGMLFEQQLIEDE-------SLLRYQAC---ADFWR-RHCYPLPR---------EIAQ	181
+sp|P07648|RECC_ECOLI      FDQYLVYRPDWLAQWETGHLVEGLGEAQ--AWQAPLWKALVEYTHQLGQPRWHRANLYQR	192
+                          :          :                                                
+
+sp|Q17RS7|GEN_HUMAN       FTMNT-KDPHVDCYTMSSIKSKLGLDRDALVGLAILLGC---DYLPKGVPGVGKEQALKL	225
+sp|P39748|FEN1_HUMAN      LTASEAKKLPIQEFHLSRILQELGLNQEQFVDLCILLGS---DYCE-SIRGIGPKRAVDL	249
+sp|Q8IZH2|XRN1_HUMAN      FLSD------IHNISTLKIHFELGKPFKPFEQLLAVLPAASKNLLPACYQHLMTNEDSPI	541
+sp|P08394|RECB_ECOLI      VV------------------------FETWKGPQALLRDIN-RY---------LQGEAPV	207
+sp|P07648|RECC_ECOLI      FIETLES----------ATTCPPGLPSRVFICGISALPP---VYLQ-ALQALGKHIEIHL	238
+                          .                                   *                 .    :
+
+sp|Q17RS7|GEN_HUMAN       IQIL---KGQ----------SLLQRFNRWNETSCNSSPQLLVTKKLAHCSVCSHPGSPKD	272
+sp|P39748|FEN1_HUMAN      IQKH---KSI----------EEIVR--RLDP-----------------------------	265
+sp|Q8IZH2|XRN1_HUMAN      IEYYPPDFKT----------DLNGKQQEWEAVV--LIPFIDEKRLLEAMETCNHSLKKEE	589
+sp|P08394|RECB_ECOLI      IKAPPPDDETLASRHAQIVARIDTVKQQWRDAVGELDALIESSGI-------------DR	254
+sp|P07648|RECC_ECOLI      L-----------------------------------------------------------	239
+                          :                                                           
+
+sp|Q17RS7|GEN_HUMAN       ---HERNGCRLCKSDKY---CEPHDYEYCCPCEW--------------------HRTEHD	306
+sp|P39748|FEN1_HUMAN      -------------------------NKYPVPENW--------------------LHKEAH	280
+sp|Q8IZH2|XRN1_HUMAN      RKRNQHSECLMCWYDR--------DTEFIYPSPW--------------------PEKFPA	621
+sp|P08394|RECB_ECOLI      RKFN--RSNQAKWIDKISAWAEEETNSYQLPESLEKFSQRFLEDRTKAGGETPRHPLFEA	312
+sp|P07648|RECC_ECOLI      ----FTNPCRYYWGDIK-------DPAYLA------------------------------	258
+                                                     :                                
+
+sp|Q17RS7|GEN_HUMAN       --RQLSEVE-----------------NNIKKKACCCEGFPFH-EVIQEFLLNKDKLVKVI	346
+sp|P39748|FEN1_HUMAN      --QLFLEPEVLDPESVELKWSEPNE-EELIKFMCGEKQFSEE-RIRSG-V---KRLSKS-	331
+sp|Q8IZH2|XRN1_HUMAN      IERCCTRYKIISLDAWRVDINKNKI-TRIDQKALYFCGFPTLKHIRHKFFLKKSGVQ-VF	679
+sp|P08394|RECB_ECOLI      IDQLLAEPLSIRDLVITRALAEIRETVAREKRRRGELGFDDMLSRLDSALRSESGEVLAA	372
+sp|P07648|RECC_ECOLI      -----------------------------------------------KLL--------TR	263
+                                                                           .          
+
+sp|Q17RS7|GEN_HUMAN       RYQ-RPDLLLFQRF--------TL-----------EKMEWPNHYACEKLLVLL--THYDM	384
+sp|P39748|FEN1_HUMAN      RQG-STQ------------------------------G-------------RL--DDFFK	345
+sp|Q8IZH2|XRN1_HUMAN      QQSSRGENMMLEILVDAESDELTVENVASSVLGKSVFVNWPHLEEARVVAVSDGETKFY-	738
+sp|P08394|RECB_ECOLI      AIRTRFPVAMIDEFQDTDPQQY-----------RIFRRIWHHQPETALLLIGDPKQAIYA	421
+sp|P07648|RECC_ECOLI      QRRHSFEDRELPLFRDSENAGQLFNSDGEQDVGNPLLASWGKLGRDYIYLLSD-------	316
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       IERKLGSRN---SNQLQPIRIVKTRIRNGVHCFEIEWEKP-----EHYAME---------	427
+sp|P39748|FEN1_HUMAN      VTGSLSSAK---RKEPEPKGSTKKKAKTGA------------------------------	372
+sp|Q8IZH2|XRN1_HUMAN      LEEPPGTQKLYSGRTAPPSKVVHLGD-----KEQSNWAKEVQGISEHYLRRKGIIINETS	793
+sp|P08394|RECB_ECOLI      FRG------------ADIFT----------------YMK---------------------	432
+sp|P07648|RECC_ECOLI      ---LESSQELDAFVDVTPDNLLH--------NIQSD------------------------	341
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       --------------DKQHGEFALLTIEEESLFEAAYPEIVAVYQKQKLEIKGKKQKRIKP	473
+sp|P39748|FEN1_HUMAN      -----------------AGKFKRGK-----------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      AVVYAQLLTGRKYQINQNGEVRLEKQWSKQVVPF-------VYQTIVKDIRA-----FDS	841
+sp|P08394|RECB_ECOLI      ------------ARSEVHAHYTLDTNWRSA------------------------------	450
+sp|P07648|RECC_ECOLI      ------------------------------ILEL--------ENRAVAGVN---IEEFS-	359
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       KENNLPEPDEVMSFQSHMTLKPTCEIFHKQNSKLNSGISPDPTLPQESISASLNSLLLPK	533
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      RFSNIKTLDDLFPLRSMVFMLG-TPYYGCTGEVQDSG----DVITEGR-------IRVIF	889
+sp|P08394|RECB_ECOLI      -PGMVNSVNKLFSQTDDAFMFREIPFIPVKSAGKNQ------------------ALRFVF	491
+sp|P07648|RECC_ECOLI      RSDNKRPLD---PLD------SSITFHVCHSPQREVEVLHDRL------------LAMLE	398
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       NTPCLNAQEQFMS--------SLRPLAIQ-QIK-AVSK---------SLISESSQPNT-S	573
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      SIPCEPNLDALIQNQHKYSI-KYNPGYVLASRL-GVSGYLVSRFTGSIFIGRGSRRNPHG	947
+sp|P08394|RECB_ECOLI      KGETQPAMKMWLMEGESCGVGDYQSTMAQVCAA-QIRDWLQAGQRGEALLMNGDDARPVR	550
+sp|P07648|RECC_ECOLI      EDPTLTPRDIIVMV---ADIDSYSPFIQAVFGSAPADRYLPYAIS----DRRARQSHPVL	451
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       SHNISVI--AD-------------------------------------------------	582
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      DHKANVG--LNLKFNKK-------NEEVPG-Y------------------TKKVGSEWMY	979
+sp|P08394|RECB_ECOLI      ASDISVL--VRSRQEAAQVRDALTLLEIPSVYLSNRDSVFE--------TLEAQEMLWLL	600
+sp|P07648|RECC_ECOLI      EAFISLLSLPDSRFV---SEDVLALLDVPVLA--ARFDITEEGLRYLRQWVNESGIRWGI	506
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       -------------------------------LHLSTI-----------------------	588
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      SSAAEQLLAEYLERAPELFSYIAKN--SQEDVFYEDD-----------------------	1014
+sp|P08394|RECB_ECOLI      QAVMTPERENTLRSA-LATSMMGLNALDIETLNNDEHAWDVVVEE------FDG------	647
+sp|P07648|RECC_ECOLI      DDDNVR---------------------ELELPATGQHTWRFGLTRMLLGYAMESAQGEWQ	545
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ---------------------------DWEGT----------------------------	593
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      ---------------------------IWPGE----------------------------	1019
+sp|P08394|RECB_ECOLI      ------------------------YRQIWRKR--------GVMPMLRALMSARNIAEN--	673
+sp|P07648|RECC_ECOLI      SVLPYDESSGLIAELVGHLASLLMQLNIWRRGLAQERPLEEWLPVCRDMLNAFFLPDAET	605
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ---------------------------------SFSNSPAIQRNTFSHDLKSEVESELSA	620
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      ---------------------------------NENGAEKVQEII--TWLKGHPV-----	1039
+sp|P08394|RECB_ECOLI      ------------LLATAGGERRLTDILHISELLQEAGTQLESEHALVRWLSQHILEPDSN	721
+sp|P07648|RECC_ECOLI      EAAMTLIEQQWQAIIAEGLGAQYGDAVPLSLLRDELAQRLDQERISQRFLAGPVNI-CTL	664
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       IPDGFENIPEQLSCESERYTANIKKVLDEDSDG-----------ISPEEHLLS-------	662
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      ------STLSRSSCDLQILDAAIVEKIEEEVEKCKQRKNNKKVRVTVKPHLLYRP-LEQQ	1092
+sp|P08394|RECB_ECOLI      -------------------------------------ASSQQMRLESDKHLVQIVTIHKS	744
+sp|P07648|RECC_ECOLI      M--PMRSIPFKVVCLLG-----------------------------------------MN	681
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------GITDLCLQD------LPLKERIFTKLSYPQDNLQPDVNLKT--LSI--------	700
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      HGVIPDRDAEFCLFD------RVV---------NVRENFSVPVGLRG--TIIGIKGANRE	1135
+sp|P08394|RECB_ECOLI      ------KGLEYPLVWLPFITNFRVQEQAFY---HDRHSFEAVLDLNAAPESVDLAEAERL	795
+sp|P07648|RECC_ECOLI      DGVYPRQL--------------------------------APLGFDLMSQKPKRGDRSRR	709
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ---------LSVK------ESCIANSGSDCTSHLSKDLPGI---PLQNESRDSKILKGDQ	742
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      A---DVLFEVLFD------EEFPGGLTIRCSPGRGYRLPTS---ALVNLSHGSRSETGNQ	1183
+sp|P08394|RECB_ECOLI      AEDLRLLYVALT------------RSVWHCSLGVA---------PLVRRRGD---KKG--	829
+sp|P07648|RECC_ECOLI      DDDRYLFLEALISAQQKLYISYIGRSIQDNS----ERFPSVLVQELIDYIGQSHYLPGDE	765
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       LLQEDYKVNTSVPYSVSNTVVKTCNVRPPNTALDHSRKVDMQTTR-KILMKKSVCLDRHS	801
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      KLTAIVKPQPAVHQHSSSSSVSSGH----LGALNHSPQSLFVPTQVPTKDDDEFCNIW--	1237
+sp|P08394|RECB_ECOLI      --------DTDVHQSALGRLLQKGEPQDAAGL----------RTCIEALCDDD--IAWQT	869
+sp|P07648|RECC_ECOLI      ALNCDES-EARVK----------AH----LTCL--HTRMPFDPQNYQPGERQSYAREWLP	808
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       SDEQSAPVFGKAKYTTQ-----------RMKHSSQKHNSSHFKESGHN-KLSSPKIHIKE	849
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      ---QSLQGSGKMQYFQPTIQEKGAVLPQEISQVNQHH-KSGFNDNSVKYQQRKHDPHRKF	1293
+sp|P08394|RECB_ECOLI      AQT------GDNQPW-------------QVNDVSTA----ELNA---KTLQR--------	895
+sp|P07648|RECC_ECOLI      AASQAG--KAHSEFVQPLPFTLPETVPLETLQRFWAHPVRAFFQMRLQVNFRTEDSEI--	864
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       TEQCVRSYETAENEESCFPDSTK-----------S-SLSSLQCHKKEN------------	885
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      KEECKS------PKAECWSQKMSN--KQPNSGIEN-FLASLNISKENEVQSSHHGEPPSE	1344
+sp|P08394|RECB_ECOLI      ------------LPGDNWRVTSYSGLQQRGHGIAQDLMPRLDVD------AAGVASVVEE	937
+sp|P07648|RECC_ECOLI      ------------PDTEPFILE---GLS--RYQINQQLLNALVEQDDA--------ERLFR	899
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------------------------------------------------------	885
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      EHLSPQSFAMGTR----MLKEILKIDGSNTVD-----HKNEIKQIANEIPVSSNRRDEYG	1395
+sp|P08394|RECB_ECOLI      PTLTPHQFPRGASPGTFLHSLFEDLDFTQPVDPNWVREKLELGGFE--------------	983
+sp|P07648|RECC_ECOLI      RFRAAGDLPYGAF-----------------GEIFWETQCQEMQQLADRVIACRQ------	936
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ----------------------------------NSGTCLD-------------------	892
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      LPSQPKQNKKLASYMNKPHSAN-----EYHNVQSMDNMCWPAPSQIPPVSTPVTELSRIC	1450
+sp|P08394|RECB_ECOLI      SQWEPVLTEWITAVLQAPLNETGVSLSQLSARNKQVEMEFYLPISEPLIASQLDTLIRQF	1043
+sp|P07648|RECC_ECOLI      ----PG------QSMEIDLACNGVQITGWLPQVQPDGLLRWRP-----------------	969
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------------------------------------------------------	892
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      SLVGMPQPDFSFLRMPQTMTVCQVKLSNGLLVHGPQCHSENEAKEKAALFALQQLGSLGM	1510
+sp|P08394|RECB_ECOLI      DPLSAGCPPLEFMQVRGML--------KGF---------------------------IDL	1068
+sp|P07648|RECC_ECOLI      ----------SLLSVAQGMQ--------LWLEHLVYCASGGNGESR--LFL-RKDG--EW	1006
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------------------------------------------------------	892
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      NFPLPSQVF-ANYPSA----VPPGTIPPAFPPP-TGWDHYGSNYALGAANIMP-------	1557
+sp|P08394|RECB_ECOLI      VFRHEGRYYLLDYKSNWLGEDSSAYTQQAMAAA-MQAHRYDLQYQLYTLALHRYLRHRIA	1127
+sp|P07648|RECC_ECOLI      RFPPLAAEQALHYLSQLIEGYREGMSAPLLVLPESGGAWLKTCYDAQNDAMLD-------	1059
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------------------------------------------------------	892
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      --SSSHLFGSMPWGPSVPVPGKPFHHTLYSGTMPMAGGIPGG-VH---NQFIPLQVTKKR	1611
+sp|P08394|RECB_ECOLI      DYDYEHHFGGVIYLFLRGVDKEHPQQGIYT-TRPNAG-LIAL-MD---EMFAGMTLEEA-	1180
+sp|P07648|RECC_ECOLI      -DDST--LQ----------KARTKFLQAYEGNMMVRGEGDDIWYQRLWRQLTPETMEA-I	1105
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ---------------------------------------------S--------------	893
+sp|P39748|FEN1_HUMAN      ------------------------------------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      VANKKNFENKEAQSSQATPVQTSQPDSSNIVKVSPRESSSASLKSSPIAQPASSFQVETA	1671
+sp|P08394|RECB_ECOLI      ------------------------------------------------------------	1180
+sp|P07648|RECC_ECOLI      VEQS-----------------------------------------QRFLLPLFR------	1118
+                                                                                      
+
+sp|Q17RS7|GEN_HUMAN       ------------PLP----LRQRLKLRFQST----	908
+sp|P39748|FEN1_HUMAN      -----------------------------------	380
+sp|Q8IZH2|XRN1_HUMAN      SQGHSISHHKSTPISSSRRKSRKLAVNFGVSKPSE	1706
+sp|P08394|RECB_ECOLI      -----------------------------------	1180
+sp|P07648|RECC_ECOLI      ---------------------------FNQS----	1122
+                                                             

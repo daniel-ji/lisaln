@@ -1,0 +1,887 @@
+#!/bin/sh
+#Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
+base='/home/holi/database/chembl/'  #folder to store CHEMBL downloaded data 
+cmpdurl='https://www.ebi.ac.uk/chembl/compound_report_card/' #Chembl website for a cmpd is $cmpdurl/chemblID
+assayurl='https://www.ebi.ac.uk/chembl/assay_report_card/'   #Chembl website for an assay is $assayurl/chemblID
+targeturl='https://www.ebi.ac.uk/chembl/target_report_card/' #Chembl website for a target
+urlbase='ftp://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBL-RDF/latest/'  #url to download ChEMBL data files
+infourl='https://chembl.gitbook.io/chembl-interface-documentation/downloads' #ChEMBL downloadable newest version info. Current is v25.0 updated in 2019/3
+
+dotime=1;starts=`date +%s` ; starttime=`date`
+
+thisfile=$0
+doout=0
+debug=0
+force=0;fforce="";cluster=""
+map=""
+less=0
+protein=1;uni=0;chembl=0
+prepare=0
+single=1;display=1
+distop=10
+less=0
+
+oldline=$*   #all argvs
+oldline1=`awk -v ins="$oldline" 'BEGIN{n=split(ins,a," ");for(i=1;i<n;i++){printf("%s ",a[i])}}'` #remove last argv
+if [ -n "$1" ] ; then
+ aaa=`echo "$1" | awk '{print substr($1,1,1);exit}'`  #check if first input is -XXX
+ while [ "$aaa" == "-" ] ; do
+  case $1 in
+   -chembl)chembl=1;protein=1;shift;;
+   -less)less=1;shift;;
+   -top)distop=$2;shift 2;;
+   -cluster)cluster=$1;shift;;
+   -nocluster)cluster="";shift;;
+   -nodisplay)display=0;shift;;
+   -prepare)prepare=1;shift;;
+   -uni)uni=1;protein=1;shift;;
+   -name)uni=0;protein=1;shift;;
+   -less)less=1;shift;;
+   -force)force=1;fforce=$1;shift;;
+   -smile)map='molecule';shift;;
+   -smi)map='molecule';shift;;
+   -assay)map='assay';shift;;
+   -activity)map='activity';shift;;
+   -act)map='activity';shift;;
+   -target)map='target';shift;;
+   -protein)map='targetcmpt';shift;;
+   -debug) debug=1; shift;;
+   -out) output="$2"; doout=1;shift 2;;  #Use "$2" to pass argments with blank space inside as d='a b c''
+   -all)single=0;shift;;
+   -single)single=1;shift;;
+   *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
+  esac
+  [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
+ done
+fi
+[ $debug -eq 1 ] && echo $0 $oldline
+
+if [ -n "$1" ] ; then 
+ input="$1"
+else
+cat << ttt
+    ****NOTE: Copyright belongs to Dr. Hongzhi Li *******
+ 2020/1
+
+ Analyze the CHEMBL downloaded data files
+ Find Chembl inhibitors of a protein, also PDBs of the Protein
+ Can auto-download new version data files and analyze when -prepare 
+
+ To find info of ChemBL from the downloaded CHEMBL site: https://chembl.gitbook.io/chembl-interface-documentation/downloads
+  Current version is 25.0 updated in 2019/3 in website
+ All data saved in database/chembl 
+
+Downloaded from RDF Version of ChEMBL database (2020/1). saved in database/chembl from ftp://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBL-RDF/latest/
+Molecules: molecule SMILES, many properties (MW, psa, rule_3),  etc. But no target protein info.
+chembl_25.0_molecule.ttl.gz (1GB)   chembl_25.0_molecule.ttl (14G) 2020/1
+<http://rdf.ebi.ac.uk/resource/chembl/molecule/CHEMBL6939#canonical_smiles> a cheminf:CHEMINF_000018 ;
+        cheminf:SIO_000300 "CC(C)NCC(O)COc1ccc(COCC2CC2)cc1" ;
+        rdfs:label "CHEMBL6939 Canonical Smiles" .
+So, use this file to map small molecule ID vs. SMILES :
+$0 -smi 1
+
+Assay: chembl_25.0_assay.ttl.gz (185M) chembl_25.0_assay.ttl(3.7G)
+ Assay ID, name, target protein (CHEMBL214)
+chembl_assay:CHEMBL615160 a cco:Assay ;
+        rdfs:label "CHEMBL615160" ;
+        cco:chemblId "CHEMBL615160" ;
+        dcterms:description "Effective concentration ast binding of radioligand [35S]GTP-gamma-S in CHO cells expressing human 5-hydroxytryptamine 1A receptor" ;
+        cco:assayType "Functional" ;
+        cco:assayCellType "CHO" ;
+        cco:targetConfDesc "Homologous single protein target assigned" ;
+        cco:targetConfScore "8"^^xsd:int ;
+        cco:targetRelType "H" ;
+        cco:targetRelDesc "Homologous protein target assigned" ;
+        bao:BAO_0000205 bao:BAO_0000219 ;
+        cco:hasTarget chembl_target:CHEMBL214 .
+chembl_assay:CHEMBL615160 cco:hasActivity chembl_activity:CHEMBL_ACT_1148061 .
+chembl_activity:CHEMBL_ACT_1148061 cco:hasAssay chembl_assay:CHEMBL615160 .
+Use this to extract assay ID vs, assay name, target protein, chembl_activity IDs(CHEMBL_ACT_1148061) in chembl_25.0_activity.ttl 
+ NOTE: One assay has multiple chembl_activity IDs
+$0 -assay 1
+
+Activities: chembl_25.0_activity.ttl.gz (619M) chembl_25.0_activity.ttl(12G) 
+chembl_activity:CHEMBL_ACT_99399 a cco:Activity ;
+        rdfs:label "CHEMBL_ACT_99399" ;
+        cco:chemblId "CHEMBL_ACT_99399" ;
+        cco:type "IC50" ;
+        cco:relation "=" ;
+        cco:value "140.0"^^xsd:double ;
+        cco:units "uM" ;
+        cco:standardType "IC50" ;
+        cco:standardRelation "=" ;
+        cco:standardValue "140000.0"^^xsd:double ;
+        cco:standardUnits "nM" ;
+        cco:hasUnitOnto uo:UO_0000065 ;
+        cco:hasQUDT ops:Nanomolar ;
+        cco:hasMolecule chembl_molecule:CHEMBL69297 .
+Use this to extract compoundID, ActivityID, Type(IC50, MIC, Ki), Value, Unit
+
+Target Names (protein or cell or organism: chembl_25.0_target.ttl.gz (515K)  
+ Protein name and its chembl ID as: component ID CHEMBL_TC_9749 which has detail info of protein in chembl_25.0_target.ttl
+ Protein's web is: https://www.ebi.ac.uk/chembl/target_report_card/CHEMBL1910/
+chembl_target:CHEMBL1910 a cco:SingleProtein ;
+	cco:chemblId "CHEMBL1910" ;
+	rdfs:label "Adenosine deaminase" ;
+	dcterms:title "Adenosine deaminase" ;
+	cco:targetType "SINGLE PROTEIN" ;
+	cco:taxonomy <http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=9606> , <http://identifiers.org/taxonomy/9606> ;
+	cco:organismName "Homo sapiens" ;
+	cco:hasTargetComponent chembl_target_cmpt:CHEMBL_TC_223 .
+chembl_target_cmpt:CHEMBL_TC_223 cco:hasTarget chembl_target:CHEMBL1910 .
+So, use this to map id vs protein name
+
+Protein/RNA (Target Component): chembl_25.0_targetcmpt.ttl
+Protein target info: such as UniprotID, GO terms, Pfam, PDBs, all Names, sequence etc.
+chembl_target_cmpt:CHEMBL_TC_47 a cco:TargetComponent ;
+        rdfs:label "CHEMBL_TC_47" ;
+        cco:chemblId "CHEMBL_TC_47" ;
+        cco:componentType "PROTEIN" ;
+        dcterms:description "Gamma-aminobutyric acid receptor subunit beta-2" ;
+        cco:taxonomy <http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=9606> , <http://identifiers.org/taxonomy/9606> .
+uniprot:P47870 a cco:UniprotRef ;
+        rdfs:label "CHEMBL_TC_47 UniProt Reference: P47870" .
+<http://identifiers.org/pdb/3IAR> a cco:ProteinDataBankRef ;
+        rdfs:label "CHEMBL_TC_223 PDBe Reference: 3IAR" .
+chembl_target_cmpt:CHEMBL_TC_223 skos:altLabel "ADA" , "ADA1" , "Adenosine aminohydrolase" , "Adenosine deaminase" ;
+        cco:targetCmptXref <http://identifiers.org/ensembl/ENSG00000196839> .
+<http://identifiers.org/ensembl/ENSG00000196839> a cco:EnsemblGeneRef ;
+        rdfs:label "CHEMBL_TC_223 ENSEMBL Reference: ENSG00000196839" .
+chembl_target_cmpt:CHEMBL_TC_223 cco:proteinSequence "MAQTPAFDKPKVELHVHLDGSIKPETILYYGRRRGIALPANTAEGLLNVIGMDKPLTLPDFLAKFDYYMPAIAGCREAIKRIAYEFVEMKAKEGVVYVEVRYSPHLLANSKVEPIPWNQAEGDLTPDEVVALVGQGLQEGERDFGVKARSILCCMRHQPNWSPKVVELCKKYQQQTVVAIDLAGDETIPGSSLLPGHVQAYQEAVKSGIHRTVHAGEVGSAEVVKEAVDILKTERLGHGYHTLEDQALYNRLRQENMHFEICPWSSYLTGAWKPDTEHAVIRLKNDQANYSLNTDDPLIFKSTLDTDYQMTKRDMGFTEEEFKRLNINAAKSSFLPEDEKRELLDLLYKAYGMPPSASAGQNL" ;
+        skos:altLabel "1230" ;
+        cco:targetCmptXref <http://identifiers.org/ec-code/3.5.4.4> .
+
+ NOTE: to find the connections of two scripts in my scripts: ./find_script
+
+ Usage: $0 [Options] Input
+ Options:
+  -debug : debug model on
+  -force : froce to re-cal
+  -less: less display
+  -prepare : Auto-download new version of ChEMBL data and prepare the newly downloaded Chembl data (need download 5 data files from chembl)
+  -smile | -smi : map compound CHEMBL id vs SMILES, output as chembl_25.0_molecule.map.xls
+    Find compound in website: ${cmpdurl}cmpdID 
+  -assay : map assay CHEMBL id vs target, activity ID
+  -act|-activity : map cmpd to activityID, IC50/Ki/MIC/pIC50 value etc.
+    NOTE: there are 3896 activity types: Potency(4473537) lo(2434612) IC50(1951075),Inhibition(551355),Ki(530693),Kd(73756)
+    NOTE: pIC50, pKi, pKd are same as IC50, Ki, Kd. IC50 unit could be ug.mL-1 
+    NOTE: Inhibition unit is %
+  -target : map target (single protein, protein complex , cell or organism) to its detail
+    NOTE: Total 22 target types: SingleProtein(7350) Organism(2137) CellLineTarget(1608) ProteinComplex(424) ProteinFamily(335) Tissue(243)
+  -protein :  map targetComponent (single protein ID) to its details such as Uniprot ID, names, etc.
+    NOTE: PROTEIN(9132) RNA(27)
+    NOTE: One targetComponent has only one UniprotID
+
+  -uni : input is the UniprotID of a protein. Can auto-search if it is UniprotID or protein name 
+  -chembl : input is target ChEMBL ID. As for SARS/, do not know its Uniprot ID. So search 'SARS Coronavirus' directly in ChEMBL website to get targetID
+  [-name] : input is protein name
+  [-single] : only find inhibitors as SingleProtein for input protein, not include inhibitors for Complex/Cell/Tissue/Organism of input protein etc.
+  -all : find inhibitors for any target includes input protein, including Complex/Cell/Tissue/Organism assay
+  -out Output : User defined output
+  -nodisplay : will not display inhibitor images
+  -top topNum : screendump top inhibitors
+  -cluster | [-nocluster] : will cluster CHEMBL inhibitors
+
+ Example: 
+
+  #Auto-download new version of ChEMBL data and Prepare the newly downloaded Chembl data:
+  $0 -prepare 1
+
+  #Pre-process and Analysis CHEMBL downloaded data: 
+  $0 -smi 1  #Generate file for compound CHEMBL id vs SMILES, output as chembl_25.0_molecule.map.xls
+    Total Chembl compounds (with 3,896 activity types) = 1,870,461 
+  $0 -activity 1 #Generate file for activity ID vs cmpdID, IC50 value etc.
+    => Output for activity CHEMBL id vs copound, IC50 mapping file is /home/holi/database/chembl/chembl_25.0_activity.map.xls
+    CHEMBL_cmpd_id      ActivityID      Type    Relation        Values  Unit
+    Total Chembl activity = 15,504,603 for 1,786,446 compounds with 2011943 IC50/pIC50, 661819 Ki/pKi , 75941 Kd/pKd and 551357 Inhibition(%)
+    Total 3,896 activity types: Potency(4473537) lo(2434612) IC50(1951075) Activity(839702) Inhibition(551355) MIC(544258) Ki(530693) INH(402297) EC50(372469) Rati(152970) AC50(148313) pKi(130972) Tissu(129337) GI50(121253) ED50(99533) GI(98434) Ratio(93298) K(82831) Residua(76711) Kd(73756) CC50(64259) Lo(63459) pIC50(60868)
+  $0 -assay 1  #Generate file for assay id vs target protein, activity ID 
+    => Output for assay CHEMBL id vs target, activity mapping file is /home/holi/database/chembl/chembl_25.0_assay.map.xls
+    CHEMBL_assay_id	TargetProtein	assayType	assayCellType	chembl_activityIDs
+    Total uniq Chembl assays = 1,125,387 for 12,111 targets (22 types of singleProtein/Complex/cell/tissue/organism/etc.)
+    Find chembl website for a compound as https://www.ebi.ac.uk/chembl/compound_report_card/ChemblID
+  $0 -target 1 #map targets
+    => Output for Target CHEMBL id vs Proteins, organism mapping file is /home/holi/database/chembl/chembl_25.0_target.map.xls
+    Target_id	Proteins	Type	Organism
+    Total Targets = 12,482 for 7350 SingleProtein, 424 ProteinComplex, 1608 cells, 2138 Organism, 243 tissues 
+    Total 22 target types: SingleProtein(7350) Organism(2137) CellLineTarget(1608) ProteinComplex(424) ProteinFamily(335) Tissue(243) ProteinSelectivityGroup(100) ProteinProteinInteraction(80) ProteinComplexGroup(53) NucleicAcid(33) SmallMoleculeTarget(25) UnknownTarget(19) ChimericProtein(14) Macromolecule(12) SubCellular(10) OligosaccharideTarget(10) UnclassifiedTarget(9) Metal(9) ProteinNucleicAcidComplex(7) Phenotype(2) NonMolecular(1) ADMET(1)
+  $0 -protein 1 #map target component (protein, RNA)
+    => Output for TargetComponent (Protein) CHEMBL id vs UniprotID, PDBs, names mapping file is /home/holi/database/chembl/chembl_25.0_targetcmpt.map.xls
+       Component_id	Type	UniProt	PDBs	Names
+    Total Target Components = 9159 with 9132 as proteins 
+    Total 2 types are: PROTEIN(9132) RNA(27)
+
+ #Find CHEMBL info of a protein
+  $0 -uni -cluster P00813  
+  $0 ADA
+  $0 -chembl CHEMBL3927
+   #As for SARS/ virus, do not know its Uniprot ID. So search 'SARS Coronavirus' directly in ChEMBL website to get targetID CHEMBL3927
+  $0 -less -nodisplay "Adenosine Deaminase"
+    #Only find Chembl inhibitor info for ADA that target ADA as SingleProtein. Also cluster inhibitors
+  $0 -uni -all P00813   #Find Chembl inhibitor info for ADA from all targets that has ADA, such as SingleProtein, Complex, Cell/Tissue/Organism etc.
+   => P00813 has total uniq 85 (from 120) inhibitors from 1 targets
+   =>To find inhibitors for target at chembl: https://www.ebi.ac.uk/chembl/target_report_card/CHEMBL1910
+   =>Output of inhibitors (sorted by value col#6) saved in P00813_inhibitors.xls
+     Protein	TargetID	CompoundID	Type	Relation	Values	Unit	AssayID	ProteinNames	SMILES
+     P00813	CHEMBL1910	CHEMBL1580	Ki	=	2.5e-12	nM	CHEMBL640454	ADA|ADA1|Adenosine
+
+ #Find CHEMBL inhibitor SDF or info:
+  ./ChEMBL2name -outsdf A.sdf CHEMBL41
+
+ NOTE: To search/cluster function of a list proteins, run ./protein_cluster -filter "kinase activity"
+ NOTE: To download Uniprot page for specific Uniprot: ./UniProt_getProperty  UniprotID . But this script can run offline
+ NOTE: To download PDBs related to Uniprot or human protein name: ./pdb_download UniprotID or $0 -getPDB  (gives different PDBs!)
+ NOTE: For super fast of convert human protein GeneID/Name etc., run ./IDs_gene_uniprot_convert -nopdb
+ NOTE: To find CID/Vendor/Patent/Analogs/AnalogVendors/IC50(Activity)/PDBs of a compound, run ./PubChem_convert
+ NOTE: To find mutation rate vs. protein length and predict cancer driver/passenger genes, run ./cluster_Pickmutation
+ NOTE: To find CHEMBL inhibitors and PDBs for any protein or analyze chembl database, run ./chembl
+
+ NOTE: My AAD (All-Around Docking), DSP (Drugable Site Prediction), STP/SOP (Structure-based Target/Offtarget Prediction), SAG(Side-chain Auto-Grow) 
+ NOTE: LiVS (ligand virtual screening pipeline): 
+ NOTE: LibaPipe (Library Analysis Pipeline): ./library_sdf_report
+ NOTE: LisAln (LIberal Sequence ALigNment): ./NCBI_blast -LisAln
+ NOTE: Lian (Legion Interfaces Analysis): ./namd_analysis 
+ NOTE: LiPav (Ligand information of Patent/Analog/Vendor/PDB): ./PubChem_convert 
+ NOTE: My sRMSD to cluster protein structures: ././protein_cluster
+ NOTE: My UDscore (Universal diversity score) to determine Library diversity: ./diversity_DScore
+ NOTE: My normalized mutation-rate to predict cancer driver/passenger genes: ./cluster_Pickmutation -length -cancer -col 3 human_uniprot.xls 
+
+WARNing: P00813(CHEMBL1910, ADA) have several Ki values from same cmpd CHEMBL1580 (from different assayID)
+NOTE: ./UniProt_get can get CHEMBL ID of a protein and other informations
+WARNing: CHEMBL id could be multiple meaning: same CHEMBLxxxx could be different for compound, assay, target, reference
+ 
+ttt
+  exit
+fi
+
+extension=`echo $input | awk '{n=split($1,a,".");printf(".%s",a[n])}'`
+infile=`echo $input | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".pdb"){print substr($1,1,l-1)}else{print $1}}'`
+infile=`echo $input | awk '{n=split($1,a,".");printf("%s",a[1]);for(i=2;i<n;i++){printf(".%s",a[i])}}'`
+#infile=`basename $input ${extension}`
+[ $doout -ne 1 ] && output=$infile'_.xls'
+
+#FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
+# Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
+temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/pdb_sdf_smi_mae_mol2_convert $ed/ChEMBL2name $ed/sdf2images .
+fi
+
+
+##############################################################################
+#Prepare/pre-processing newly downloaded Chembl data
+if [ $prepare -eq 1 ] ; then
+ echo "=> Auto-download and prepare/pre-processing newly downloaded Chembl data
+ WARNing: the following 5 files will be auto-downloaded together from ftp://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBL-RDF/latest/
+  chembl_25.0_activity.ttl.gz chembl_25.0_assay.ttl.gz chembl_25.0_molecule.ttl.gz chembl_25.0_target.ttl.gz chembl_25.0_targetcmpt.ttl.gz
+ You can delete all .ttl files later to save diskspace
+ Check the newest version (25.0) and updated date(2019/3) info at: $infourl
+" 
+ cd $base
+
+ webu='ftp://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBL-RDF/latest/'
+ nowv=`ls -lrst *.map.xls | tail -1 | awk '{split($NF,a,"_");printf("%s_%s",a[1],a[2])}'`  #check current version: chembl_25.0_targetcmpt.map.xls
+ echo "Current version in use is $nowv"
+ url=${urlbase}*_target.ttl.gz  #try to download one file target.ttl.gz to check website newest version
+ wget $url -t 3 -O $temp.gz >& $temp2   #-t 1  Only try once when failed
+  #WARNing: wget may have different downloads: sometimes -O is output .gz, sometimes is *_target.ttl.gz directly. Need code for the two cases
+ dfile=`grep saved $temp2 | tail -1 | awk '{split($_,a,"‘");split(a[2],b,"’");print b[1]}'`  #Output file named in $temp2
+ vfile=`grep $webu $temp2 | tail -1 | awk '{split($_,a,"'$webu'");split(a[2],b," ");split(b[1],c,"*");print c[1]}'` #.gz file in website 
+  #ftp://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBL-RDF/latest/chembl_25.0_target.ttl.gz
+  #file name downloaded: 2020-01-21 10:20:36 (151 KB/s) - ‘chembl_25.0_target.ttl.gz’ saved [526722]
+ echo "Current file downloaded from $vfile in website"
+ if [ "$vfile" == "" ] ; then
+  gunzip $dfile
+ else
+  mv $temp.gz $vfile
+  vfile2=`basename $vfile .gz`
+  rm -f $vfile2
+  gunzip $vfile
+  dfile=$vfile
+ fi
+ dfile=`basename $dfile .gz`
+ echo " Downloaded $url saved as $base$dfile"
+ er=`grep "ERROR" $temp2 | wc -l | awk '{print $1}'`
+ [ $er -gt 0 ] && echo "WARNing: Failed to download $url. Check website or download later"
+ webv=`echo $dfile | awk '{split($1,a,"_");printf("%s_%s",a[1],a[2])}'`
+ echo " Newest version in ChEMBL website is $webv"
+ if [ "$nowv" == "$webv" ] ; then
+  echo "=> WARNing: as no newer website ChEMBL data ($nowv), will NOT re-download ChEMBL data from website to save time"
+  ls -lrst $dfile
+  rm -f $temp* ; exit
+ fi
+
+ url=${urlbase}*_activity.ttl.gz
+ wget $url -t 3 -O $temp >& $temp2   #-t 1  Only try once when failed
+ dfile=`grep saved $temp | tail -1 | awk '{split($_,a,"‘");split(a[2],b,"’");print b[1]}'`
+ vfile=`grep $webu $temp2 | tail -1 | awk '{split($_,a,"'$webu'");split(a[2],b," ");split(b[1],c,"*");print c[1]}'` #.gz file in website 
+  #file name downloaded: 2020-01-21 10:20:36 (151 KB/s) - ‘chembl_25.0_target.ttl.gz’ saved [526722]
+ if [ "$vfile" == "" ] ; then
+  gunzip $dfile
+ else
+  mv $temp.gz $vfile
+  vfile2=`basename $vfile .gz`
+  rm -f $vfile2
+  gunzip $vfile
+  dfile=$vfile
+ fi
+ dfile=`basename $dfile .gz`
+ echo " Downloaded $url saved as $dfile"
+ er=`grep "ERROR" $temp2 | wc -l | awk '{print $1}'`
+ [ $er -gt 0 ] && echo "WARNing: Failed to download $url. Check website or download later"
+
+ url=${urlbase}*_assay.ttl.gz
+ wget $url -t 3 -O $temp >& $temp2   #-t 1  Only try once when failed
+ dfile=`grep saved $temp | tail -1 | awk '{split($_,a,"‘");split(a[2],b,"’");print b[1]}'`
+ vfile=`grep $webu $temp2 | tail -1 | awk '{split($_,a,"'$webu'");split(a[2],b," ");split(b[1],c,"*");print c[1]}'` #.gz file in website 
+  #file name downloaded: 2020-01-21 10:20:36 (151 KB/s) - ‘chembl_25.0_target.ttl.gz’ saved [526722]
+ if [ "$vfile" == "" ] ; then
+  gunzip $dfile
+ else
+  mv $temp.gz $vfile
+  vfile2=`basename $vfile .gz`
+  rm -f $vfile2
+  gunzip $vfile
+  dfile=$vfile
+ fi
+ dfile=`basename $dfile .gz`
+ echo " Downloaded $url saved as $dfile"
+ er=`grep "ERROR" $temp2 | wc -l | awk '{print $1}'`
+ [ $er -gt 0 ] && echo "WARNing: Failed to download $url. Check website or download later"
+
+ url=${urlbase}*_molecule.ttl.gz
+ wget $url -t 3 -O $temp >& $temp2   #-t 1  Only try once when failed
+ dfile=`grep saved $temp | tail -1 | awk '{split($_,a,"‘");split(a[2],b,"’");print b[1]}'`
+ vfile=`grep $webu $temp2 | tail -1 | awk '{split($_,a,"'$webu'");split(a[2],b," ");split(b[1],c,"*");print c[1]}'` #.gz file in website 
+  #file name downloaded: 2020-01-21 10:20:36 (151 KB/s) - ‘chembl_25.0_target.ttl.gz’ saved [526722]
+ if [ "$vfile" == "" ] ; then
+  gunzip $dfile
+ else
+  mv $temp.gz $vfile
+  vfile2=`basename $vfile .gz`
+  rm -f $vfile2
+  gunzip $vfile
+  dfile=$vfile
+ fi
+ dfile=`basename $dfile .gz`
+ echo " Downloaded $url saved as $dfile"
+ er=`grep "ERROR" $temp2 | wc -l | awk '{print $1}'`
+ [ $er -gt 0 ] && echo "WARNing: Failed to download $url. Check website or download later"
+
+ url=${urlbase}*_targetcmpt.ttl.gz
+ wget $url -t 3 -O $temp >& $temp2   #-t 1  Only try once when failed
+ dfile=`grep saved $temp | tail -1 | awk '{split($_,a,"‘");split(a[2],b,"’");print b[1]}'`
+ vfile=`grep $webu $temp2 | tail -1 | awk '{split($_,a,"'$webu'");split(a[2],b," ");split(b[1],c,"*");print c[1]}'` #.gz file in website 
+  #file name downloaded: 2020-01-21 10:20:36 (151 KB/s) - ‘chembl_25.0_target.ttl.gz’ saved [526722]
+ if [ "$vfile" == "" ] ; then
+  gunzip $dfile
+ else
+  mv $temp.gz $vfile
+  vfile2=`basename $vfile .gz`
+  rm -f $vfile2
+  gunzip $vfile
+  dfile=$vfile
+ fi
+ dfile=`basename $dfile .gz`
+ echo " Downloaded $url saved as $dfile"
+ er=`grep "ERROR" $temp2 | wc -l | awk '{print $1}'`
+ [ $er -gt 0 ] && echo "WARNing: Failed to download $url. Check website or download later"
+
+ #prepare.post-processing
+ echo "=> Preprocessing the downloaded data to generate mapping files as .map.xls" 
+ $0 -force -protein 1
+ $0 -force -target 1
+ $0 -force -assay 1
+ $0 -force -act 1
+ $0 -force -smi 1
+ echo "=> Now finished download the newest version $webv , you can delete the following .ttl to save space:"
+ ls -lrst *${webv}*.ttl
+ rm -f $temp* ; exit 
+fi
+
+##############################################################################
+#Generate mapping file for newly download CHEMBL data
+if [ "$map" != "" ] ; then 
+ file=`ls -lrst ${base}*_${map}.ttl | tail -1 | awk '{print $NF}'`  #Find newest downloaded _molecule.ttl
+ if [ "$file" == "" ] ; then
+  echo "Can NOT find downloaded ${base}*_${map}.ttl. Either re-download it, or use the previous extract mapping file ${base}*_${map}.map.xls"
+  ls -lrst ${base}*_${map}.map.xls
+  exit
+ fi
+ out=`echo $file | awk '{l=length($1)-3;a=substr($1,l,4);if(a==".ttl"){b=substr($1,1,l-1)}else{b=$1}}END{printf("%s.map.xls",b)}'` 
+
+ bypass=0
+ if [ $force -eq 0 ] && [ -s $out ] ; then
+  nc=`wc -l $out | awk '{print $1-1}'`
+  echo "WARNing: Using existing SMILES mapping file $out ($nc records extracted from $file)"
+  bypass=1
+ fi 
+
+#Generate file for compound CHEMBL id vs SMILES, output as chembl_25.0_molecule.map.xls
+#       cheminf:SIO_000300 "CC(C)NCC(O)COc1ccc(COCC2CC2)cc1" ;
+#        rdfs:label "CHEMBL6939 Canonical Smiles" .
+  if [ "$map" == "molecule" ] ; then  
+   if [ $bypass -eq 0 ] ; then
+   echo "Extract compound info from $file"
+   echo -e "CHEMBL_molecule_id\tCanonical_Smiles" > $out
+   awk '{if($1=="rdfs:label"&&$3=="Canonical"&&$4=="Smiles\""){
+    id=substr($2,2,99)
+    split(pre,a,"\"");smi=a[2]
+    if(smi!=""){printf("%s\t%s\n",id,smi)}
+   };pre=$_}' $file >> $out
+   echo "=> Output for compound CHEMBL id vs SMILES mapping file is $out"
+   fi #bypass
+   head -1 $out
+   nc=`wc -l $out | awk '{print $1-1}'`
+   echo " Total Chembl compounds (with 3,896 activity types) = $nc"
+  fi #$map == molecule
+
+### Genearte assay map : all records are ending as cco:Assay
+#chembl_assay:CHEMBL615160 a cco:Assay ;
+#        rdfs:label "CHEMBL615160" ;
+#        cco:chemblId "CHEMBL615160" ;
+#        dcterms:description "Effective concentration ast binding of radioligand [35S]GTP-gamma-S in CHO cells expressing human 5-hydroxytryptamine 1A receptor" ;
+#        cco:assayType "Functional" ;
+#        cco:assayCellType "CHO" ;
+#        cco:targetConfDesc "Homologous single protein target assigned" ;
+#        cco:targetConfScore "8"^^xsd:int ;
+#        cco:targetRelType "H" ;
+#        cco:targetRelDesc "Homologous protein target assigned" ;
+#        bao:BAO_0000205 bao:BAO_0000219 ;
+#        cco:hasTarget chembl_target:CHEMBL214 .
+#chembl_assay:CHEMBL615160 cco:hasActivity chembl_activity:CHEMBL_ACT_1148061 .
+#Output: CHEMBL_assay_id	TargetProtein	assayType	assayCellType	chembl_activityIDs
+  if [ "$map" == "assay" ] ; then  
+   echo "Extract assay info from $file"
+   if [ $bypass -eq 0 ] ; then
+   echo -e "CHEMBL_assay_id\tTargetProtein\tassayType\tassayCellType\tchembl_activityIDs" > $out
+   awk 'BEGIN{n=0}{k=NF-1
+    if(did==1){
+     if($1=="cco:assayType"){type=substr($2,2,length($2)-2)}
+     if($1=="cco:assayCellType"){cell=substr($2,2,length($2)-2)}  
+     if($1=="cco:hasTarget"){split($2,a,":");if(target=="na"){target=a[2]}else{target=sprintf("%s|%s",target,a[2])}}
+     if($2=="cco:hasActivity"){split($3,a,":");if(act==""){act=a[2]}else{act=sprintf("%s|%s",act,a[2])}}
+    }
+    if(substr($1,1,13)=="chembl_assay:"&&substr($k,1,4)=="cco:"){
+     n++
+     #if(n>1){printf("%s\t%s\t%s\t%s\t%s\t%s\n",id,target,type,cell,act,tag)}
+     if(n>1){printf("%s\t%s\t%s\t%s\t%s\n",id,target,type,cell,act)}
+     id=substr($1,14,99);target="na";type="na";cell="na";act=""
+     tag=substr($k,5,99) #check if other than cco:Assay. All records are cco:Assay from check
+     did=1
+    }
+   }END{if(n>0){
+    #printf("%s\t%s\t%s\t%s\t%s\t%s\n",id,target,type,cell,act,tag)
+    printf("%s\t%s\t%s\t%s\t%s\n",id,target,type,cell,act)
+   }}' $file >> $out
+   fi #bypass
+   echo "=> Output for assay CHEMBL id vs target, activity mapping file is $out"
+   head -1 $out
+   nc=`wc -l $out | awk '{print $1-1}'`
+   np=`awk '{print $2}' $out | sort | uniq | wc -l | awk '{print $1-1}'`
+   echo " Total uniq Chembl assays = $nc for $np targets (22 types of singleProtein/Complex/cell/tissue/organism/etc.)"
+  fi #assay
+
+#Generate activity
+#chembl_activity:CHEMBL_ACT_99399 a cco:Activity ;
+#        rdfs:label "CHEMBL_ACT_99399" ;
+#        cco:chemblId "CHEMBL_ACT_99399" ;
+#        cco:type "IC50" ;
+#        cco:relation "=" ;
+#        cco:value "140.0"^^xsd:double ;
+#        cco:units "uM" ;
+#        cco:standardType "IC50" ;
+#        cco:standardRelation "=" ;
+#        cco:standardValue "140000.0"^^xsd:double ;
+#        cco:standardUnits "nM" ;
+#        cco:hasUnitOnto uo:UO_0000065 ;
+#        cco:hasQUDT ops:Nanomolar ;
+#        cco:hasMolecule chembl_molecule:CHEMBL69297 .
+#Output: CHEMBL_cmpd_id	ActivityID	Type	Relation	Values	Unit
+  if [ "$map" == "activity" ] ; then
+   echo "Extract activity info from $file"
+   if [ $bypass -eq 0 ] ; then
+   echo -e "CHEMBL_cmpd_id\tActivityID\tType\tRelation\tValues\tUnit" > $out
+   awk 'BEGIN{n=0}{k=NF-1
+    if(did==1){
+     if($1=="cco:type"){type=substr($2,2,length($2)-2)}
+     if($1=="cco:relation"){relation=substr($2,2,length($2)-2)}  
+     if($1=="cco:value"){split($2,a,"\"");value=a[2]}
+     if($1=="cco:standardUnits"){unit=substr($2,2,length($2)-2)}  
+     if($1=="cco:hasMolecule"){split($2,a,":");if(cmpd=="na"){cmpd=a[2]}else{cmpd=sprintf("%s|%s",cmpd,a[2])}}
+    }
+    if(substr($1,1,16)=="chembl_activity:"&&$k=="cco:Activity"){
+     n++
+     if(n>1){printf("%s\t%s\t%s\t%s\t%s\t%s\n",cmpd,id,type,relation,value,unit)}
+     id=substr($1,17,99);cmpd="na";type="na";relation="na";value="na";unit="na"
+     did=1
+    }
+   }END{if(n>0){
+    printf("%s\t%s\t%s\t%s\t%s\t%s\n",cmpd,id,type,relation,value,unit)
+   }}' $file >> $out
+   fi #bypass
+   echo "=> Output for activity CHEMBL id vs compound, IC50 mapping file is $out"
+   head -1 $out
+   nc=`wc -l $out | awk '{print $1-1}'`
+   if [ $less -eq 0 ] ; then
+    np=`awk '{print $1}' $out | sort | uniq | wc -l | awk '{print $1-1}'`
+   fi
+   n50=`grep IC50 $out | awk '{if($3=="IC50"||$3=="pIC50"){n++}}END{print n}'`
+   nki=`grep -i ki $out | awk '{if(toupper($3)=="KI"||toupper($3)=="PKI"){n++}}END{print n}'`
+   nkd=`grep -i kd $out | awk '{if(toupper($3)=="KD"||toupper($3)=="PKD"){n++}}END{print n}'`
+   nin=`grep -i inhibition $out | awk '{if(tolower($3)=="inhibition"){n++}}END{print n}'`
+   echo " Total Chembl activity = $nc for $np compounds with $n50 IC50/pIC50, $nki Ki/pKi , $nkd Kd/pKd and $nin Inhibition(%)"
+   awk '{if(NR>1){if(!a[$3]){n++;a[$3]=$3;c[$3]=1}else{c[$3]++}}}END{for(x in a){printf("%s\t%s\n",a[x],c[x])}}' $out > $temp3
+   ntp=`wc -l $temp3 | awk '{print $1}'`
+   echo -n " Total $ntp activity types:"
+   sort -nr -k 2 $temp3 | awk '{printf(" %s(%s)",$1,$2)}END{printf("\n")}'   
+  fi #activity
+
+#Generate targets
+#chembl_25.0_target.ttl :
+#chembl_target:CHEMBL2244 a cco:SingleProtein ;
+#        cco:chemblId "CHEMBL2244" ;
+#        rdfs:label "Estrogen sulfotransferase" ;
+#        dcterms:title "Estrogen sulfotransferase" ;
+#        cco:targetType "SINGLE PROTEIN" ;
+#        cco:taxonomy <http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=9913> , <http://identifiers.org/taxonomy/9913> ;
+#        cco:organismName "Bos taurus" ;
+#        cco:hasTargetComponent chembl_target_cmpt:CHEMBL_TC_585 .
+#chembl_target_cmpt:CHEMBL_TC_585 cco:hasTarget chembl_target:CHEMBL2244 .
+  if [ "$map" == "target" ] ; then
+   echo "Extract target (singleProtein, proteinCmplx, tissue, cell, organism etc) info from $file"
+   if [ $bypass -eq 0 ] ; then   
+   echo -e "Target_id\tProteins\tType\tOrganism" > $out
+   awk 'BEGIN{n=0}{k=NF-1
+    if(did==1){
+     if($1=="cco:organismName"){split($_,a,"\"");j=split(a[2],b," ");org=b[1];for(i=2;i<=j;i++){org=sprintf("%s_%s",org,b[i])}}
+     if($1=="cco:hasTargetComponent"){split($2,a,":");if(cmp=="na"){cmp=a[2]}else{cmp=sprintf("%s|%s",cmp,a[2])}}
+    }
+    if(substr($1,1,14)=="chembl_target:"&&substr($k,1,4)=="cco:"){
+     n++
+     if(n>1){printf("%s\t%s\t%s\t%s\n",id,cmp,type,org)}
+     id=substr($1,15,99);org="na";cmp="na"
+     type=substr($k,5,99)
+     did=1
+    }
+   }END{if(n>0){
+    printf("%s\t%s\t%s\t%s\n",id,cmp,type,org)
+   }}' $file >> $out
+   fi #bypass
+   echo "=> Output for Target CHEMBL id vs Proteins, tissue, organism mapping file is $out"
+   head -1 $out
+   nc=`wc -l $out | awk '{print $1-1}'`
+   ns=`grep 'SingleProtein' $out | sort | uniq | wc -l | awk '{print $1}'`
+   nce=`grep 'CellLineTarget' $out | sort | uniq | wc -l | awk '{print $1}'`
+   no=`grep 'Organism' $out | sort | uniq | wc -l | awk '{print $1}'`
+   nt=`grep 'Tissue' $out | sort | uniq | wc -l | awk '{print $1}'`
+   echo " Total Targets = $nc for $ns SingleProtein , $nce cells, $no Organism, $nt tissues "
+   awk '{if(NR>1){if(!a[$3]){n++;a[$3]=$3;c[$3]=1}else{c[$3]++}}}END{for(x in a){printf("%s\t%s\n",a[x],c[x])}}' $out > $temp3
+   ntp=`wc -l $temp3 | awk '{print $1}'`
+   echo -n " Total $ntp target types:"
+   sort -nr -k 2 $temp3 | awk '{printf(" %s(%s)",$1,$2)}END{printf("\n")}'
+  fi #target
+
+#Generate protein/RNA (target component) info : all data only has _TC_ id, no _BC_ id (from chembl_25.0_biocmpt.ttl)
+#chembl_target_cmpt:CHEMBL_TC_47 a cco:TargetComponent ;
+#        rdfs:label "CHEMBL_TC_47" ;
+#        cco:chemblId "CHEMBL_TC_47" ;
+#        cco:componentType "PROTEIN" ;
+#        dcterms:description "Gamma-aminobutyric acid receptor subunit beta-2" ;
+#        cco:taxonomy <http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=9606> , <http://identifiers.org/taxonomy/9606> .
+#uniprot:P47870 a cco:UniprotRef ;
+#        rdfs:label "CHEMBL_TC_47 UniProt Reference: P47870" .
+#<http://identifiers.org/pdb/3IAR> a cco:ProteinDataBankRef ;
+#        rdfs:label "CHEMBL_TC_223 PDBe Reference: 3IAR" .
+#chembl_target_cmpt:CHEMBL_TC_223 skos:altLabel "ADA" , "ADA1" , "Adenosine aminohydrolase" , "Adenosine deaminase" ;
+#        cco:targetCmptXref <http://identifiers.org/ensembl/ENSG00000196839> .
+#<http://identifiers.org/ensembl/ENSG00000196839> a cco:EnsemblGeneRef ;
+#        rdfs:label "CHEMBL_TC_223 ENSEMBL Reference: ENSG00000196839" .
+#chembl_target_cmpt:CHEMBL_TC_223 cco:proteinSequence "MAQTPAFDKPKVELHVHLDGSIKPETILYYGRRRGIALPANTAEGLLNVIGMDKPLTLPDFLAKFDYYMPAIAGCREAIKRIAYEFVEMKAKEGVVYVEVRYSPHLLANSKVEPIPWNQAEGDLTPDEVVALVGQGLQEGERDFGVKARSILCCMRHQPNWSPKVVELCKKYQQQTVVAIDLAGDETIPGSSLLPGHVQAYQEAVKSGIHRTVHAGEVGSAEVVKEAVDILKTERLGHGYHTLEDQALYNRLRQENMHFEICPWSSYLTGAWKPDTEHAVIRLKNDQANYSLNTDDPLIFKSTLDTDYQMTKRDMGFTEEEFKRLNINAAKSSFLPEDEKRELLDLLYKAYGMPPSASAGQNL" ;
+#        skos:altLabel "1230" ;
+#        cco:targetCmptXref <http://identifiers.org/ec-code/3.5.4.4> .
+  if [ "$map" == "targetcmpt" ] ; then
+   echo "Extract protein info from $file . saved in $out"
+   if [ $bypass -eq 0 ] ; then   
+   echo -e "Component_id\tType\tUniProt\tPDBs\tNames" > $out
+   awk 'BEGIN{n=0; 
+     #outfile="'$temp2'"; printf("") > outfile
+    }{k=NF-1;if(k<1){k=1}
+    if(did==1){
+     if($1=="cco:componentType"){split($_,a,"\"");j=split(a[2],b," ");type=b[1];for(i=2;i<=j;i++){type=sprintf("%s_%s",type,b[i])}}
+     if($1=="rdfs:label"){
+      if($3=="UniProt"&&$4=="Reference:"){u=substr($5,1,length($5)-1);if(uniprot=="na"){uniprot=u}else{uniprot=sprintf("%s|%s",uniprot,u)}}
+      if($3=="PDBe"&&$4=="Reference:"){u=tolower(substr($5,1,length($5)-1));if(pdb=="na"){pdb=u}else{pdb=sprintf("%s|%s",pdb,u)}}
+     }
+     if($2=="skos:altLabel"){  #CHEMBL_TC_223 has two skos:altLabel, the last one is UniprotID
+      split($_,b,"\"");t=split(b[2],c," ");if(name=="na"){name=c[1]}else{name=sprintf("%s|%s",name,c[1])};
+      for(i=2;i<=t;i++){name=sprintf("%s_%s",name,c[i])}  #first name ADA
+      t=split($_,a,","); for(i=2;i<=t;i++){split(a[i],b,"\"");p=split(b[2],c," ");v=c[1];for(j=2;j<=p;j++){v=sprintf("%s_%s",v,c[j])};
+       name=sprintf("%s|%s",name,v)}  #other names     
+     }
+    }
+    if(substr($1,1,19)=="chembl_target_cmpt:"&&$k=="cco:TargetComponent"){
+     n++
+     if(n>1){printf("%s\t%s\t%s\t%s\t%s\n",id,type,uniprot,pdb,name)}
+     id=substr($1,20,99);type="na";uniprot="na";pdb="na";name="na"
+     #tag=substr($k,5,99)
+     #if(tag!="TargetComponent"){
+     # print $_ >> outfile
+     #}
+     did=1
+    }
+   }END{if(n>0){
+    printf("%s\t%s\t%s\t%s\t%s\n",id,type,uniprot,pdb,name)
+   }}' $file >>  $out
+   fi #bypass
+   echo "=> Output for TargetComponent (Protein/RNA) CHEMBL id vs UniprotID, PDBs, names mapping file is $out"
+   head -1 $out
+   nc=`wc -l $out | awk '{print $1-1}'`
+   np=`grep 'PROTEIN' $out | awk '{if($2=="PROTEIN"){print $_}}' | sort | uniq | wc -l | awk '{print $1}'`
+   echo " Total Target Components = $nc with $np as proteins (one protein only has one UniprotID)"
+   awk '{if(NR>1){if(!a[$2]){n++;a[$2]=$2;c[$2]=1}else{c[$2]++}}}END{for(x in a){printf("%s\t%s\n",a[x],c[x])}}' $out > $temp3
+   ntp=`wc -l $temp3 | awk '{print $1}'`
+   echo -n " Total $ntp targetComponent types:"
+   sort -nr -k 2 $temp3 | awk '{printf(" %s(%s)",$1,$2)}END{printf("\n")}'
+   nerr=0
+   [ -s $temp2 ] && nerr=`wc -l $temp2 | awk '{print $1}'`  #Check if other tags
+   if [ $nerr -gt 0 ] ; then
+    echo "Fatal $nerr WARNing: there are tags NOT as cco:TargetComponent. Go debug code to include these:"
+    head -10 $temp2
+   fi
+  fi #targetcmpt
+ 
+
+ echo " 
+To download and prepare newest Chembl 5 data files, run: $0 -prepare 1
+Find chembl website: 
+ for a compound as ${cmpdurl}CmpdChemblID
+ for an assay as ${assayurl}AssayChemblID
+ for a target (protein/cell/organsim/tissue) as ${targeturl}TargetChemblID
+"
+ 
+ rm -f $temp* ; exit
+fi #map -gt 0
+
+
+#Use lastest Chembl download files
+cmpt=`ls -lrst ${base}*_targetcmpt.map.xls | tail -1 | awk '{print $NF}'`
+target=`ls -lrst ${base}*_target.map.xls | tail -1 | awk '{print $NF}'`
+assay=`ls -lrst ${base}*_assay.map.xls | tail -1 | awk '{print $NF}'`
+act=`ls -lrst ${base}*_activity.map.xls | tail -1 | awk '{print $NF}'`
+cmpd=`ls -lrst ${base}*_molecule.map.xls | tail -1 | awk '{print $NF}'`
+if [ $less -eq 0 ] ; then
+ echo "Will use the following lastest 2020/1 version 25 CHEMBL prepared data to extract CHEMBL info for a protein or compound:
+ $cmpt
+ $target
+ $assay
+ $act
+ $cmpd
+To download and prepare newest Chembl data files, run: $0 -prepare 1
+"
+fi #less
+##########################################
+# Find Chembl info for a protein 
+#############################################
+if [ $protein -eq 1 ] ; then
+ inputo=$input
+ input=`echo $input | awk '{printf("%s",$1);for(i=2;i<=NF;i++){printf("_%s",$i)}}'`  #change protein names by adding _
+ if [ $doout -ne 1 ] ; then
+  output=$input'_chembl_inh'$single'.xls'
+ fi
+ sdfout=$input'_chembl_inh'$single'.png'
+ osdf=$input'_chembl_inh'$single'.sdf'
+
+ if [ $chembl -eq 0 ] ; then
+#Component_id	Type	UniProt	PDBs	Names
+#CHEMBL_TC_47	PROTEIN	P47870	na	GABA(A)_receptor_subunit_beta-2|GABRB2|Gamma-aminobutyric_acid_receptor_subunit_beta-2|P47870
+ #[ $uni -eq 1 ] && uni=`echo $input | awk '{if(length($1)!=6){print 1}else{print 2}}'`  #In case UniprotID is not 6-char, take it as protein name 
+ if [ $uni -eq 1 ] ; then  #for UniprotID
+  got=`grep "$input" $cmpt | awk '{if($3=="'$input'"){print $_}}'`
+  cmptid=`echo $got | awk '{print $1}'`  
+ else #For protein name
+  got=`grep -i "$input" $cmpt | awk '{k=split($5,a,"|");for(i=1;i<=k;i++){if(tolower(a[i])==tolower("'$input'")){print $_}}}'`
+  cmptid=`echo $got | awk '{print $1}'` 
+ fi
+ if [ "$cmptid" == "" ] ; then  #Auto-check if it is UniprotID or protein name
+  echo "No CHEMBL componentID (protein ID) found for $inputo : No chembl record for it! Or try to search by another protein name or UniprotID"
+  got=`grep "$input" $cmpt | awk '{if($3=="'$input'"){print $_}}'` 
+  if [ "$got" == "" ] ; then
+   got=`grep -i "$input" $cmpt | awk '{k=split($5,a,"|");for(i=1;i<=k;i++){if(tolower(a[i])==tolower("'$input'")){print $_}}}'`
+  fi
+  cmptid=`echo $got | awk '{print $1}'`
+  if [ "$got" == "" ] ; then  
+   echo "No CHEMBL componentID (proteinID) found for $inputo : No chembl record for it! Or try to search by another protein name or UniprotID"
+   rm -f $temp* ; exit
+  fi
+ fi
+ #if [ $less -eq 0 ] ; then
+  echo "=> PDBs and ComponentID ($cmptid) for $inputo : Component_id|Type|UniProt|PDBs|Names"
+  echo " "$got
+ #fi
+ npdbs=`echo $got | awk '{if($4=="na"){s=0}else{s=split($4,a,"|")}}END{print s}'`
+ if [ $npdbs -gt 0 ] ; then
+  echo -n "=> $npdbs PDBs for ChEMBL $cmptid as $inputo is: " 
+  echo $got | awk '{print $4}'
+ else
+  echo "=> No PDBs for $inputo"
+ fi
+ pname=`echo $got | awk '{print $NF}'`
+ grep $cmptid $target | awk '{if($2=="'$cmptid'"){print $_}}' > $temp
+ else #chembl
+ #Input is target Chembl ID
+  [ $less -eq 0 ] && echo "Input is target/protein CHEMBL ID as $input"
+  grep "$input" $target | awk -v input="$input" '{if($1==input){print $_}}' > $temp
+ fi #chembl
+
+#Target_id       Proteins        Type    Organism
+#CHEMBL2242      CHEMBL_TC_583   SingleProtein   Homo_sapiens
+ nt=`wc -l $temp | awk '{print $1}'`
+ nall=$nt
+ nsingle=`grep SingleProtein $temp | wc -l | awk '{print $1}'`
+ if [ $less -eq 0 ] ; then
+  echo "=> $inputo has $nt targetID: should only look for SingleProtein" 
+  cat $temp  
+ fi
+ if [ $nt -eq 0 ] ; then
+  echo "No CHEMBL targetID (protein/cell/tissue) found for $inputo : No chembl record for it!"
+  rm -f $temp* ; exit
+ fi
+
+ if [ $single -eq 1 ] ; then
+  [ $less -eq 0 ] && echo " Only output targetID as SingleProtein : inhibitors must target single protein $inputo . Otherwise: $0 -all $inputo"
+  grep SingleProtein $temp > $temp6
+  mv $temp6 $temp
+  nt=`wc -l $temp | awk '{print $1}'`
+ else
+  echo " Output targetID as any 22 targets as: SingleProtein, Complex, cell/tissue/organism (run $0 -target 1)" 
+ fi
+ 
+ #loop for each targetID: CHEMBL2242      CHEMBL_TC_583   SingleProtein   Homo_sapiens
+ if [ $force -eq 0 ] && [ -s $output ] ; then
+  echo "WARNing: use exisitng inhitors output $output. Otherwise: $0 -force $oldline"
+  awk '{if(NF==0){exit};print $_}' $output > $temp5
+  awk '{if(s==1&&NF>0){print $_};if(NF==0){s=1}}' $output > $temp6
+  nuniq=`wc -l $temp5 | awk '{print $1-1}'`
+  totna=`wc -l $temp6 | awk '{print $1-1}'`
+  tid=`tail -1 $temp5 | awk '{print $2}'`
+  tidsingle=`awk '{s=$2;if($3=="SingleProtein"){exit}}END{print s}' $temp5`
+  awk '{if(NR>1){print $_}}' $temp5 > $temp6
+ else #force
+ echo -n > $temp6.ori
+ totna=0;tidsingle=""
+ for (( i=1 ; i<=$nt ; i++ )) ; do
+  tid=`head -$i $temp | tail -1 | awk '{print $1}'` #targetID
+  typ=`head -$i $temp | tail -1 | awk '{print $3}'` #targetType
+  [ "$typ" == "SingleProtein" ] && tidsingle=$tid' '$tidsingle
+  grep $tid $assay | awk '{if($2=="'$tid'"){n=split($5,a,"|");for(i=1;i<=n;i++){print a[i],$1}}}' > $temp2  #$1 is assayID
+  na=`wc -l $temp2 | awk '{print $1}'`
+  totna=`expr $totna + $na`
+  if [ $less -eq 0 ] ; then
+   [ $nt -gt 1 ] && echo " $i/$nt target $tid ($typ) has $na activities/inhibitors"
+  fi
+  for (( j=1; j<=$na ; j++ )) ; do  #loop for each cmpd
+   aid=`head -$j $temp2 | tail -1 | awk '{print $1}'` #activityID
+   assid=`head -$j $temp2 | tail -1 | awk '{print $2}'` #assayID
+   inh=`grep $aid $act | awk '{if($2=="'$aid'"){print $_}}'`  #CHEMBL69297	CHEMBL_ACT_99399	IC50	=	140.0	nM
+   cid=`echo $inh | awk '{print $1}'`  #cmpd ID
+   smil=`grep $cid $cmpd | awk '{if($1=="'$cid'"){print $2}}'`
+   echo $inh | awk '{
+    v=$5; n=split(v,a,"E"); if(n>0){v=a[1]*10^a[2]}  #convert 1.0E-10 to 0.000000001 
+    printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n","'$input'","'$tid'","'$typ'","'$cid'",$3,$4,v,$6,"'$assid'","'$pname'","'$smil'")
+   }' >> $temp6.ori
+  done 
+ done #i
+ #merge same cmpdID : P00813(CHEMBL1910) have several Ki values from same cmpd CHEMBL1580 (from different assayID) and keep the smallest value
+ awk '{if(!a[$4]){
+   a[$4]=$4;all[$4]=$_;u[$4]=$8;v[$4]=$7
+  }else{
+   if($7<v[$4]&&$7!=0){all[$4]=$_;u[$4]=$8;v[$4]=$7}  #Found smaller none-zero value (no count of unit u[] yet)
+  }
+ }END{for(x in a){print all[x]}}' $temp6.ori > $temp5
+ #sort inhibitor values
+ awk '{n++;a[n]=$_;u[n]=$8;b[n]=strtonum($7)
+   #v=strtonum($7); b[n]=v
+   #t=split(v,d,"e"); if(t>1){v=d[1]*10^d[2]; print "hahaha",v,d[1],d[2]};b[n]=v
+  }END{
+  for(i=1;i<n;i++){
+   for(j=i+1;j<=n;j++){
+    if(b[i]>b[j]){
+     x=a[i];a[i]=a[j];a[j]=x
+     y=b[i];b[i]=b[j];b[j]=y
+    }
+   }
+  }
+  for(i=1;i<=n;i++){  #print none-zero value first as b[i]=0 cannot sort for unknown reason
+   if(b[i]!=0){
+    print a[i]
+   }
+  }
+  for(i=1;i<=n;i++){
+   if(b[i]==0){
+    print a[i]
+   }
+  }
+ }' $temp5 > $temp6
+ nuniq=`wc -l $temp6 | awk '{print $1}'`
+ [ "$tidsingle" == "" ] && tidsingle=$tid
+ echo -e "Protein\tTargetID\tTargetType\tCompoundID\tType\tRelation\tValue\tUnit\tAssayID\tProteinNames\tSMILES" > $output
+ cat $temp6 >> $output
+ echo "" >> $output
+ echo "" >> $output
+ echo "All inhibitors (Could duplicated inhibitors from different assays):" >> $output
+ cat $temp6.ori >> $output
+ fi #force 
+
+ echo "=> $inputo has total uniq $nuniq (from $totna) inhibitors from $nt targets (tatal targets=$nall ; SingleProtein=$nsingle)"
+ echo "=>Output of ${nuniq} uniq inhibitors (sorted by IC50/Ki/Kd/etc value col#7, appended w/ all inhibitors) saved in $output"
+ echo "  SDF (may put in LiVS for reference) saved in $osdf"
+ awk '{if($7>0){printf("%s\t%s\t%s\t%s\t%s\t%s\n",$5,$6,$7,$8,$4,$2)}}' $output | head -$distop   #ignore negative value
+ awk '{if(NR>1){printf("%s\t%s_%s%s%s%s\n",$NF,$4,$5,$6,$7,$8)};if(NF<3){exit}}' $output > $temp.smi
+ ./pdb_sdf_smi_mae_mol2_convert $temp.smi $osdf > $temp
+ if [ $less -eq 0 ] ; then
+  echo "
+ Find inhibitors for target at chembl website: ${targeturl}$tidsingle
+ Find inhibitor info or sdf, run: ./ChEMBL2name -head -col 4 -out A.xls -outsdf A.sdf $output                               
+"
+ fi
+ if [ $totna -eq 0 ] ; then
+  echo "No CHEMBL activity of compounds found for $inputo"
+  rm -f $output
+ fi
+ if [ $nall -gt 1 ] ; then
+  echo "WARNing: there are $nall targetID(protein/cell/tissue/etc) for $inputo. $nsingle target as SingleProtein"
+ fi
+ if [ $nsingle -gt 1 ] ; then
+  echo "WARNing: there are $nsingle targetIDs as SingleProtein for $inputo"
+ fi
+ if [ $nsingle -le 0 ] ; then
+  echo "Fatal Warning: there is NO SingleProtein target for $inputo. Inhibitors NOT for single protein $inputo"
+ fi
+
+ if [ $nuniq -gt 0 ] && [ $display -eq 1 ] ; then
+  [ "$cluster" != "" ] && rm $sdfout
+  ./sdf2images $fforce $cluster -smi -nodup -nosort -tcol 5 -vcol 7 -ucol 8 -nohead -scol 11 -namecol 4 -out3 $sdfout $temp6 >& $temp
+  [ "$cluster" != "" ] && cat $temp
+ fi
+
+ rm -f $temp* ; exit
+fi #protein
+
+
+
+if [ "$temp" == "" ] ; then
+ echo "FATAL error: temp files are NOT defined: all files in folder could be erased!!! Rewrite $0 script";exit
+fi
+rm -f $temp* $temp2* $temp3* $temp4* $temp5* $temp6* ; exit  #Do NOT use rm -rf will may delete subfolders

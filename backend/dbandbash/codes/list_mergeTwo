@@ -1,0 +1,239 @@
+#!/bin/sh
+
+starts=`date +%s`
+thisfile=$0
+
+removedup=0
+keepo=0
+keepscore=1 #=1:  only GScore (col 4) will be at output for rept. Other terms will be removed
+keepo1=0
+header=0
+fill1=''
+fill2=''
+oldline=$*   #all argvs
+
+if [ -n "$1" ] ; then
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'`  #check if first input is -XXX
+ while [ $aaa == "-" ] ; do
+
+if [ "$1" == "-fill1" ] ; then
+ fill1="$2"
+ shift 2
+fi
+
+if [ "$1" == "-fill2" ] ; then
+ fill2="$2"
+ shift 2
+fi
+ 
+if [ "$1" == "-removedup" ] ; then
+ removedup=1
+ echo "Duplicate will be removed"
+ shift
+fi
+
+if [ "$1" == "-keepo" ] ; then
+ keepo=1
+ echo "Orphan records only found in anyone of the two lists will be kept"
+ shift
+fi
+
+if [ "$1" == "-keepo1" ] ; then
+ keepo1=1
+ echo "Only keep Orphan records of first file/list"
+ shift
+fi
+
+if [ "$1" == "-keepAll" ] ; then
+ keepscore=0
+ echo "All terms in Glide rept will be kept"
+ shift
+fi
+
+if [ "$1" == "-header" ] ; then
+ header=$2
+ echo "Headers of first $header rows will be merged and kept"
+ shift 2
+fi
+
+ aaa=`echo $1 | awk '{print substr($1,1,1)}'` 
+ done
+fi
+fletter=`echo $1 | awk '{if(substr($1,1,1)=="-"){print 1}else{print 0}}'`
+if [ $fletter -eq 1 ] ; then
+  echo "Fatal error! Argument $1 has - as preceding letter which is unrecoginized and forbidden for safety case!"
+  exit
+fi
+
+
+if [ -n "$1" ] ; then
+  input=$1
+  col=$2
+  input2=$3
+  col2=$4
+  output=$5
+else
+cat << ttt
+   Merge two lists into one list, by checking/remove duplicate CmpdID in col1 and col2
+      based on the same value of col1 in list1 and col2 in list2
+      Input can be Glide docking rept: col1/col2 will auto-change to 2
+        When keepscore=1 [default]: only GScore will be at output
+      Output is the whole fields of list1 and list2
+      -removedup : Duplicate record will be removed for input lists
+      -keepo : Orphan records only found in anyone of the two lists will be kept
+      -keepo1 : Only keep orphan records in First file
+       -fill1 "Fillings" : Fillings String to append orphan records in First file. e.g. -fill1 " - - - - "
+       -fill2 "Fillings" : Fillings String to prefix orphan records in 2nd file.
+      -keepAll : All terms in Glide rept will be kept
+      -header HeaderLines : First HeaderLines of both files will be take as headers and will be kept and merged. [$header]
+      The two list can have headers if they share the same header name on the value col
+     Line started with # will be treated as comment line and discarded
+
+   Usage [-removedup] [-keepo] [-keepAll] List1 Col1 List2 Col2 Output
+
+    $0 -keepo -fill1 " - - - - " -fill2 " - - - - " -header 1 N1079-1.QlogP 1 N1079-1.map 1 OutputName    
+      #keep orphan records of both lists. Merge and keep header lines. Fill empty records with " - - - - " for both orphan records
+    $0 -keepo1 ...
+      #Only keep orphan records in first file
+    $0 -removedup a.rept 2 b.rept 2 a_b.rept 
+    $0 -keepo1 -header 1 ODL_2525.xls.ori 6 ~/database/NCI_CBIS.txt 1 ODL_2525.xls
+       #Add CAS/CBISid ID to ODL_2525 which only has NSC# in Library/
+
+ttt
+  exit
+fi
+
+thispid=$$
+temp=$thisfile'_'$thispid'.tmp'  #temp file required by DVS
+temp2=$temp'2'
+temp3=$temp'3'
+temp4=$temp'4'
+
+if [ ! -s $input ] ; then
+ echo "Fatal error @$0 $oldline : No $input exitsts" 
+ exit
+fi
+
+if [ ! -s $input2 ] ; then
+ echo "Fatal error @$0 $oldline : No $input2 exitsts" 
+ exit
+fi
+
+
+#Check root folder: scalemp1=p-gpu1; p-ngs=hpc
+ed='/home/holi/database/pipeline_script/'
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My old computer
+drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@scalemp1
+drd='/isi-dcnl/flower_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-ngs2
+drd='/isi-flower/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #holi@p-gpu1
+drd='/net/isi-dcnl/ifs/user_data/hongzhi/database/pipeline_script/'; [ -d $drd ] && ed=$drd ##holi@hpc-access1.coh.org
+drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
+
+thisfolder=`pwd`; thisfolder=$thisfolder'/'
+if [ $thisfolder != $ed ] ; then
+ cp -f $ed/lists_remove_duplicate  .
+fi
+
+isrept=`cat $input | awk 'BEGIN{is=0}{if($1=="===="){is=1}}END{print is}' `
+
+echo Merge two list files $input $input2 into one list file based on name in $col and $col2 cols
+[ $keepo -eq 1 ] && echo "Will also keep orphan records" 
+
+isrept=`cat $input | awk 'BEGIN{is=0}{if($1=="===="){is=1}}END{print is}' `
+if [ $isrept -eq 1 ] ; then
+ echo First $input is rept file from Glide
+ if [ $keepscore -eq 1 ] ; then
+  echo Only Gscore in col 4 and Rank in col 1 will be output
+  cat $input | awk 'BEGIN{is=0}{if(is==1){if($1==""){exit}else{printf("%s\t%s\t%s\n", $1, $2, $4)}};if($1=="===="){is=1}}' > $temp
+ else 
+  cat $input | awk 'BEGIN{is=0}{if(is==1){if($1==""){exit}else{print $_}};if($1=="===="){is=1}}' > $temp
+ fi
+ col=2
+else
+  cp $input $temp
+fi
+
+isrept2=`cat $input2 | awk 'BEGIN{is=0}{if($1=="===="){is=1}}END{print is}' `
+if [ $isrept2 -eq 1 ] ; then
+  echo $input2 is rept file from Glide
+  if [ $keepscore -eq 1 ] ; then
+   echo Only Gscore in col 4 and Rank in col 1 will be output
+   cat $input2 | awk 'BEGIN{is=0}{if(is==1){if($1==""){exit}else{printf("%s\t%s\t%s\n",$1, $2, $4)}};if($1=="===="){is=1}}' > $temp2
+  else
+   cat $input2 | awk 'BEGIN{is=0}{if(is==1){if($1==""){exit}else{print $_}};if($1=="===="){is=1}}' > $temp2
+  fi
+  col2=2
+else
+  cp $input2 $temp2
+fi
+
+n1=`wc -l $temp | awk '{print $1}'`
+n2=`wc -l $temp2 | awk '{print $1}'`
+n1r=$n1
+n2r=$n2
+
+if [ $removedup -eq 1 ] ; then
+ echo "Remove duplicate records"
+ ./lists_remove_duplicate $temp $col $temp3
+ n1r=`wc -l $temp3 | awk '{print $1}'`
+ echo "$n1r records left for $n1 records in $input"
+ mv $temp3 $temp
+
+ ./lists_remove_duplicate $temp2 $col2 $temp3
+ n2r=`wc -l $temp3 | awk '{print $1}'`
+ echo "$n2r records left for $n2 records in $input2"
+ mv $temp3 $temp2
+fi
+
+
+ cat $temp | awk -v fill1="$fill1" -v fill2="$fill2" 'BEGIN{
+  keepo='$keepo'; keepo1='$keepo1';header='$header'
+  file="'$temp2'"
+  col='$col';col2='$col2';
+  nrec=-1*header
+  while ((getline line < file) > 0) {
+   if(substr(line,1,1)!="#"){
+    nrec++
+    nf=split(line,d," ")
+    all[nrec]=line
+    a[nrec]=d[col2]
+    did[nrec]=0
+   }
+  }
+  close(file)
+ }
+ {
+ if(NR>header){ 
+  if(substr($1,1,1)!="#") {
+   doit=0
+   for(i=1;i<=nrec;i++) {
+    if($col==a[i]){ printf("%s\t%s\n",$_,all[i]);doit=1;did[i]=1;break}
+   }
+   if(keepo==1 || keepo1==1) {   #Print out Orphan records for first file
+    if(doit==0){print $_,fill1}
+   }
+  }   
+ }else{  #Print headers
+  hhh=-1*header+NR
+  printf("%s\t%s\n",$_,all[hhh])
+ }
+ }
+ END{
+  if(keepo==1) {   #Print out Orphan records for 2nd file as "2nd Record"
+   for(i=1;i<=nrec;i++) {
+    if(did[i]==0){printf("2nd%s\t%s\n", fill2,all[i])}
+   }
+  }
+ }' > $output
+
+ count2=`wc -l $output | awk '{print $1}'`
+
+echo "========================================="
+echo "$n1 ( $n1r ) records in $input using $col"
+echo "$n2 ( $n2r )records in $input2 using $col2"
+echo "$count2 records in output $output"
+echo "Output is $output"
+
+rm -f $temp $temp2 $temp3 $temp4
+
+exit
