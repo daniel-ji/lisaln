@@ -38,9 +38,8 @@ body {
     flex-direction: column;
     margin-top: 5vh;
     min-height: 90vh;
-    padding: 3vw;
+    padding: 5vh 0 3vh 0;
     box-sizing: border-box;
-    border: 0.25rem solid black;
     border-radius: 1vw;
 
     &:hover {
@@ -55,6 +54,10 @@ body {
         margin-bottom: 5vh;
     }
 
+    .lessMargin {
+        margin-bottom: 2vh!important;
+    }
+
     .inputField {
         display: flex;
         flex-direction: column;
@@ -63,7 +66,7 @@ body {
         padding: 2vw;
         border: 3px solid black;
         border-radius: 0.5vw;
-        width: 35vw;
+        min-width: 35vw;
 
         &:hover {
             border-color: $primary;
@@ -79,13 +82,16 @@ body {
             align-items: stretch;
             margin-bottom: 5vh;
             padding-left: 2vw;
+            min-width: 90%;
 
-            .MuiInputBase-root {
+            .MuiTextField-root {
                 margin-right: 2vw;
+                width: 45%;
             }
     
             .MuiButtonBase-root {
                 margin-right: 2vw;
+                min-width: 30%;
                 text-transform: none;
             }
         }
@@ -101,8 +107,74 @@ body {
         text-transform: none;
         margin-top: auto;
     }
+
+    .imageResults {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+
+        margin: 0;
+        & > * {
+            width: 80vw;
+        }
+    }
 }
 
 .MuiButtonBase-root {
     text-transform: none;
+}
+
+
+// scroll indicator from https://codepen.io/chris_cook/pen/KaMXzE
+.scrollIndicator {
+    width: 28px;
+    height: 48px;
+    border-radius: 11px 11px 15px 15px;
+    border: 3px solid $primary;
+    position: fixed;
+    bottom: 5vh;
+    right: 5vw;
+    margin-left: -13px;
+    z-index: 9999;
+    cursor: pointer;
+}
+  
+.scrollIndicator span {
+    display: block;
+    margin: 6px auto;
+    width: 2px;
+    height: 7px;
+    border-radius: 4px;
+    background: $primary;
+    border: 1px solid transparent;
+    -webkit-animation-duration: 2s;
+    animation-duration: 2s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+    -webkit-animation-iteration-count: infinite;
+    animation-iteration-count: infinite;
+    -webkit-animation-name: scrollIndicatorAnim;
+    animation-name: scrollIndicatorAnim;
+}
+  
+@keyframes scrollIndicatorAnim {
+    0% {
+      opacity: 1;
+      -webkit-transform: translateY(0);
+      -ms-transform: translateY(0);
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      -webkit-transform: translateY(20px);
+      -ms-transform: translateY(20px);
+      transform: translateY(20px);
+    }
+}
+
+.fadeOut{
+    opacity:0;
+    width:0;
+    height:0;
+    transition: width 0.5s 0.5s, height 0.5s 0.5s, opacity 0.5s;
 }
