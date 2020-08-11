@@ -14,9 +14,10 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage: storage });
 //file suffixes for files we're sending (will be combined with protein name)
-const filesuffixes = ['_landmark_homolo_aln.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh.txt.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif'];
+let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh.txt.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif'];
 //checkpoints for status bar
-const checkpoints = [];
+let checkpoints = ["Trying to get fasta seq", "GeneName is ", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", ""];
+let proteinName;
 
 // needs validation
 //each post is based on a different option sent from the client
