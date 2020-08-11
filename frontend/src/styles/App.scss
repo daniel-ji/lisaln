@@ -17,6 +17,10 @@ body {
     margin: 0;
 }
 
+img {
+    opacity: 0;
+}
+
 .App {
     display: flex;
     align-items: center;
@@ -68,13 +72,13 @@ body {
         border-radius: 0.5vw;
         min-width: 35vw;
 
-        &:hover {
+        /*&:hover {
             border-color: $primary;
             
             & h1 {
                 color: $primary;
             }
-        }
+        }*/
 
         .rowInput {
             display: flex;
@@ -101,22 +105,23 @@ body {
         }
     }
 
+    .errorMessage {
+        color: $error!important;
+    }
+
     .sendButton {
         width: 10vw;
         font-size: 1.5rem;
         text-transform: none;
         margin-top: auto;
+        margin-bottom: 2vh;
     }
 
-    .imageResults {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-
-        margin: 0;
-        & > * {
-            width: 80vw;
-        }
+    .downloadButton {
+        width: 10vw;
+        font-size: 1rem;
+        text-transform: none;
+        margin-top: auto;
     }
 }
 
@@ -124,13 +129,18 @@ body {
     text-transform: none;
 }
 
+.buttonError {
+    border: 1px solid $error!important;
+    color: $error!important;
+}
+
 
 // scroll indicator from https://codepen.io/chris_cook/pen/KaMXzE
 .scrollIndicator {
-    width: 28px;
-    height: 48px;
+    width: 1.5rem;
+    height: 2.75rem;
     border-radius: 11px 11px 15px 15px;
-    border: 3px solid $primary;
+    border: 3px solid black;
     position: fixed;
     bottom: 5vh;
     right: 5vw;
@@ -145,7 +155,7 @@ body {
     width: 2px;
     height: 7px;
     border-radius: 4px;
-    background: $primary;
+    background: black;
     border: 1px solid transparent;
     -webkit-animation-duration: 2s;
     animation-duration: 2s;
@@ -172,7 +182,12 @@ body {
     }
 }
 
-.fadeOut{
+.fadeIn {
+    opacity: 1;
+    transition: all 0.5s;
+}
+
+.fadeOut {
     opacity:0;
     width:0;
     height:0;

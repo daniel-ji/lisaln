@@ -1,0 +1,22 @@
+Rank Protein ClusterLevel
+1	Human	1	1	1	1	1	1	1	1	1	
+2	Mouse	1	1	1	1	1	1	1	1	1	
+3	zebraFish	2	1	1	1	1	1	1	1	1	
+4	fruitFly	3	2	1	1	1	1	1	1	1	
+5	roundWorm	4	3	2	1	1	1	1	1	1	
+6	yeastS288c	5	4	3	2	1	1	1	1	1	
+7	fissionYeast	5	4	3	2	1	1	1	1	1	
+8	thaleCress	6	5	4	3	2	2	2	2	1	
+9	Soybean	6	5	4	3	2	2	2	2	1	
+10	moldAX4	7	5	4	3	2	2	2	2	1	
+11	Leishmania-donovani	8	6	5	4	3	3	3	3	1	
+12	Plasmodium-falciparum-3D7	9	7	6	5	4	4	4	3	1	
+13	Sulfolobus-acidocaldarius	10	8	7	6	5	5	4	3	1	
+14	Methanothermobacter-thermautotrophicus	10	8	7	6	5	5	4	3	1	
+15	Thermotoga-maritima	11	9	8	7	6	5	4	3	1	
+16	Synechocystis-sp.-PCC-7509	12	9	8	7	6	5	4	3	1	
+17	Microcystis-aeruginosa	12	9	8	7	6	5	4	3	1	
+18	Deinococcus-radiodurans	13	10	8	7	6	5	4	3	1	
+19	Streptococcus-pneumoniae	14	11	9	7	6	5	4	3	1	
+20	Clostridioides-difficile	14	11	9	7	6	5	4	3	1	
+21	Shewanella-oneidensis	15	12	10	8	6	5	4	3	1	

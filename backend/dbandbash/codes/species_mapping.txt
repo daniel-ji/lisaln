@@ -1,0 +1,38 @@
+# This is mapping simple name to species seperated by tab. First col is simple name. 2nd col after tab is full name. 
+# 3col (seperated by tab) is priority to pick in ./NCBI_blast
+# full name must only have one space to seperate long name
+# Species order: Eukaryota[Animals, Plants, Fungi, Protists], Archaea, Bacteria  (http://www.oum.ox.ac.uk/thezone)
+#  Animals: mammals [mouse], Reptiles [Crocodiles, turtles], Birds, Amphibians, Bony fish, Sharks and rays, Echinoderms [starfish],
+#    Arthropods [Insects, spiders], Roundworms, Flatworms, Molluscs[snails], Annelids[earth wroms], Cnidarians[jelly fish], Sponges   
+# Landmark database species name in https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+# Ensembl species name in https://uswest.ensembl.org/info/about/species.html (also link to plants etc.)
+# NCBI Taxonomy database: https://www.ncbi.nlm.nih.gov/Taxonomy/taxonomyhome.html/
+# NCBI Taxonomy Browser: https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Undef&name=Hepatitis+C+virus&lvl=0&srchmode=1
+# This is called by ./blastp_display and ./seq_align_check ./NCBI_blast ./fasta_merge_species
+# To find seq across species or homology (othologues or paralogues): ./NCBI_blast -species -noshort -range 200 250 protein.fasta
+Human	homo sapiens	1	Mammal
+Chimpanzee	pan troglodytes	10
+Monkey	macaca mulatta	4
+Dog	canis lupus familiaris	3
+Cattle	bos taurus	2
+Rat	rattus norvegicus	2	Mammal
+Mouse	mus musculus	1	Mammal
+Chicken	gallus gallus	1	Bird
+clawedFrog	xenopus tropicalis	1	Amphibian
+clawedFrog2	Xenopus (Silurana) tropicalis	3
+zebraFish	danio rerio	1	Fish
+Mosquitos	Anopheles gambiae str. PEST	2	Insect(Arthropods)
+fruitFly	drosophila melanogaster	1	Insect(Arthropods)
+roundWorm	caenorhabditis elegans	1	Roundworm
+thaleCress	arabidopsis thaliana	1	plant(small flowering)
+Soybean	Glycine max	2
+Rice	oryza sativa japonica group	1
+bakerYeast	Saccharomyces cerevisiae	1	Fungus, baker's yeast
+bakerYeast	Saccharomyces	1	baker's yeast
+yeastS288c	Saccharomyces cerevisiae S288c	3	Fungus, baker's yeast
+fissionYeast	Schizosaccharomyces pombe	2	Fungus, fission yeast
+fissionYeast	Schizosaccharomyces	2	fission yeast
+yeast972h-	Schizosaccharomyces pombe 972h-	3	fission yeast
+slimeMolds	Dictyostelium	1	Protist
+moldAX4	Dictyostelium discoideum AX4	2	Protist
+bacteriaMR-1	Shewanella oneidensis MR-1	1	Bacteria
