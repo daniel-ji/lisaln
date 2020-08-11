@@ -579,7 +579,7 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   echo ""
   echo "=> Paralogues: Human homology proteins saved in $outalnh $outfastalnh"
   #$temp.allaln: NP_476473.1     NA      9999    9899    99%     Rat      transforming protein RhoA precursor  (or: isoform X1)
-  sort -k 6 $temp.allaln | grep H.sapiens > $temp6  #find human genes
+  sort -k 6 $temp.allaln | grep Human > $temp6  #find human genes
   #remove isoforms and precursor in names: Only keep one record for all isoforms
   echo " Will only keep first one of all isoforms. Also remove precursor or isoform from protein full name for clean display"
   awk 'BEGIN{n=0}{k=split($_,a,"\t");name=a[k]
