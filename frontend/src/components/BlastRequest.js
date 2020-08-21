@@ -108,6 +108,7 @@ class BlastRequest extends Component {
 
         //requests
         if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid) {
+            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: ''})
             //if protein name input
             if (this.state.proteinName !== '') {
                 axios.post(serverUrl + '/api/blastp/name', {
@@ -156,6 +157,7 @@ class BlastRequest extends Component {
                 this.setState({result: '', resultFormatted: ''});
             }   
         } else {
+            // error displaying
             console.log(errorMessage);
             this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid && true, rangeEndErr: rangeEndInvalid && true,
                 errorMessage: errorMessage.map(element => {

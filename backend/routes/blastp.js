@@ -9,20 +9,19 @@ const storage = multer.diskStorage({
         cb(null, 'dbandbash/codes/uploads')
     },
     filename: (req, file, cb) => {
+        console.log(req);
         cb(null, file.originalname)
     }
 })
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 //file suffixes for files we're sending (will be combined with protein name)
 let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh.txt.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif'];
-//checkpoints for status bar
-let checkpoints = ["Trying to get fasta seq", "GeneName is ", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", ""];
 let proteinName;
 
-// needs validation
+// needs validation ^ up there and down there
 //each post is based on a different option sent from the client
 router.post('/file', upload.single('fasta'), (req, res, next) => {
-    runAndOutput(`uploads/${req.file.filename}`, req, res);
+    runAndOutput(`uploads/${Date.now().toString() + Math.random().toString(36)}.fasta`, req, res);
 });
 
 router.post('/name', (req, res) => {
@@ -35,15 +34,19 @@ router.post('/name', (req, res) => {
 router.post('/text', (req, res) => {
     let fastaText = String(req.body.fastaText);
     if (fastaText.length !== 0 && fastaText.length < 10000) {
-        fs.writeFile('./dbandbash/codes/uploads/test.fasta', fastaText, err => {
-            console.log(err);
+        fs.writeFile(`./dbandbash/codes/uploads/${Date.now().toString() + Math.random().toString(36)}.fasta`, fastaText, err => {
+            if (err !== null) {
+                console.log(err);
+            }
         })
     }
-    runAndOutput('uploads/test.fasta', req, res);
+    runAndOutput(`./dbandbash/codes/uploads/${Date.now().toString() + Math.random().toString(36)}.fasta`, req, res);
 })
 
 //returning information to client and console
 const runAndOutput = (input, req, res) => {
+    //checkpoints for status bar
+    let checkpoints = ["Trying to get fasta seq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
     let response;
     //checking if range
     if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
@@ -53,10 +56,18 @@ const runAndOutput = (input, req, res) => {
     }
     //writing stuff to console for debug
     response.stdout.on("data", data => {
-        process.stdout.write(data.toString());
+            let i = 0;
+            if (data.toString().includes(checkpoints[i])) {
+                //has an issue - can't parse from output until very late
+                if (i == 1 && req.url === "/file") {
+                    
+                }
+                i++;
+            }
+            process.stdout.write(data.toString());
     })
     response.stderr.on("data", data => {
-        process.stderr.write(data.toString());
+        //process.stderr.write(data.toString());
     })
     response.on("exit", () => {
         //prefix to add onto suffixes - so can get correct files produced from the NCBI_blast shell script
@@ -67,12 +78,14 @@ const runAndOutput = (input, req, res) => {
         } else if (req.body.proteinName !== undefined){
             filenameprefix = req.body.proteinName.toLowerCase();
         } else {
-            filenameprefix = 'test';
+            filenameprefix = 'upload';
         }
         //copying them to public and adding the file to the response
         filesuffixes.forEach((suffix) => {
             fs.copyFile(`./dbandbash/codes/${filenameprefix}${suffix}`, `./public/images/${filenameprefix}${suffix}`, err => {
-                console.log(err);
+                if (err !== null) {
+                    console.log(err);
+                }
             })
             url.push(`/public/images/${filenameprefix}${suffix}`);
         });
