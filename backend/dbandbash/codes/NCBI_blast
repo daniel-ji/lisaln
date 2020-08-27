@@ -357,6 +357,7 @@ outfastalnh=$infile'_'$blast'_'$dbo'_human.fasta.txt'
 #FATAL WARNing: NEVER delete following temp files! Otherwise last line will erase all files * in folder
 # Not recommend to define temp=$0'_'$$'.tmp'  as temp has ./ ahead which may cause trouble when re-use it to define temp file name
 temp=$$'.tmp';  temp2=$temp'2' ; temp3=$temp'3' ; temp4=$temp'4'; temp5=$temp'5'; temp6=$temp'6'
+echo "Temp identifier for possible clear: $$";
 
 #Check root folder: scalemp1=p-gpu1; p-ngs=hpc
 ed='/home/holi/database/pipeline_script/'
@@ -768,6 +769,7 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   ./seq_align_check -plotout ${outallaln}.gif -less -cd -range $rstart $rend -out $temp.out $outallaln | tee $temp.aln
   echo ""
   ./clustal_identity -1 -nohead  $temp.out 
+  ./seq_align_check -range 1 3000 -plotout ${outallaln}_all.gif -less -cd  -out $temp.out $outallaln
   [ $quite -ne 1 ] && echo "  If new species shown without simple name, put it in $ed/$speciesfile"
 fi  #$dospecies -eq 1
 

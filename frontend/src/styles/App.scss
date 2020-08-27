@@ -123,6 +123,15 @@ img {
         text-transform: none;
         margin-top: auto;
     }
+
+    .imageResults img {
+        display: block;
+        max-width: 90vw;
+        max-height: 30vh;
+        width: auto;
+        height: auto;
+        // margin: auto;
+    }
 }
 
 .MuiButtonBase-root {
