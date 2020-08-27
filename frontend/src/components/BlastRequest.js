@@ -59,6 +59,7 @@ class BlastRequest extends Component {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     this.setState({showScrollIndicator: false})
+                    observer.disconnect()
                 }
             })
         });
@@ -190,7 +191,24 @@ class BlastRequest extends Component {
                 io.observe(target);
             }
             targets.forEach(lazyload);
-            setTimeout(() => document.querySelector('.imageResults').scrollIntoView({ behavior: 'smooth', block: 'end'}), 500)
+            setTimeout(
+                () => {
+                    this.setState({showScrollIndicator: true}, () => {
+                        //seeing if user scrolled to "go button"
+                        const observer = new IntersectionObserver((entries, observer) => {
+                            entries.forEach(entry => {
+                                if (entry.isIntersecting) {
+                                    console.log('asdfg');
+                                    this.setState({showScrollIndicator: false})
+                                    observer.disconnect()
+                                }
+                            })
+                        });
+                        const target = document.querySelector('.imageResults');
+                        observer.observe(target);                        
+                    })
+                }
+                , 500)
         })
     }
 
@@ -232,9 +250,15 @@ class BlastRequest extends Component {
     }
 
     scrollToGo() {
-        this.setState({showScrollIndicator: false}, () => {
-            document.querySelector('.sendButton').scrollIntoView({ behavior: 'smooth'})
-        })
+        if (this.state.resultFormatted !== '') {
+            this.setState({showScrollIndicator: false}, () => {
+                document.querySelector('.imageResults').scrollIntoView({ behavior: 'smooth'})
+            })
+        } else {
+            this.setState({showScrollIndicator: false}, () => {
+                document.querySelector('.sendButton').scrollIntoView({ behavior: 'smooth'})
+            })   
+        }
     }
 
     render() {
