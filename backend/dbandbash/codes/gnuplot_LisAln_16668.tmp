@@ -1,0 +1,591 @@
+#!/usr/bin/gnuplot
+
+#see http://cs.ecs.baylor.edu/~donahoo/tools/gnuplot/3Dex.html
+reset
+set terminal gif enhanced   size 1512,288 font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,15' # 'enhanced' can produce sub and superscripts
+set   autoscale                        # scale axes automatically
+set title ""
+set key off   #legand
+#set xtics font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,18'  #smaller font 
+#set ytics font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,18'  #smaller font 
+set label font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,18'  #smaller font
+#set ztics font '/usr/share/fonts/liberation/LiberationMono-Bold.ttf,18'  #smaller font 
+
+#set xdata time
+#set timefmt "%d/%m/%Y %H:%M:%S"
+#set format x "%H:%M"
+
+#set xlabel offset 1,0 ;  #offset ylabel to be more close to y-axis
+
+
+set xrange [1:84] 
+set yrange [0:10]
+
+#
+
+set label 11 "           " at 5, 7.8, 0 tc ls -1
+set label 12 "1" at 12, 7.8, 0
+set label 13 "1" at 12.8, 7.8, 0
+set label 14 "1" at 13.6, 7.8, 0
+set label 15 "2" at 14.4, 7.8, 0
+set label 16 " " at 15.2, 7.8, 0
+set label 17 " " at 16, 7.8, 0
+set label 18 " " at 16.8, 7.8, 0
+set label 19 " " at 17.6, 7.8, 0
+set label 20 "1" at 18.4, 7.8, 0
+set label 21 "1" at 19.2, 7.8, 0
+set label 22 "2" at 20, 7.8, 0
+set label 23 "0" at 20.8, 7.8, 0
+set label 24 " " at 21.6, 7.8, 0
+set label 25 " " at 22.4, 7.8, 0
+set label 26 " " at 23.2, 7.8, 0
+set label 27 " " at 24, 7.8, 0
+set label 28 " " at 24.8, 7.8, 0
+set label 29 " " at 25.6, 7.8, 0
+set label 30 " " at 26.4, 7.8, 0
+set label 31 " " at 27.2, 7.8, 0
+set label 32 " " at 28, 7.8, 0
+set label 33 "1" at 28.8, 7.8, 0
+set label 34 "1" at 29.6, 7.8, 0
+set label 35 "3" at 30.4, 7.8, 0
+set label 36 "0" at 31.2, 7.8, 0
+set label 37 " " at 32, 7.8, 0
+set label 38 " " at 32.8, 7.8, 0
+set label 39 " " at 33.6, 7.8, 0
+set label 40 " " at 34.4, 7.8, 0
+set label 41 " " at 35.2, 7.8, 0
+set label 42 " " at 36, 7.8, 0
+set label 43 " " at 36.8, 7.8, 0
+set label 44 "1" at 37.6, 7.8, 0
+set label 45 "1" at 38.4, 7.8, 0
+set label 46 "4" at 39.2, 7.8, 0
+set label 47 "0" at 40, 7.8, 0
+set label 48 " " at 40.8, 7.8, 0
+set label 49 " " at 41.6, 7.8, 0
+set label 50 " " at 42.4, 7.8, 0
+set label 51 " " at 43.2, 7.8, 0
+set label 52 " " at 44, 7.8, 0
+set label 53 " " at 44.8, 7.8, 0
+set label 54 "1" at 45.6, 7.8, 0
+set label 55 "1" at 46.4, 7.8, 0
+set label 56 "5" at 47.2, 7.8, 0
+set label 57 "0" at 48, 7.8, 0
+set label 58 " " at 48.8, 7.8, 0
+set label 59 " " at 49.6, 7.8, 0
+set label 60 " " at 50.4, 7.8, 0
+set label 61 " " at 51.2, 7.8, 0
+set label 62 " " at 52, 7.8, 0
+set label 63 " " at 52.8, 7.8, 0
+set label 64 "1" at 53.6, 7.8, 0
+set label 65 "1" at 54.4, 7.8, 0
+set label 66 "6" at 55.2, 7.8, 0
+set label 67 "0" at 56, 7.8, 0
+set label 68 " " at 56.8, 7.8, 0
+set label 69 " " at 57.6, 7.8, 0
+set label 70 " " at 58.4, 7.8, 0
+set label 71 " " at 59.2, 7.8, 0
+set label 72 " " at 60, 7.8, 0
+set label 73 " " at 60.8, 7.8, 0
+set label 74 " " at 61.6, 7.8, 0
+set label 75 " " at 62.4, 7.8, 0
+set label 76 "1" at 63.2, 7.8, 0
+set label 77 "1" at 64, 7.8, 0
+set label 78 "7" at 64.8, 7.8, 0
+set label 79 "0" at 65.6, 7.8, 0
+set label 80 "1" at 66.4, 7.8, 0
+set label 81 "1" at 67.2, 7.8, 0
+set label 82 "7" at 68, 7.8, 0
+set label 83 "2" at 68.8, 7.8, 0
+set label 84 "           " at 5, 7, 0 tc ls -1
+set label 85 "|" at 12, 7, 0
+set label 86 "-" at 12.8, 7, 0
+set label 87 "-" at 13.6, 7, 0
+set label 88 ":" at 14.4, 7, 0
+set label 89 "-" at 15.2, 7, 0
+set label 90 "-" at 16, 7, 0
+set label 91 "-" at 16.8, 7, 0
+set label 92 "-" at 17.6, 7, 0
+set label 93 "+" at 18.4, 7, 0
+set label 94 "-" at 19.2, 7, 0
+set label 95 "-" at 20, 7, 0
+set label 96 "-" at 20.8, 7, 0
+set label 97 "-" at 21.6, 7, 0
+set label 98 "." at 22.4, 7, 0
+set label 99 "." at 23.2, 7, 0
+set label 100 ":" at 24, 7, 0
+set label 101 "-" at 24.8, 7, 0
+set label 102 "-" at 25.6, 7, 0
+set label 103 "-" at 26.4, 7, 0
+set label 104 "-" at 27.2, 7, 0
+set label 105 "." at 28, 7, 0
+set label 106 "+" at 28.8, 7, 0
+set label 107 "." at 29.6, 7, 0
+set label 108 "-" at 30.4, 7, 0
+set label 109 "-" at 31.2, 7, 0
+set label 110 "-" at 32, 7, 0
+set label 111 "-" at 32.8, 7, 0
+set label 112 ":" at 33.6, 7, 0
+set label 113 "-" at 34.4, 7, 0
+set label 114 "-" at 35.2, 7, 0
+set label 115 "-" at 36, 7, 0
+set label 116 "-" at 36.8, 7, 0
+set label 117 "+" at 37.6, 7, 0
+set label 118 "-" at 38.4, 7, 0
+set label 119 "-" at 39.2, 7, 0
+set label 120 "-" at 40, 7, 0
+set label 121 "-" at 40.8, 7, 0
+set label 122 ":" at 41.6, 7, 0
+set label 123 "-" at 42.4, 7, 0
+set label 124 "-" at 43.2, 7, 0
+set label 125 "-" at 44, 7, 0
+set label 126 "-" at 44.8, 7, 0
+set label 127 "+" at 45.6, 7, 0
+set label 128 "-" at 46.4, 7, 0
+set label 129 "-" at 47.2, 7, 0
+set label 130 "-" at 48, 7, 0
+set label 131 "-" at 48.8, 7, 0
+set label 132 ":" at 49.6, 7, 0
+set label 133 "-" at 50.4, 7, 0
+set label 134 "-" at 51.2, 7, 0
+set label 135 "-" at 52, 7, 0
+set label 136 "-" at 52.8, 7, 0
+set label 137 "+" at 53.6, 7, 0
+set label 138 "." at 54.4, 7, 0
+set label 139 "." at 55.2, 7, 0
+set label 140 "-" at 56, 7, 0
+set label 141 "-" at 56.8, 7, 0
+set label 142 "-" at 57.6, 7, 0
+set label 143 "-" at 58.4, 7, 0
+set label 144 ":" at 59.2, 7, 0
+set label 145 "-" at 60, 7, 0
+set label 146 "-" at 60.8, 7, 0
+set label 147 "-" at 61.6, 7, 0
+set label 148 "-" at 62.4, 7, 0
+set label 149 "+" at 63.2, 7, 0
+set label 150 "-" at 64, 7, 0
+set label 151 "|" at 64.8, 7, 0
+set label 152 "Human      " at 5, 5.8, 0 tc ls -1
+set label 154 "D" at 12, 5.8, 0 tc ls 1
+set label 155 "P" at 12.8, 5.8, 0 tc ls 5
+set label 156 "P" at 13.6, 5.8, 0 tc ls 5
+set label 157 "P" at 14.4, 5.8, 0 tc ls 5
+set label 158 "D" at 15.2, 5.8, 0 tc ls 1
+set label 159 "I" at 16, 5.8, 0 tc ls 5
+set label 160 "F" at 16.8, 5.8, 0 tc ls 5
+set label 161 "A" at 17.6, 5.8, 0 tc ls 5
+set label 162 "A" at 18.4, 5.8, 0 tc ls 5
+set label 163 "A" at 19.2, 5.8, 0 tc ls 5
+set label 164 "D" at 20, 5.8, 0 tc ls 1
+set label 165 "S" at 20.8, 5.8, 0 tc ls 2
+set label 166 "K" at 21.6, 5.8, 0 tc ls 3
+set label 167 "-" at 22.4, 5.8, 0 tc ls -1
+set label 168 "-" at 23.2, 5.8, 0 tc ls -1
+set label 169 "K" at 24, 5.8, 0 tc ls 3
+set label 170 "S" at 24.8, 5.8, 0 tc ls 2
+set label 171 "Q" at 25.6, 5.8, 0 tc ls 2
+set label 172 "P" at 26.4, 5.8, 0 tc ls 5
+set label 173 "K" at 27.2, 5.8, 0 tc ls 3
+set label 174 "-" at 28, 5.8, 0 tc ls -1
+set label 175 "I" at 28.8, 5.8, 0 tc ls 5
+set label 176 "-" at 29.6, 5.8, 0 tc ls -1
+set label 177 "Q" at 30.4, 5.8, 0 tc ls 2
+set label 178 "P" at 31.2, 5.8, 0 tc ls 5
+set label 179 "P" at 32, 5.8, 0 tc ls 5
+set label 180 "S" at 32.8, 5.8, 0 tc ls 2
+set label 181 "P" at 33.6, 5.8, 0 tc ls 5
+set label 182 "A" at 34.4, 5.8, 0 tc ls 5
+set label 183 "G" at 35.2, 5.8, 0 tc ls 2
+set label 184 "S" at 36, 5.8, 0 tc ls 2
+set label 185 "G" at 36.8, 5.8, 0 tc ls 2
+set label 186 "S" at 37.6, 5.8, 0 tc ls 2
+set label 187 "M" at 38.4, 5.8, 0 tc ls 5
+set label 188 "Q" at 39.2, 5.8, 0 tc ls 2
+set label 189 "G" at 40, 5.8, 0 tc ls 2
+set label 190 "P" at 40.8, 5.8, 0 tc ls 5
+set label 191 "Q" at 41.6, 5.8, 0 tc ls 2
+set label 192 "T" at 42.4, 5.8, 0 tc ls 2
+set label 193 "P" at 43.2, 5.8, 0 tc ls 5
+set label 194 "Q" at 44, 5.8, 0 tc ls 2
+set label 195 "S" at 44.8, 5.8, 0 tc ls 2
+set label 196 "T" at 45.6, 5.8, 0 tc ls 2
+set label 197 "S" at 46.4, 5.8, 0 tc ls 2
+set label 198 "S" at 47.2, 5.8, 0 tc ls 2
+set label 199 "S" at 48, 5.8, 0 tc ls 2
+set label 200 "M" at 48.8, 5.8, 0 tc ls 5
+set label 201 "A" at 49.6, 5.8, 0 tc ls 5
+set label 202 "E" at 50.4, 5.8, 0 tc ls 1
+set label 203 "G" at 51.2, 5.8, 0 tc ls 2
+set label 204 "G" at 52, 5.8, 0 tc ls 2
+set label 205 "D" at 52.8, 5.8, 0 tc ls 1
+set label 206 "L" at 53.6, 5.8, 0 tc ls 5
+set label 207 "-" at 54.4, 5.8, 0 tc ls -1
+set label 208 "-" at 55.2, 5.8, 0 tc ls -1
+set label 209 "K" at 56, 5.8, 0 tc ls 3
+set label 210 "P" at 56.8, 5.8, 0 tc ls 5
+set label 211 "P" at 57.6, 5.8, 0 tc ls 5
+set label 212 "T" at 58.4, 5.8, 0 tc ls 2
+set label 213 "P" at 59.2, 5.8, 0 tc ls 5
+set label 214 "A" at 60, 5.8, 0 tc ls 5
+set label 215 "S" at 60.8, 5.8, 0 tc ls 2
+set label 216 "T" at 61.6, 5.8, 0 tc ls 2
+set label 217 "P" at 62.4, 5.8, 0 tc ls 5
+set label 218 "H" at 63.2, 5.8, 0 tc ls 3
+set label 219 "S" at 64, 5.8, 0 tc ls 2
+set label 220 "Q" at 64.8, 5.8, 0 tc ls 2
+set label 221 " 1172" at 66.4, 5.8, 0 tc ls -1
+set label 222 "Mouse      " at 5, 5, 0 tc ls -1
+set label 224 "D" at 12, 5, 0 tc ls 1
+set label 225 "P" at 12.8, 5, 0 tc ls 5
+set label 226 "P" at 13.6, 5, 0 tc ls 5
+set label 227 "P" at 14.4, 5, 0 tc ls 5
+set label 228 "D" at 15.2, 5, 0 tc ls 1
+set label 229 "I" at 16, 5, 0 tc ls 5
+set label 230 "F" at 16.8, 5, 0 tc ls 5
+set label 231 "A" at 17.6, 5, 0 tc ls 5
+set label 232 "A" at 18.4, 5, 0 tc ls 5
+set label 233 "A" at 19.2, 5, 0 tc ls 5
+set label 234 "D" at 20, 5, 0 tc ls 1
+set label 235 "S" at 20.8, 5, 0 tc ls 2
+set label 236 "K" at 21.6, 5, 0 tc ls 3
+set label 237 "-" at 22.4, 5, 0 tc ls -1
+set label 238 "-" at 23.2, 5, 0 tc ls -1
+set label 239 "K" at 24, 5, 0 tc ls 3
+set label 240 "S" at 24.8, 5, 0 tc ls 2
+set label 241 "Q" at 25.6, 5, 0 tc ls 2
+set label 242 "P" at 26.4, 5, 0 tc ls 5
+set label 243 "K" at 27.2, 5, 0 tc ls 3
+set label 244 "-" at 28, 5, 0 tc ls -1
+set label 245 "I" at 28.8, 5, 0 tc ls 5
+set label 246 "-" at 29.6, 5, 0 tc ls -1
+set label 247 "Q" at 30.4, 5, 0 tc ls 2
+set label 248 "P" at 31.2, 5, 0 tc ls 5
+set label 249 "P" at 32, 5, 0 tc ls 5
+set label 250 "S" at 32.8, 5, 0 tc ls 2
+set label 251 "P" at 33.6, 5, 0 tc ls 5
+set label 252 "A" at 34.4, 5, 0 tc ls 5
+set label 253 "G" at 35.2, 5, 0 tc ls 2
+set label 254 "S" at 36, 5, 0 tc ls 2
+set label 255 "G" at 36.8, 5, 0 tc ls 2
+set label 256 "S" at 37.6, 5, 0 tc ls 2
+set label 257 "M" at 38.4, 5, 0 tc ls 5
+set label 258 "Q" at 39.2, 5, 0 tc ls 2
+set label 259 "G" at 40, 5, 0 tc ls 2
+set label 260 "P" at 40.8, 5, 0 tc ls 5
+set label 261 "Q" at 41.6, 5, 0 tc ls 2
+set label 262 "T" at 42.4, 5, 0 tc ls 2
+set label 263 "P" at 43.2, 5, 0 tc ls 5
+set label 264 "Q" at 44, 5, 0 tc ls 2
+set label 265 "S" at 44.8, 5, 0 tc ls 2
+set label 266 "T" at 45.6, 5, 0 tc ls 2
+set label 267 "S" at 46.4, 5, 0 tc ls 2
+set label 268 "S" at 47.2, 5, 0 tc ls 2
+set label 269 "S" at 48, 5, 0 tc ls 2
+set label 270 "M" at 48.8, 5, 0 tc ls 5
+set label 271 "A" at 49.6, 5, 0 tc ls 5
+set label 272 "E" at 50.4, 5, 0 tc ls 1
+set label 273 "G" at 51.2, 5, 0 tc ls 2
+set label 274 "G" at 52, 5, 0 tc ls 2
+set label 275 "D" at 52.8, 5, 0 tc ls 1
+set label 276 "L" at 53.6, 5, 0 tc ls 5
+set label 277 "-" at 54.4, 5, 0 tc ls -1
+set label 278 "-" at 55.2, 5, 0 tc ls -1
+set label 279 "K" at 56, 5, 0 tc ls 3
+set label 280 "P" at 56.8, 5, 0 tc ls 5
+set label 281 "P" at 57.6, 5, 0 tc ls 5
+set label 282 "T" at 58.4, 5, 0 tc ls 2
+set label 283 "P" at 59.2, 5, 0 tc ls 5
+set label 284 "A" at 60, 5, 0 tc ls 5
+set label 285 "S" at 60.8, 5, 0 tc ls 2
+set label 286 "T" at 61.6, 5, 0 tc ls 2
+set label 287 "P" at 62.4, 5, 0 tc ls 5
+set label 288 "H" at 63.2, 5, 0 tc ls 3
+set label 289 "S" at 64, 5, 0 tc ls 2
+set label 290 "Q" at 64.8, 5, 0 tc ls 2
+set label 291 " 788" at 66.4, 5, 0 tc ls -1
+set label 292 "zebraFish  " at 5, 4.2, 0 tc ls -1
+set label 294 "D" at 12, 4.2, 0 tc ls 1
+set label 295 "P" at 12.8, 4.2, 0 tc ls 5
+set label 296 "P" at 13.6, 4.2, 0 tc ls 5
+set label 297 "P" at 14.4, 4.2, 0 tc ls 5
+set label 298 "D" at 15.2, 4.2, 0 tc ls 1
+set label 299 "F" at 16, 4.2, 0 tc ls 5
+set label 300 "F" at 16.8, 4.2, 0 tc ls 5
+set label 301 "N" at 17.6, 4.2, 0 tc ls 2
+set label 302 "N" at 18.4, 4.2, 0 tc ls 2
+set label 303 "-" at 19.2, 4.2, 0 tc ls -1
+set label 304 "D" at 20, 4.2, 0 tc ls 1
+set label 305 "P" at 20.8, 4.2, 0 tc ls 5
+set label 306 "K" at 21.6, 4.2, 0 tc ls 3
+set label 307 "-" at 22.4, 4.2, 0 tc ls -1
+set label 308 "-" at 23.2, 4.2, 0 tc ls -1
+set label 309 "K" at 24, 4.2, 0 tc ls 3
+set label 310 "N" at 24.8, 4.2, 0 tc ls 2
+set label 311 "Q" at 25.6, 4.2, 0 tc ls 2
+set label 312 "A" at 26.4, 4.2, 0 tc ls 5
+set label 313 "K" at 27.2, 4.2, 0 tc ls 3
+set label 314 "-" at 28, 4.2, 0 tc ls -1
+set label 315 "V" at 28.8, 4.2, 0 tc ls 5
+set label 316 "-" at 29.6, 4.2, 0 tc ls -1
+set label 317 "Q" at 30.4, 4.2, 0 tc ls 2
+set label 318 "P" at 31.2, 4.2, 0 tc ls 5
+set label 319 "P" at 32, 4.2, 0 tc ls 5
+set label 320 "S" at 32.8, 4.2, 0 tc ls 2
+set label 321 "P" at 33.6, 4.2, 0 tc ls 5
+set label 322 "A" at 34.4, 4.2, 0 tc ls 5
+set label 323 "G" at 35.2, 4.2, 0 tc ls 2
+set label 324 "S" at 36, 4.2, 0 tc ls 2
+set label 325 "G" at 36.8, 4.2, 0 tc ls 2
+set label 326 "S" at 37.6, 4.2, 0 tc ls 2
+set label 327 "L" at 38.4, 4.2, 0 tc ls 5
+set label 328 "Q" at 39.2, 4.2, 0 tc ls 2
+set label 329 "G" at 40, 4.2, 0 tc ls 2
+set label 330 "P" at 40.8, 4.2, 0 tc ls 5
+set label 331 "Q" at 41.6, 4.2, 0 tc ls 2
+set label 332 "T" at 42.4, 4.2, 0 tc ls 2
+set label 333 "P" at 43.2, 4.2, 0 tc ls 5
+set label 334 "Q" at 44, 4.2, 0 tc ls 2
+set label 335 "S" at 44.8, 4.2, 0 tc ls 2
+set label 336 "T" at 45.6, 4.2, 0 tc ls 2
+set label 337 "S" at 46.4, 4.2, 0 tc ls 2
+set label 338 "S" at 47.2, 4.2, 0 tc ls 2
+set label 339 "S" at 48, 4.2, 0 tc ls 2
+set label 340 "M" at 48.8, 4.2, 0 tc ls 5
+set label 341 "A" at 49.6, 4.2, 0 tc ls 5
+set label 342 "E" at 50.4, 4.2, 0 tc ls 1
+set label 343 "G" at 51.2, 4.2, 0 tc ls 2
+set label 344 "G" at 52, 4.2, 0 tc ls 2
+set label 345 "D" at 52.8, 4.2, 0 tc ls 1
+set label 346 "L" at 53.6, 4.2, 0 tc ls 5
+set label 347 "-" at 54.4, 4.2, 0 tc ls -1
+set label 348 "-" at 55.2, 4.2, 0 tc ls -1
+set label 349 "K" at 56, 4.2, 0 tc ls 3
+set label 350 "P" at 56.8, 4.2, 0 tc ls 5
+set label 351 "P" at 57.6, 4.2, 0 tc ls 5
+set label 352 "T" at 58.4, 4.2, 0 tc ls 2
+set label 353 "P" at 59.2, 4.2, 0 tc ls 5
+set label 354 "A" at 60, 4.2, 0 tc ls 5
+set label 355 "S" at 60.8, 4.2, 0 tc ls 2
+set label 356 "T" at 61.6, 4.2, 0 tc ls 2
+set label 357 "P" at 62.4, 4.2, 0 tc ls 5
+set label 358 "H" at 63.2, 4.2, 0 tc ls 3
+set label 359 "S" at 64, 4.2, 0 tc ls 2
+set label 360 "Q" at 64.8, 4.2, 0 tc ls 2
+set label 361 " 1122" at 66.4, 4.2, 0 tc ls -1
+set label 362 "fruitFly   " at 5, 3.4, 0 tc ls -1
+set label 364 "I" at 12, 3.4, 0 tc ls 5
+set label 365 "D" at 12.8, 3.4, 0 tc ls 1
+set label 366 "P" at 13.6, 3.4, 0 tc ls 5
+set label 367 "L" at 14.4, 3.4, 0 tc ls 5
+set label 368 "P" at 15.2, 3.4, 0 tc ls 5
+set label 369 "I" at 16, 3.4, 0 tc ls 5
+set label 370 "I" at 16.8, 3.4, 0 tc ls 5
+set label 371 "Q" at 17.6, 3.4, 0 tc ls 2
+set label 372 "Q" at 18.4, 3.4, 0 tc ls 2
+set label 373 "V" at 19.2, 3.4, 0 tc ls 5
+set label 374 "E" at 20, 3.4, 0 tc ls 1
+set label 375 "A" at 20.8, 3.4, 0 tc ls 5
+set label 376 "G" at 21.6, 3.4, 0 tc ls 2
+set label 377 "S" at 22.4, 3.4, 0 tc ls 2
+set label 378 "K" at 23.2, 3.4, 0 tc ls 3
+set label 379 "K" at 24, 3.4, 0 tc ls 3
+set label 380 "K" at 24.8, 3.4, 0 tc ls 3
+set label 381 "T" at 25.6, 3.4, 0 tc ls 2
+set label 382 "A" at 26.4, 3.4, 0 tc ls 5
+set label 383 "K" at 27.2, 3.4, 0 tc ls 3
+set label 384 "A" at 28, 3.4, 0 tc ls 5
+set label 385 "A" at 28.8, 3.4, 0 tc ls 5
+set label 386 "-" at 29.6, 3.4, 0 tc ls -1
+set label 387 "S" at 30.4, 3.4, 0 tc ls 2
+set label 388 "V" at 31.2, 3.4, 0 tc ls 5
+set label 389 "P" at 32, 3.4, 0 tc ls 5
+set label 390 "S" at 32.8, 3.4, 0 tc ls 2
+set label 391 "P" at 33.6, 3.4, 0 tc ls 5
+set label 392 "G" at 34.4, 3.4, 0 tc ls 2
+set label 393 "S" at 35.2, 3.4, 0 tc ls 2
+set label 394 "S" at 36, 3.4, 0 tc ls 2
+set label 395 "N" at 36.8, 3.4, 0 tc ls 2
+set label 396 "S" at 37.6, 3.4, 0 tc ls 2
+set label 397 "Q" at 38.4, 3.4, 0 tc ls 2
+set label 398 "-" at 39.2, 3.4, 0 tc ls -1
+set label 399 "-" at 40, 3.4, 0 tc ls -1
+set label 400 "-" at 40.8, 3.4, 0 tc ls -1
+set label 401 "-" at 41.6, 3.4, 0 tc ls -1
+set label 402 "-" at 42.4, 3.4, 0 tc ls -1
+set label 403 "-" at 43.2, 3.4, 0 tc ls -1
+set label 404 "-" at 44, 3.4, 0 tc ls -1
+set label 405 "-" at 44.8, 3.4, 0 tc ls -1
+set label 406 "-" at 45.6, 3.4, 0 tc ls -1
+set label 407 "-" at 46.4, 3.4, 0 tc ls -1
+set label 408 "-" at 47.2, 3.4, 0 tc ls -1
+set label 409 "-" at 48, 3.4, 0 tc ls -1
+set label 410 "-" at 48.8, 3.4, 0 tc ls -1
+set label 411 "-" at 49.6, 3.4, 0 tc ls -1
+set label 412 "-" at 50.4, 3.4, 0 tc ls -1
+set label 413 "-" at 51.2, 3.4, 0 tc ls -1
+set label 414 "-" at 52, 3.4, 0 tc ls -1
+set label 415 "D" at 52.8, 3.4, 0 tc ls 1
+set label 416 "S" at 53.6, 3.4, 0 tc ls 2
+set label 417 "-" at 54.4, 3.4, 0 tc ls -1
+set label 418 "-" at 55.2, 3.4, 0 tc ls -1
+set label 419 "F" at 56, 3.4, 0 tc ls 5
+set label 420 "P" at 56.8, 3.4, 0 tc ls 5
+set label 421 "A" at 57.6, 3.4, 0 tc ls 5
+set label 422 "P" at 58.4, 3.4, 0 tc ls 5
+set label 423 "P" at 59.2, 3.4, 0 tc ls 5
+set label 424 "G" at 60, 3.4, 0 tc ls 2
+set label 425 "S" at 60.8, 3.4, 0 tc ls 2
+set label 426 "A" at 61.6, 3.4, 0 tc ls 5
+set label 427 "P" at 62.4, 3.4, 0 tc ls 5
+set label 428 "N" at 63.2, 3.4, 0 tc ls 2
+set label 429 "A" at 64, 3.4, 0 tc ls 5
+set label 430 "A" at 64.8, 3.4, 0 tc ls 5
+set label 431 " 1141" at 66.4, 3.4, 0 tc ls -1
+set label 432 "roundWorm  " at 5, 2.6, 0 tc ls -1
+set label 434 "P" at 12, 2.6, 0 tc ls 5
+set label 435 "E" at 12.8, 2.6, 0 tc ls 1
+set label 436 "D" at 13.6, 2.6, 0 tc ls 1
+set label 437 "E" at 14.4, 2.6, 0 tc ls 1
+set label 438 "V" at 15.2, 2.6, 0 tc ls 5
+set label 439 "A" at 16, 2.6, 0 tc ls 5
+set label 440 "F" at 16.8, 2.6, 0 tc ls 5
+set label 441 "A" at 17.6, 2.6, 0 tc ls 5
+set label 442 "D" at 18.4, 2.6, 0 tc ls 1
+set label 443 "K" at 19.2, 2.6, 0 tc ls 3
+set label 444 "M" at 20, 2.6, 0 tc ls 5
+set label 445 "K" at 20.8, 2.6, 0 tc ls 3
+set label 446 "R" at 21.6, 2.6, 0 tc ls 3
+set label 447 "Q" at 22.4, 2.6, 0 tc ls 2
+set label 448 "R" at 23.2, 2.6, 0 tc ls 3
+set label 449 "K" at 24, 2.6, 0 tc ls 3
+set label 450 "R" at 24.8, 2.6, 0 tc ls 3
+set label 451 "E" at 25.6, 2.6, 0 tc ls 1
+set label 452 "P" at 26.4, 2.6, 0 tc ls 5
+set label 453 "A" at 27.2, 2.6, 0 tc ls 5
+set label 454 "G" at 28, 2.6, 0 tc ls 2
+set label 455 "G" at 28.8, 2.6, 0 tc ls 2
+set label 456 "N" at 29.6, 2.6, 0 tc ls 2
+set label 457 "A" at 30.4, 2.6, 0 tc ls 5
+set label 458 "A" at 31.2, 2.6, 0 tc ls 5
+set label 459 "A" at 32, 2.6, 0 tc ls 5
+set label 460 "A" at 32.8, 2.6, 0 tc ls 5
+set label 461 "A" at 33.6, 2.6, 0 tc ls 5
+set label 462 "A" at 34.4, 2.6, 0 tc ls 5
+set label 463 "V" at 35.2, 2.6, 0 tc ls 5
+set label 464 "A" at 36, 2.6, 0 tc ls 5
+set label 465 "A" at 36.8, 2.6, 0 tc ls 5
+set label 466 "A" at 37.6, 2.6, 0 tc ls 5
+set label 467 "Q" at 38.4, 2.6, 0 tc ls 2
+set label 468 "Q" at 39.2, 2.6, 0 tc ls 2
+set label 469 "G" at 40, 2.6, 0 tc ls 2
+set label 470 "D" at 40.8, 2.6, 0 tc ls 1
+set label 471 "Q" at 41.6, 2.6, 0 tc ls 2
+set label 472 "K" at 42.4, 2.6, 0 tc ls 3
+set label 473 "S" at 43.2, 2.6, 0 tc ls 2
+set label 474 "-" at 44, 2.6, 0 tc ls -1
+set label 475 "-" at 44.8, 2.6, 0 tc ls -1
+set label 476 "-" at 45.6, 2.6, 0 tc ls -1
+set label 477 "-" at 46.4, 2.6, 0 tc ls -1
+set label 478 "Q" at 47.2, 2.6, 0 tc ls 2
+set label 479 "H" at 48, 2.6, 0 tc ls 3
+set label 480 "G" at 48.8, 2.6, 0 tc ls 2
+set label 481 "A" at 49.6, 2.6, 0 tc ls 5
+set label 482 "P" at 50.4, 2.6, 0 tc ls 5
+set label 483 "G" at 51.2, 2.6, 0 tc ls 2
+set label 484 "G" at 52, 2.6, 0 tc ls 2
+set label 485 "S" at 52.8, 2.6, 0 tc ls 2
+set label 486 "G" at 53.6, 2.6, 0 tc ls 2
+set label 487 "A" at 54.4, 2.6, 0 tc ls 5
+set label 488 "P" at 55.2, 2.6, 0 tc ls 5
+set label 489 "P" at 56, 2.6, 0 tc ls 5
+set label 490 "P" at 56.8, 2.6, 0 tc ls 5
+set label 491 "G" at 57.6, 2.6, 0 tc ls 2
+set label 492 "P" at 58.4, 2.6, 0 tc ls 5
+set label 493 "P" at 59.2, 2.6, 0 tc ls 5
+set label 494 "G" at 60, 2.6, 0 tc ls 2
+set label 495 "A" at 60.8, 2.6, 0 tc ls 5
+set label 496 "Y" at 61.6, 2.6, 0 tc ls 2
+set label 497 "P" at 62.4, 2.6, 0 tc ls 5
+set label 498 "G" at 63.2, 2.6, 0 tc ls 2
+set label 499 "N" at 64, 2.6, 0 tc ls 2
+set label 500 "G" at 64.8, 2.6, 0 tc ls 2
+set label 501 " 475" at 66.4, 2.6, 0 tc ls -1
+set label 502 "Consensus  " at 5, 1.8, 0 tc ls -1
+set label 504 " " at 12, 1.8, 0 tc ls -1
+set label 505 " " at 12.8, 1.8, 0 tc ls -1
+set label 506 " " at 13.6, 1.8, 0 tc ls -1
+set label 507 " " at 14.4, 1.8, 0 tc ls -1
+set label 508 " " at 15.2, 1.8, 0 tc ls -1
+set label 509 " " at 16, 1.8, 0 tc ls -1
+set label 510 ":" at 16.8, 1.8, 0 tc ls 3
+set label 511 " " at 17.6, 1.8, 0 tc ls -1
+set label 512 " " at 18.4, 1.8, 0 tc ls -1
+set label 513 " " at 19.2, 1.8, 0 tc ls -1
+set label 514 " " at 20, 1.8, 0 tc ls -1
+set label 515 " " at 20.8, 1.8, 0 tc ls -1
+set label 516 " " at 21.6, 1.8, 0 tc ls -1
+set label 517 " " at 22.4, 1.8, 0 tc ls -1
+set label 518 " " at 23.2, 1.8, 0 tc ls -1
+set label 519 "*" at 24, 1.8, 0 tc ls 1
+set label 520 " " at 24.8, 1.8, 0 tc ls -1
+set label 521 " " at 25.6, 1.8, 0 tc ls -1
+set label 522 " " at 26.4, 1.8, 0 tc ls -1
+set label 523 " " at 27.2, 1.8, 0 tc ls -1
+set label 524 " " at 28, 1.8, 0 tc ls -1
+set label 525 " " at 28.8, 1.8, 0 tc ls -1
+set label 526 " " at 29.6, 1.8, 0 tc ls -1
+set label 527 " " at 30.4, 1.8, 0 tc ls -1
+set label 528 " " at 31.2, 1.8, 0 tc ls -1
+set label 529 " " at 32, 1.8, 0 tc ls -1
+set label 530 ":" at 32.8, 1.8, 0 tc ls 3
+set label 531 " " at 33.6, 1.8, 0 tc ls -1
+set label 532 "." at 34.4, 1.8, 0 tc ls 2
+set label 533 " " at 35.2, 1.8, 0 tc ls -1
+set label 534 ":" at 36, 1.8, 0 tc ls 3
+set label 535 " " at 36.8, 1.8, 0 tc ls -1
+set label 536 ":" at 37.6, 1.8, 0 tc ls 3
+set label 537 " " at 38.4, 1.8, 0 tc ls -1
+set label 538 " " at 39.2, 1.8, 0 tc ls -1
+set label 539 " " at 40, 1.8, 0 tc ls -1
+set label 540 " " at 40.8, 1.8, 0 tc ls -1
+set label 541 " " at 41.6, 1.8, 0 tc ls -1
+set label 542 " " at 42.4, 1.8, 0 tc ls -1
+set label 543 " " at 43.2, 1.8, 0 tc ls -1
+set label 544 " " at 44, 1.8, 0 tc ls -1
+set label 545 " " at 44.8, 1.8, 0 tc ls -1
+set label 546 " " at 45.6, 1.8, 0 tc ls -1
+set label 547 " " at 46.4, 1.8, 0 tc ls -1
+set label 548 " " at 47.2, 1.8, 0 tc ls -1
+set label 549 " " at 48, 1.8, 0 tc ls -1
+set label 550 " " at 48.8, 1.8, 0 tc ls -1
+set label 551 " " at 49.6, 1.8, 0 tc ls -1
+set label 552 " " at 50.4, 1.8, 0 tc ls -1
+set label 553 " " at 51.2, 1.8, 0 tc ls -1
+set label 554 " " at 52, 1.8, 0 tc ls -1
+set label 555 "." at 52.8, 1.8, 0 tc ls 2
+set label 556 " " at 53.6, 1.8, 0 tc ls -1
+set label 557 " " at 54.4, 1.8, 0 tc ls -1
+set label 558 " " at 55.2, 1.8, 0 tc ls -1
+set label 559 " " at 56, 1.8, 0 tc ls -1
+set label 560 "*" at 56.8, 1.8, 0 tc ls 1
+set label 561 " " at 57.6, 1.8, 0 tc ls -1
+set label 562 " " at 58.4, 1.8, 0 tc ls -1
+set label 563 "*" at 59.2, 1.8, 0 tc ls 1
+set label 564 "." at 60, 1.8, 0 tc ls 2
+set label 565 ":" at 60.8, 1.8, 0 tc ls 3
+set label 566 " " at 61.6, 1.8, 0 tc ls -1
+set label 567 "*" at 62.4, 1.8, 0 tc ls 1
+set label 568 " " at 63.2, 1.8, 0 tc ls -1
+set label 569 " " at 64, 1.8, 0 tc ls -1
+set label 570 " " at 64.8, 1.8, 0 tc ls -1
+set label 571 "" at 66.4, 1.8, 0 tc ls -1
+
+unset y2tics; 
+unset border;   #No x-y axis box and tics
+#unset xtics
+#unset ytics
+#set xtics scale 0  #Remove tics, but keep tics label. Still dots left for tics though
+#set ytics scale 0  #Remove tics, but keep tics label. Still dots left for tics though
+set xtics textcolor rgb "#ffffff"  #white color to hide xtics, works
+set ytics textcolor rgb "#ffffff"  #white color to hide xtics, works
+set tics scale 0; #Remove tics, but keep tics label. Still dots left for tics though 
+plot -99999 w lines lt 1 lc 1 

@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import axios from 'axios'
 import Header from './Header';
 
-import { Button, TextField} from '@material-ui/core'; 
+import { Button, TextField, Radio, RadioGroup, FormControl, FormControlLabel} from '@material-ui/core'; 
 
 import smoothscroll from 'smoothscroll-polyfill';
 
@@ -15,6 +15,7 @@ class BlastRequest extends Component {
     
         this.state = {
             //result from blastp request
+            filenameprefix: '',
             result: '',
             resultFormatted: '',
 
@@ -35,6 +36,9 @@ class BlastRequest extends Component {
             rangeEnd: '',
             rangeEndErr: false,
 
+            sciName: false,
+            reCalc: true,
+
             errorMessage: '',
             showScrollIndicator: true
         }
@@ -47,6 +51,8 @@ class BlastRequest extends Component {
         this.updateFastaPaste = this.updateFastaPaste.bind(this);
         this.updateRangeStart = this.updateRangeStart.bind(this);
         this.updateRangeEnd = this.updateRangeEnd.bind(this);
+        this.updateSciName = this.updateSciName.bind(this);
+        this.updateReCalc = this.updateReCalc.bind(this);
         this.downloadResults = this.downloadResults.bind(this);
         this.scrollToGo = this.scrollToGo.bind(this);
     }
@@ -115,7 +121,9 @@ class BlastRequest extends Component {
                 axios.post(serverUrl + '/api/blastp/name', {
                     proteinName: this.state.proteinName,
                     rangeStart: this.state.rangeStart,
-                    rangeEnd: this.state.rangeEnd
+                    rangeEnd: this.state.rangeEnd,
+                    sciName: this.state.sciName,
+                    reCalc: this.state.reCalc,
                 })
                 .then(response => {
                     this.runscriptRespHandle(response);
@@ -130,6 +138,8 @@ class BlastRequest extends Component {
                 blastForm.append('fasta', this.state.fastaInput);
                 blastForm.append('rangeStart', this.state.rangeStart);
                 blastForm.append('rangeEnd', this.state.rangeEnd);
+                blastForm.append('sciName', this.state.sciName);
+                blastForm.append('reCalc', this.state.reCalc);
                 axios.post(serverUrl + '/api/blastp/file', blastForm, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
@@ -147,7 +157,9 @@ class BlastRequest extends Component {
                 axios.post(serverUrl + '/api/blastp/text', {
                     fastaText: this.state.fastaText, 
                     rangeStart: this.state.rangeStart,
-                    rangeEnd: this.state.rangeEnd
+                    rangeEnd: this.state.rangeEnd,
+                    sciName: this.state.sciName,
+                    reCalc: this.state.reCalc,
                 })
                 .then(response => {
                     this.runscriptRespHandle(response);
@@ -170,7 +182,7 @@ class BlastRequest extends Component {
 
     //handling images from response
     runscriptRespHandle(response) {
-        this.setState({result: response.data.url, resultFormatted: response.data.url.map(image => {
+        this.setState({filenameprefix: response.data.filenameprefix, result: response.data.url, resultFormatted: response.data.url.map(image => {
             return <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" data-lazy={`${serverUrl + image}?${Date.now()}`}/>
         })}, () => {
             //lazy loading images
@@ -179,7 +191,6 @@ class BlastRequest extends Component {
                 const io = new IntersectionObserver((entries, observer) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
-                            console.log('asdf');
                             const img = entry.target;
                             const src = img.getAttribute('data-lazy');
                             img.setAttribute('src', src);
@@ -198,7 +209,6 @@ class BlastRequest extends Component {
                         const observer = new IntersectionObserver((entries, observer) => {
                             entries.forEach(entry => {
                                 if (entry.isIntersecting) {
-                                    console.log('asdfg');
                                     this.setState({showScrollIndicator: false})
                                     observer.disconnect()
                                 }
@@ -238,10 +248,19 @@ class BlastRequest extends Component {
         this.setState({rangeEnd: event.target.value, rangeEndErr: false})
     }
 
+    updateSciName(event) {
+        this.setState({sciName: event.target.value === 'true' ? true : false})
+    }
+
+    updateReCalc(event) {
+        this.setState({reCalc: event.target.value === 'true' ? true : false})
+    }
+
     //has to post to make zip and then get
     downloadResults() {
         axios.post(serverUrl + '/api/download', {
-            url: this.state.result
+            url: this.state.result,
+            filenameprefix: this.state.filenameprefix
         }).then(response => {
             window.open(serverUrl + '/api/download');
         }).catch(err => {
@@ -299,6 +318,26 @@ class BlastRequest extends Component {
                         <TextField error={this.state.rangeStartErr} label="Starting #" variant="outlined" value={this.state.rangeStart} onChange={this.updateRangeStart}/>
                         <TextField error={this.state.rangeEndErr} label="Ending #" variant="outlined" value={this.state.rangeEnd} onChange={this.updateRangeEnd}/>
                     </div>
+                </div>
+                <div className="inputField">
+                    <Header margin="3vh" size="1rem" title="Use Scientific Name?" />
+                    <Header margin="5vh" size="0.4rem" title="Example: If marked yes, will output Homo Sapiens instead of Human" />
+                    <FormControl>
+                        <RadioGroup aria-label="Scientific Name" value={this.state.sciName} onChange={this.updateSciName}>
+                            <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
+                            <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
+                        </RadioGroup>
+                    </FormControl>
+                </div>
+                <div className="inputField">
+                    <Header margin="3vh" size="1rem" title="Use previous data?" />
+                    <Header margin="5vh" size="0.4rem" title="Will use previous data if it already has been stored - can drastically improve speed." />
+                    <FormControl>
+                        <RadioGroup aria-label="Recalc" value={this.state.reCalc} onChange={this.updateReCalc}>
+                            <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
+                            <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
+                        </RadioGroup>
+                    </FormControl>
                 </div>
                 <Button className="sendButton" variant="contained" disableElevation onClick={this.runscript}>Go</Button>
                 <br/>

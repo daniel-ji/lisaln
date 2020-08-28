@@ -21,6 +21,10 @@ img {
     opacity: 0;
 }
 
+.MuiRadio-root * {
+    transition: all 0.5s, color 0s !important;
+}
+
 .App {
     display: flex;
     align-items: center;
