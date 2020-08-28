@@ -1,0 +1,13 @@
+Cluster  based on cluster size at similarity(0) cutoff 0.6, then 0.35, then MaxTanScore/RMSD:
+  This is strict cluster: element will be shown in one cluster and will not be counted in later cluster
+  Cluster ranked by cluster size at cutoff=0.6 , same size cluster ranked by size of 2nd level cluster (at cutoff=0.35)
+NoTwoLevelsClusterFound
+==> No clusters even for 2nd level cluster cutoff=0.35 found for ./sdf_contactmap_16501.tmp2_map.txt2
+NoTwoLevelsClusterFound
+==> No clusters even for 2nd level cluster cutoff=0.35 found for sdf_contactmap_16501.tmp2_map_cl1_0.6_0.35_left.xls
+NoTwoLevelsClusterFound
+==> No clusters even for 2nd level cluster cutoff=0.35 found for sdf_contactmap_16501.tmp2_map_cl2_0.6_0.35_left.xls
+  None-clustered data are assigned as cluster #4
+    Intermediate cluster files are cleaned (matrix w/o previous clusters, data for each cluster). To keep them: -keep
+==> Top 3 clusters saved in (DataName|DataRank|ClusterRank|Score) ari1a_landmark_homolo_aln_map.xls
+ WARNing: ari1a_landmark_homolo_aln_map.xls may only have 3 cols for some data that do not have first level cluster at cut=0.6, but only 2nd level at cut2=0.35

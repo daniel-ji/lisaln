@@ -5,20 +5,20 @@ const { spawn } = require('child_process');
 const router = express.Router();
 const multer = require('multer');
 let filenameprefix;
-
+let tmpExtList = []; 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'dbandbash/codes/uploads')
     },
     filename: (req, file, cb) => {
-        filenameprefix = "TEST";
+        filenameprefix = "test";
         //filenameprefix = (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)).toUpperCase();
         cb(null, filenameprefix + ".fasta");
     }
 })
 const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 //file suffixes for files we're sending (will be combined with protein name)
-let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif'];
+let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt'];
 
 // needs validation ^ up there and down there
 //each post is based on a different option sent from the client
@@ -50,11 +50,12 @@ router.get('/streaming', (req, res) => {
 });*/
 
 router.post('/file', upload.single('fasta'), (req, res, next) => {
+    console.log(req.body);
     runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
 });
 
 router.post('/name', (req, res) => {
-    filenameprefix = String(req.body.proteinName).toUpperCase();
+    filenameprefix = String(req.body.proteinName).toLowerCase();
     if (filenameprefix.length !== 0 && filenameprefix.length < 100) {
         runAndOutput(filenameprefix, req, res);
     }
@@ -74,7 +75,7 @@ router.post('/text', (req, res) => {
 
 //returning information to client and console
 const runAndOutput = (input, req, res) => {
-    //temp file number
+    //temp file number - needs to delcare here just incase concurrent running of this file (maybe?)
     let tempNumber;
     //checkpoints for status bar
     let checkpoints = ["Temp identifier for possible clear:", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
@@ -84,9 +85,9 @@ const runAndOutput = (input, req, res) => {
     let response;
     //checking if range
     if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
-        response = spawn('./dbandbash/codes/NCBI_blast', ['-LisAln', '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)), input]);   
+        response = spawn('./dbandbash/codes/NCBI_blast', ['-LisAln', '-range', /*req.body.sciName && '-nochange', */ (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)), input]);   
     } else {
-        response = spawn('./dbandbash/codes/NCBI_blast', ['-LisAln', input]);
+        response = spawn('./dbandbash/codes/NCBI_blast', ['-LisAln', /*req.body.sciName && '-nochange', */ input]);
     }
     //writing stuff to console for debug
     response.stdout.on("data", data => {
@@ -95,9 +96,11 @@ const runAndOutput = (input, req, res) => {
                 switch(checkpoints[i]) {
                     case "Temp identifier for possible clear:": 
                         tempNumber = data.toString().split(' ').slice(6, 7).join(' ');
-                        console.log(tempNumber);
-                    case "Best matching protein from":
+                        checkpoints.splice(i, 1);
+                        break;
+                    /*case "Best matching protein from":
                         if (checkpoints[i] === "Best matching protein from" && data.toString().split(' ').slice(9, 10).join(' ') !== filenameprefix) {
+                            console.log("asdfasdfasdfasdf");
                             let oldfilenameprefix = filenameprefix;
                             // gets name
                             filenameprefix = data.toString().split(' ').slice(9, 10).join(' ');
@@ -113,14 +116,15 @@ const runAndOutput = (input, req, res) => {
                             // reruns program
                             runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
                         }
-                        break;
+                        checkpoints.splice(i, 2);
+                        break;*/
                     case "GeneName is ":
-                        if (checkpoints[i] === "GeneName is " && data.toString().split(' ').slice(3, 4).join(' ') !== filenameprefix) {
+                        if (req.url !== '/name' && checkpoints[i] === "GeneName is " && data.toString().split(' ').slice(3, 4).join(' ') !== filenameprefix) {
                             let oldfilenameprefix = filenameprefix;
                             // gets name
                             filenameprefix = data.toString().split(' ').slice(3, 4).join(' ');
                             // stops program
-                            /*response.kill('SIGKILL');
+                            response.kill('SIGKILL');
                             // renames landmark & upload
                             fs.rename(`./dbandbash/codes/${input}`, `./dbandbash/codes/uploads/${filenameprefix}.fasta`, err => {
                                 if (err) console.log(err);
@@ -128,13 +132,18 @@ const runAndOutput = (input, req, res) => {
                             fs.rename(`./dbandbash/codes/${oldfilenameprefix}_blastp_landmark.txt`, `./dbandbash/codes/${filenameprefix}_blastp_landmark.txt`, err => {
                                 if (err) console.log(err);
                             })
+                            // remove tmp files
+                            tmpExtList.forEach(item => {
+                                fs.unlink(`./dbandbash/codes/${tempNumber}${tmpExtList}`, (err) => {
+                                    if (err) console.log(err);
+                                });
+                            })
                             // reruns program
-                            runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);*/
+                            runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
                         }
+                        checkpoints.splice(i, 1);
                         break;
                 }
-                checkpoints.splice(i, 2);
-                break;
             }
         }
         process.stdout.write(data.toString());
@@ -155,7 +164,7 @@ const runAndOutput = (input, req, res) => {
                 })
                 url.push(`/public/images/${filenameprefix}${suffix}`);
             });
-            res.send({url: url})
+            res.send({url: url, filenameprefix: filenameprefix})
         }
     });
 }

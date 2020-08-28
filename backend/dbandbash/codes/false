@@ -20,11 +20,11 @@ compositionally adjusted substitution matrices", FEBS J.
 272:5101-5109.
 
 
-RID: MH0T885E016
+RID: MH7UXYFY014
 
 
 Database: Landmark database for SmartBLAST
-           419,038 sequences; 240,694,457 total letters
+           419,132 sequences; 240,609,256 total letters
 Query= sp|O14497|ARI1A_HUMAN AT-rich interactive domain-containing protein 1A
 OS=Homo sapiens OX=9606 GN=ARID1A PE=1 SV=3
 
@@ -4742,13 +4742,13 @@ Lambda      K        H
 Matrix: BLOSUM62
 Gap Penalties: Existence: 11, Extension: 1
 Number of Sequences: 419132
-Number of Hits to DB: 134367233
-Number of extensions: 7618279
-Number of successful extensions: 94779
-Number of sequences better than 100: 2581
+Number of Hits to DB: 136657895
+Number of extensions: 8061686
+Number of successful extensions: 138187
+Number of sequences better than 100: 3665
 Number of HSP's better than 100 without gapping: 0
-Number of HSP's gapped: 52429
-Number of HSP's successfully gapped: 8929
+Number of HSP's gapped: 71149
+Number of HSP's successfully gapped: 13631
 Length of query: 2285
 Length of database: 240609256
 Length adjustment: 137
