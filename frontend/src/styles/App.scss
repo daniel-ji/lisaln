@@ -17,10 +17,6 @@ body {
     margin: 0;
 }
 
-img {
-    opacity: 0;
-}
-
 .MuiRadio-root * {
     transition: all 0.5s, color 0s !important;
 }
@@ -95,6 +91,10 @@ img {
             .MuiTextField-root {
                 margin-right: 2vw;
                 width: 45%;
+
+                &.longTextField {
+                    width: 100%;
+                }
             }
     
             .MuiButtonBase-root {
@@ -135,6 +135,11 @@ img {
         width: auto;
         height: auto;
         // margin: auto;
+    }
+
+    .textOutput {
+        width: 100%;
+
     }
 }
 

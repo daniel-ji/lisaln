@@ -1,1 +1,0 @@
-The Uniprot data used is ./uniprot_sprot_202001.dat. To download the newest version, run: ./UniProt_get -download 1

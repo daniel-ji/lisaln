@@ -38,6 +38,8 @@ class BlastRequest extends Component {
 
             sciName: false,
             reCalc: true,
+            email: '',
+            emailErr: false,
 
             errorMessage: '',
             showScrollIndicator: true
@@ -53,6 +55,7 @@ class BlastRequest extends Component {
         this.updateRangeEnd = this.updateRangeEnd.bind(this);
         this.updateSciName = this.updateSciName.bind(this);
         this.updateReCalc = this.updateReCalc.bind(this);
+        this.updateEmail = this.updateEmail.bind(this);
         this.downloadResults = this.downloadResults.bind(this);
         this.scrollToGo = this.scrollToGo.bind(this);
     }
@@ -79,8 +82,10 @@ class BlastRequest extends Component {
         let inputTooLong = 'false';
         let rangeStartInvalid = false;
         let rangeEndInvalid = false;
+        let emailInvalid = false;
         let errorMessage = [];
 
+        //protein input
         if (this.state.proteinName === '' && this.state.fastaInput === '' && this.state.fastaText === '') {
             noInput = true;
             errorMessage.push('Please enter a protein name, upload a file, or paste a fasta');
@@ -101,6 +106,7 @@ class BlastRequest extends Component {
             }
         }
 
+        //range input
         if ((this.state.rangeStart === '' && this.state.rangeEnd !== '') || (this.state.rangeStart !== '' && (!Number.isInteger(parseInt(this.state.rangeStart)) || parseInt(this.state.rangeStart) < 0 || parseInt(this.state.rangeStart) > 10000))) {
             rangeStartInvalid = true;
             errorMessage.push('Please have a valid range start number');
@@ -113,8 +119,15 @@ class BlastRequest extends Component {
             this.setState(prevState => ({rangeEnd: 50, rangeStart: 25}))
         }
 
+        //email input
+        const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        if (this.state.email !== '' && !emailRegex.test(String(this.state.email).toLowerCase())) {
+            emailInvalid = true;
+            errorMessage.push('Please enter a valid email');
+        }
+
         //requests
-        if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid) {
+        if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid && !emailInvalid) {
             this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: ''})
             //if protein name input
             if (this.state.proteinName !== '') {
@@ -124,6 +137,7 @@ class BlastRequest extends Component {
                     rangeEnd: this.state.rangeEnd,
                     sciName: this.state.sciName,
                     reCalc: this.state.reCalc,
+                    email: this.state.email,
                 })
                 .then(response => {
                     this.runscriptRespHandle(response);
@@ -140,6 +154,7 @@ class BlastRequest extends Component {
                 blastForm.append('rangeEnd', this.state.rangeEnd);
                 blastForm.append('sciName', this.state.sciName);
                 blastForm.append('reCalc', this.state.reCalc);
+                blastForm.append('email', this.state.email);
                 axios.post(serverUrl + '/api/blastp/file', blastForm, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
@@ -160,6 +175,7 @@ class BlastRequest extends Component {
                     rangeEnd: this.state.rangeEnd,
                     sciName: this.state.sciName,
                     reCalc: this.state.reCalc,
+                    email: this.state.email,
                 })
                 .then(response => {
                     this.runscriptRespHandle(response);
@@ -171,55 +187,65 @@ class BlastRequest extends Component {
             }   
         } else {
             // error displaying
-            console.log(errorMessage);
-            this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid && true, rangeEndErr: rangeEndInvalid && true,
+            this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid, rangeEndErr: rangeEndInvalid, emailErr: emailInvalid,
                 errorMessage: errorMessage.map(element => {
                     return <Header margin="2vh" key={element+Date.now()} size="0.5rem" className="errorMessage" title={element}/>
                 })
-            }, () => console.log(this.state.errorMessage))
+            })
         }
     }
 
-    //handling images from response
+    //handling files from response
     runscriptRespHandle(response) {
-        this.setState({filenameprefix: response.data.filenameprefix, result: response.data.url, resultFormatted: response.data.url.map(image => {
-            return <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" data-lazy={`${serverUrl + image}?${Date.now()}`}/>
-        })}, () => {
-            //lazy loading images
-            const targets = document.querySelectorAll('img');
-            const lazyload = target => {
-                const io = new IntersectionObserver((entries, observer) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            const src = img.getAttribute('data-lazy');
-                            img.setAttribute('src', src);
-                            img.classList.add('fadeIn');
-                            observer.disconnect();
-                        }
-                    })
-                })
-                io.observe(target);
+        let gifPreResults = [];
+        let txtPreResults = [];
+        let finalResults = [];
+        response.data.url.forEach(file => {
+            if (file.substr(-3, 3) === 'gif') {
+                gifPreResults.push(file);
+            } else if (file.substr(-3, 3) === 'txt') {
+                txtPreResults.push(file);
             }
-            targets.forEach(lazyload);
-            setTimeout(
-                () => {
-                    this.setState({showScrollIndicator: true}, () => {
-                        //seeing if user scrolled to "go button"
-                        const observer = new IntersectionObserver((entries, observer) => {
-                            entries.forEach(entry => {
-                                if (entry.isIntersecting) {
-                                    this.setState({showScrollIndicator: false})
-                                    observer.disconnect()
-                                }
-                            })
-                        });
-                        const target = document.querySelector('.imageResults');
-                        observer.observe(target);                        
-                    })
-                }
-                , 500)
         })
+        const gifResults = gifPreResults.map(image => {
+            return <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/>
+        })
+        const txtResults = txtPreResults.map(txtFile => {
+            return (axios.get(`${serverUrl + txtFile}?${Date.now()}`).then().catch());
+        })
+        Promise.all(txtResults).then(txtResponse => {
+            finalResults = txtResponse.map(indivRes => {
+                return (<TextField
+                    key={Date.now()}
+                    className="textOutput"
+                    label="Full Alignment Results"
+                    multiline
+                    rows = "8"
+                    variant="outlined"
+                    value={indivRes.data}
+                />)
+            })
+            let resultsFormatted = [...gifResults, ...finalResults];
+            this.setState({filenameprefix: response.data.filenameprefix, result: response.data.url, resultFormatted: resultsFormatted}, () => {
+                setTimeout(
+                    () => {
+                        this.setState({showScrollIndicator: true}, () => {
+                            //seeing if user scrolled to "go button"
+                            const observer = new IntersectionObserver((entries, observer) => {
+                                entries.forEach(entry => {
+                                    if (entry.isIntersecting) {
+                                        this.setState({showScrollIndicator: false})
+                                        observer.disconnect()
+                                    }
+                                })
+                            });
+                            const target = document.querySelector('.imageResults');
+                            observer.observe(target);                        
+                        })
+                    }
+                , 500)
+            })
+        });
     }
 
     updateFile(event) {
@@ -256,6 +282,10 @@ class BlastRequest extends Component {
         this.setState({reCalc: event.target.value === 'true' ? true : false})
     }
 
+    updateEmail(event) {
+        this.setState({email: event.target.value})
+    }
+
     //has to post to make zip and then get
     downloadResults() {
         axios.post(serverUrl + '/api/download', {
@@ -264,7 +294,6 @@ class BlastRequest extends Component {
         }).then(response => {
             window.open(serverUrl + '/api/download');
         }).catch(err => {
-            console.log(err)
         })
     }
 
@@ -338,6 +367,13 @@ class BlastRequest extends Component {
                             <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
                         </RadioGroup>
                     </FormControl>
+                </div>
+                <div className="inputField">
+                    <Header margin="3vh" size="1rem" title="Email (optional)" />
+                    <Header maxWidth="70vh" margin="5vh" size="0.4rem" title={`To additionally send results to the email. If results take long to load (5+ minutes) or a database is down, will send results to the email when available.`}/>
+                    <div className="rowInput">
+                        <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
+                    </div>
                 </div>
                 <Button className="sendButton" variant="contained" disableElevation onClick={this.runscript}>Go</Button>
                 <br/>
