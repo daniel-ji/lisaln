@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         filenameprefix = "test";
-        //filenameprefix = (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)).toUpperCase();
+        filenameprefix = "a" + (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)).toLowerCase();
         cb(null, filenameprefix + ".fasta");
     }
 })
@@ -20,7 +20,7 @@ const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 //file suffixes for files we're sending (will be combined with protein name)
 let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt'];
 
-// needs validation ^ up there and down there
+// needs validation ^ up there and down there - including email verif
 //each post is based on a different option sent from the client
 /*
 router.get('/streaming', (req, res) => {
@@ -49,11 +49,7 @@ router.get('/streaming', (req, res) => {
     });
 });*/
 
-router.post('/file', upload.single('fasta'), (req, res, next) => {
-    console.log(req.body);
-    runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
-});
-
+//when inputs protein name
 router.post('/name', (req, res) => {
     filenameprefix = String(req.body.proteinName).toLowerCase();
     if (filenameprefix.length !== 0 && filenameprefix.length < 100) {
@@ -61,19 +57,27 @@ router.post('/name', (req, res) => {
     }
 })
 
+//when sends file
+router.post('/file', upload.single('fasta'), (req, res, next) => {
+    console.log(req.body);
+    runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
+});
+
+//when input in text box
 router.post('/text', (req, res) => {
     let fastaText = String(req.body.fastaText);
     if (fastaText.length !== 0 && fastaText.length < 10000) {
-        fs.writeFile(`uploads/${Date.now().toString() + Math.random().toString(36)}.fasta`, fastaText, err => {
+        filenameprefix = Date.now().toString() + Math.random().toString(36);
+        fs.writeFile(`uploads/${filenameprefix}.fasta`, fastaText, err => {
             if (err !== null) {
                 console.log(err);
             }
         })
     }
-    runAndOutput(`uploads/${Date.now().toString() + Math.random().toString(36)}.fasta`, req, res);
+    runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
 })
 
-//returning information to client and console
+//returning information to client and console - main function for blastp
 const runAndOutput = (input, req, res) => {
     //temp file number - needs to delcare here just incase concurrent running of this file (maybe?)
     let tempNumber;
@@ -83,12 +87,15 @@ const runAndOutput = (input, req, res) => {
         checkpoints.splice(1, 0, "GeneName is ");
     }
     let response;
-    //checking if range
-    if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
-        response = spawn('./dbandbash/codes/NCBI_blast', ['-LisAln', '-range', /*req.body.sciName && '-nochange', */ (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)), input]);   
-    } else {
-        response = spawn('./dbandbash/codes/NCBI_blast', ['-LisAln', /*req.body.sciName && '-nochange', */ input]);
+    let args = ['-LisAln', input];
+    if (req.body.sciName) {
+        args.splice(1, 0, '-nochange');
     }
+    if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
+        args.splice(1, 0, '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)));
+    }
+    //checking if range
+    response = spawn('./dbandbash/codes/NCBI_blast', args);
     //writing stuff to console for debug
     response.stdout.on("data", data => {
         for (let i = 0; i < checkpoints.length; i++) {
@@ -98,9 +105,8 @@ const runAndOutput = (input, req, res) => {
                         tempNumber = data.toString().split(' ').slice(6, 7).join(' ');
                         checkpoints.splice(i, 1);
                         break;
-                    /*case "Best matching protein from":
-                        if (checkpoints[i] === "Best matching protein from" && data.toString().split(' ').slice(9, 10).join(' ') !== filenameprefix) {
-                            console.log("asdfasdfasdfasdf");
+                    case "Best matching protein from":
+                        if (req.url !== '/name' && data.toString().split(' ').slice(9, 10).join(' ') !== filenameprefix) {
                             let oldfilenameprefix = filenameprefix;
                             // gets name
                             filenameprefix = data.toString().split(' ').slice(9, 10).join(' ');
@@ -113,26 +119,7 @@ const runAndOutput = (input, req, res) => {
                             fs.rename(`./dbandbash/codes/${oldfilenameprefix}_blastp_landmark.txt`, `./dbandbash/codes/${filenameprefix}_blastp_landmark.txt`, err => {
                                 if (err) console.log(err);
                             })
-                            // reruns program
-                            runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
-                        }
-                        checkpoints.splice(i, 2);
-                        break;*/
-                    case "GeneName is ":
-                        if (req.url !== '/name' && checkpoints[i] === "GeneName is " && data.toString().split(' ').slice(3, 4).join(' ') !== filenameprefix) {
-                            let oldfilenameprefix = filenameprefix;
-                            // gets name
-                            filenameprefix = data.toString().split(' ').slice(3, 4).join(' ');
-                            // stops program
-                            response.kill('SIGKILL');
-                            // renames landmark & upload
-                            fs.rename(`./dbandbash/codes/${input}`, `./dbandbash/codes/uploads/${filenameprefix}.fasta`, err => {
-                                if (err) console.log(err);
-                            })
-                            fs.rename(`./dbandbash/codes/${oldfilenameprefix}_blastp_landmark.txt`, `./dbandbash/codes/${filenameprefix}_blastp_landmark.txt`, err => {
-                                if (err) console.log(err);
-                            })
-                            // remove tmp files
+                            //removes tmp files
                             tmpExtList.forEach(item => {
                                 fs.unlink(`./dbandbash/codes/${tempNumber}${tmpExtList}`, (err) => {
                                     if (err) console.log(err);
