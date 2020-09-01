@@ -3,9 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const router = express.Router();
+const dotenv = require('dotenv');
+dotenv.config();
+
+// storing stuff
 const multer = require('multer');
 let filenameprefix;
-let tmpExtList = []; 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'dbandbash/codes/uploads')
@@ -17,8 +20,15 @@ const storage = multer.diskStorage({
     }
 })
 const upload = multer({ storage: storage, limits: {fileSize: 20000}});
+
 //file suffixes for files we're sending (will be combined with protein name)
 let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt'];
+//tmp file list to remove tmp files when execution is cancelled
+let tmpExtList = ['.tmp', '.tmp2', '.tmp6', '.tmp.allaln', '.tmp.fin', 'tmp.fin2', '.tmp.more']; 
+
+// email
+const nodemailer = require("nodemailer");
+const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
 // needs validation ^ up there and down there - including email verif
 //each post is based on a different option sent from the client
@@ -59,7 +69,6 @@ router.post('/name', (req, res) => {
 
 //when sends file
 router.post('/file', upload.single('fasta'), (req, res, next) => {
-    console.log(req.body);
     runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
 });
 
@@ -79,7 +88,7 @@ router.post('/text', (req, res) => {
 
 //returning information to client and console - main function for blastp
 const runAndOutput = (input, req, res) => {
-    //temp file number - needs to delcare here just incase concurrent running of this file (maybe?)
+    //temp file number - needs to delcare here just incase concurrent running of this file
     let tempNumber;
     //checkpoints for status bar
     let checkpoints = ["Temp identifier for possible clear:", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
@@ -109,9 +118,9 @@ const runAndOutput = (input, req, res) => {
                         if (req.url !== '/name' && data.toString().split(' ').slice(9, 10).join(' ') !== filenameprefix) {
                             let oldfilenameprefix = filenameprefix;
                             // gets name
-                            filenameprefix = data.toString().split(' ').slice(9, 10).join(' ');
+                            filenameprefix = data.toString().split(' ').slice(9, 10).join(' ').toLowerCase();
                             // stops program
-                            response.kill('SIGKILL');
+                            response.kill('SIGTERM');
                             // renames landmark & upload
                             fs.rename(`./dbandbash/codes/${input}`, `./dbandbash/codes/uploads/${filenameprefix}.fasta`, err => {
                                 if (err) console.log(err);
@@ -119,9 +128,12 @@ const runAndOutput = (input, req, res) => {
                             fs.rename(`./dbandbash/codes/${oldfilenameprefix}_blastp_landmark.txt`, `./dbandbash/codes/${filenameprefix}_blastp_landmark.txt`, err => {
                                 if (err) console.log(err);
                             })
+                            fs.rename(`./dbandbash/codes/${oldfilenameprefix}_blastp_landmark.fasta.txt`, `./dbandbash/codes/${filenameprefix}_blastp_landmark.fasta.txt`, err => {
+                                if (err) console.log(err);
+                            })
                             //removes tmp files
                             tmpExtList.forEach(item => {
-                                fs.unlink(`./dbandbash/codes/${tempNumber}${tmpExtList}`, (err) => {
+                                fs.unlink(`./dbandbash/codes/${tempNumber}${item}`, (err) => {
                                     if (err) console.log(err);
                                 });
                             })
@@ -139,7 +151,7 @@ const runAndOutput = (input, req, res) => {
         //process.stderr.write(data.toString());
     })
     response.on("exit", (code, signal) => {
-        if (signal !== 'SIGKILL') {
+        if (signal !== 'SIGTERM') {
             //prefix to add onto suffixes - so can get correct files produced from the NCBI_blast shell script
             let url = [];
             //copying them to public and adding the file to the response
@@ -152,6 +164,28 @@ const runAndOutput = (input, req, res) => {
                 url.push(`/public/images/${filenameprefix}${suffix}`);
             });
             res.send({url: url, filenameprefix: filenameprefix})
+            if (emailRegex.test(String(req.body.email).toLowerCase())) {
+                async function main() {
+                    const transporter = nodemailer.createTransport({
+                        host: 'smtp.ethereal.email' /* change (and also env)*/,
+                        port: 587,
+                        auth: {
+                            user: process.env.emailUsername,
+                            pass: process.env.emailPassword
+                        }
+                    });
+    
+                    let info = await transporter.sendMail({
+                        from: '"LisAln Blast Request" <lisaln@lisaln.org>', // sender address - need to change
+                        to: req.body.email,
+                        subject: `LisAln Blast Request results for protein ${filenameprefix} at time: ${new Date().toLocaleString('en-US')}`, // Subject line
+                        text: "Results in attached zip file.",
+                       // need to attach zip 
+                    });
+                    console.log("Message sent: %s", info.messageId);
+                }
+                main().catch(console.error)
+            }
         }
     });
 }
