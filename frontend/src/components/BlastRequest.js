@@ -120,7 +120,7 @@ class BlastRequest extends Component {
         }
 
         //email input
-        const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         if (this.state.email !== '' && !emailRegex.test(String(this.state.email).toLowerCase())) {
             emailInvalid = true;
             errorMessage.push('Please enter a valid email');
@@ -288,13 +288,15 @@ class BlastRequest extends Component {
 
     //has to post to make zip and then get
     downloadResults() {
-        axios.post(serverUrl + '/api/download', {
-            url: this.state.result,
-            filenameprefix: this.state.filenameprefix
-        }).then(response => {
-            window.open(serverUrl + '/api/download');
-        }).catch(err => {
-        })
+        if (this.state.result !== undefined && this.state.result !== '') {
+            axios.post(serverUrl + '/api/download', {
+                url: this.state.result,
+                filenameprefix: this.state.filenameprefix
+            }).then(response => {
+                window.open(serverUrl + '/api/download');
+            }).catch(err => {
+            })
+        }
     }
 
     scrollToGo() {
