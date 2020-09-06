@@ -1,0 +1,10 @@
+Will not apply HSTS. The HSTS database must be a regular and non-world-writable file.
+ERROR: could not open HSTS store at '/home/bigjijiman/.wget-hsts'. HSTS will be disabled.
+--2020-09-05 15:42:08--  https://www.uniprot.org/uniprot/Q9HBJ5.fasta
+Resolving www.uniprot.org (www.uniprot.org)... 128.175.245.202, 193.62.193.81
+Connecting to www.uniprot.org (www.uniprot.org)|128.175.245.202|:443... connected.
+HTTP request sent, awaiting response... 301 Moved Permanently
+Location: https://ebi14.uniprot.org/uniprot/Q9HBJ5.fasta [following]
+--2020-09-05 15:42:09--  https://ebi14.uniprot.org/uniprot/Q9HBJ5.fasta
+Resolving ebi14.uniprot.org (ebi14.uniprot.org)... 193.62.193.81
+Connecting to ebi14.uniprot.org (ebi14.uniprot.org)|193.62.193.81|:443... 

@@ -47,6 +47,7 @@ class BlastRequest extends Component {
 
         this.runscript = this.runscript.bind(this);
         this.runscriptRespHandle = this.runscriptRespHandle.bind(this);
+        this.runscriptErrHandle = this.runscriptErrHandle.bind(this);
         this.updateFile = this.updateFile.bind(this);
         this.clearFile = this.clearFile.bind(this);
         this.updateName = this.updateName.bind(this);
@@ -143,7 +144,7 @@ class BlastRequest extends Component {
                     this.runscriptRespHandle(response);
                 })
                 .catch(error => {
-                    this.setState({result: error.data})
+                    this.runscriptErrHandle(error.response);
                 })
                 this.setState({result: '', resultFormatted: ''});
             //if fasta file uploaded
@@ -164,7 +165,7 @@ class BlastRequest extends Component {
                     this.runscriptRespHandle(response);
                 })
                 .catch(error => {
-                    this.setState({result: error.data})
+                    this.runscriptErrHandle(error.response);
                 })
                 this.setState({result: '', resultFormatted: ''});
             //if fasta text pasted
@@ -181,7 +182,7 @@ class BlastRequest extends Component {
                     this.runscriptRespHandle(response);
                 })
                 .catch(error => {
-                    this.setState({result: error.data})
+                    this.runscriptErrHandle(error.response);
                 })
                 this.setState({result: '', resultFormatted: ''});
             }   
@@ -197,6 +198,7 @@ class BlastRequest extends Component {
 
     //handling files from response
     runscriptRespHandle(response) {
+        console.log(response);
         let gifPreResults = [];
         let txtPreResults = [];
         let finalResults = [];
@@ -246,6 +248,13 @@ class BlastRequest extends Component {
                 , 500)
             })
         });
+    }
+
+    //resp err handling
+    runscriptErrHandle(response) {
+        if (response.status === 503) {
+            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time."/>, result: ''})
+        }
     }
 
     updateFile(event) {
@@ -314,7 +323,7 @@ class BlastRequest extends Component {
     render() {
         return (
             <div className="BlastRequest">
-                <Header size="2rem" title="LisAln Blast Request" />
+                <Header margin="0 0 5vh 0" size="2rem" title="LisAln Blast Request" />
                 <div className="inputField">
                     <Header margin="3vh" size="1rem" title="Enter one of the three:"/>
                     <Header margin="7vh" size="0.4rem" title="(If multiple selections filled, will default to Protein Name, then File Upload, and then Pasted Fasta)" />
@@ -344,35 +353,27 @@ class BlastRequest extends Component {
                     />
                 </div>
                 <div className="inputField">
-                    <Header size="1rem" title="Range (optional)" />
+                    <Header margin="0 0 5vh 0" size="1.25rem" title="Optional Inputs" />
+                    <Header margin="0 0 5vh 0" size="1rem" title="Range" help="A range of which area of the protein to align"/>
                     <div className="rowInput">
                         <TextField error={this.state.rangeStartErr} label="Starting #" variant="outlined" value={this.state.rangeStart} onChange={this.updateRangeStart}/>
                         <TextField error={this.state.rangeEndErr} label="Ending #" variant="outlined" value={this.state.rangeEnd} onChange={this.updateRangeEnd}/>
                     </div>
-                </div>
-                <div className="inputField">
-                    <Header margin="3vh" size="1rem" title="Use Scientific Name?" />
-                    <Header margin="5vh" size="0.4rem" title="Example: If marked yes, will output Homo Sapiens instead of Human" />
+                    <Header  margin="0 0 3vh 0" size="0.9rem" title="Use Scientific Name" help="Example: If marked yes, will output Homo Sapiens instead of Human"/>
                     <FormControl>
                         <RadioGroup aria-label="Scientific Name" value={this.state.sciName} onChange={this.updateSciName}>
                             <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
                             <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
                         </RadioGroup>
                     </FormControl>
-                </div>
-                <div className="inputField">
-                    <Header margin="3vh" size="1rem" title="Use previous data?" />
-                    <Header margin="5vh" size="0.4rem" title="Will use previous data if it already has been stored - can drastically improve speed." />
+                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Use previous data?" help="Will use previous data if it already has been stored - can drastically improve speed."/>
                     <FormControl>
                         <RadioGroup aria-label="Recalc" value={this.state.reCalc} onChange={this.updateReCalc}>
                             <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
                             <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
                         </RadioGroup>
                     </FormControl>
-                </div>
-                <div className="inputField">
-                    <Header margin="3vh" size="1rem" title="Email (optional)" />
-                    <Header maxWidth="70vh" margin="5vh" size="0.4rem" title={`To additionally send results to the email. If results take long to load (5+ minutes) or a database is down, will send results to the email when available.`}/>
+                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Email" help="To additionally send results to the email."/>
                     <div className="rowInput">
                         <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
                     </div>
