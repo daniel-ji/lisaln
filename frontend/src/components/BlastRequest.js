@@ -16,6 +16,7 @@ class BlastRequest extends Component {
         this.state = {
             //result from blastp request
             filenameprefix: '',
+            updates: [],
             result: '',
             resultFormatted: '',
 
@@ -37,7 +38,7 @@ class BlastRequest extends Component {
             rangeEndErr: false,
 
             sciName: false,
-            reCalc: true,
+            reUse: true,
             email: '',
             emailErr: false,
 
@@ -97,7 +98,7 @@ class BlastRequest extends Component {
             } else {
                 if (this.state.fastaInput.size > 20000) {
                     inputTooLong = 'file';
-                    errorMessage.push('Please upload a valid file');
+                    errorMessage.push('Please upload a file under 20KB.');
                 } else {
                     if (this.state.fastaText.length > 20000) {
                         inputTooLong = 'text';
@@ -129,15 +130,24 @@ class BlastRequest extends Component {
 
         //requests
         if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid && !emailInvalid) {
-            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: ''})
+            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: '', updates: []})
             //if protein name input
+            let rawData = [];
+            const source = new EventSource(serverUrl + '/api/blastp');
+            source.onmessage = (e) => {
+                console.log(e.data);
+                rawData.push(e.data);
+                this.setState({updates: rawData.map((item) => {
+                    return <Header margin="2vh" key={item+Date.now()} size="0.5rem" className="updateMessage" title={item}/>
+                })})
+            }
             if (this.state.proteinName !== '') {
                 axios.post(serverUrl + '/api/blastp/name', {
                     proteinName: this.state.proteinName,
                     rangeStart: this.state.rangeStart,
                     rangeEnd: this.state.rangeEnd,
                     sciName: this.state.sciName,
-                    reCalc: this.state.reCalc,
+                    reUse: this.state.reUse,
                     email: this.state.email,
                 })
                 .then(response => {
@@ -154,7 +164,7 @@ class BlastRequest extends Component {
                 blastForm.append('rangeStart', this.state.rangeStart);
                 blastForm.append('rangeEnd', this.state.rangeEnd);
                 blastForm.append('sciName', this.state.sciName);
-                blastForm.append('reCalc', this.state.reCalc);
+                blastForm.append('reUse', this.state.reUse);
                 blastForm.append('email', this.state.email);
                 axios.post(serverUrl + '/api/blastp/file', blastForm, {
                     headers: {
@@ -175,7 +185,7 @@ class BlastRequest extends Component {
                     rangeStart: this.state.rangeStart,
                     rangeEnd: this.state.rangeEnd,
                     sciName: this.state.sciName,
-                    reCalc: this.state.reCalc,
+                    reUse: this.state.reUse,
                     email: this.state.email,
                 })
                 .then(response => {
@@ -198,7 +208,6 @@ class BlastRequest extends Component {
 
     //handling files from response
     runscriptRespHandle(response) {
-        console.log(response);
         let gifPreResults = [];
         let txtPreResults = [];
         let finalResults = [];
@@ -252,7 +261,7 @@ class BlastRequest extends Component {
 
     //resp err handling
     runscriptErrHandle(response) {
-        if (response.status === 503) {
+        if (response !== undefined && response.status === 503) {
             this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time."/>, result: ''})
         }
     }
@@ -288,7 +297,7 @@ class BlastRequest extends Component {
     }
 
     updateReCalc(event) {
-        this.setState({reCalc: event.target.value === 'true' ? true : false})
+        this.setState({reUse: event.target.value === 'true' ? true : false})
     }
 
     updateEmail(event) {
@@ -368,7 +377,7 @@ class BlastRequest extends Component {
                     </FormControl>
                     <Header margin="5vh 0 3vh 0" size="0.9rem" title="Use previous data?" help="Will use previous data if it already has been stored - can drastically improve speed."/>
                     <FormControl>
-                        <RadioGroup aria-label="Recalc" value={this.state.reCalc} onChange={this.updateReCalc}>
+                        <RadioGroup aria-label="Recalc" value={this.state.reUse} onChange={this.updateReCalc}>
                             <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
                             <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
                         </RadioGroup>
@@ -381,6 +390,7 @@ class BlastRequest extends Component {
                 <Button className="sendButton" variant="contained" disableElevation onClick={this.runscript}>Go</Button>
                 <br/>
                 {this.state.errorMessage !== '' && this.state.errorMessage}
+                {this.state.updates.length !== 0 && this.state.updates}
                 {this.state.result !== '' && <Button className="downloadButton" variant="contained" disableElevation onClick={this.downloadResults}>Download Results</Button>}
                 <div className="imageResults">{this.state.resultFormatted}</div>
                 <div className={`scrollIndicator ${this.state.showScrollIndicator ? 'shown': 'fadeOut'}`} onClick={this.scrollToGo}><span/></div>
