@@ -20,11 +20,11 @@ compositionally adjusted substitution matrices", FEBS J.
 272:5101-5109.
 
 
-RID: N8R9GWET01R
+RID: NDXUDCSV016
 
 
 Database: Landmark database for SmartBLAST
-           419,132 sequences; 240,609,256 total letters
+           420,249 sequences; 241,691,599 total letters
 Query= sp|O14497|ARI1A_HUMAN AT-rich interactive domain-containing protein 1A
 OS=Homo sapiens OX=9606 GN=ARID1A PE=1 SV=3
 
@@ -76,7 +76,6 @@ NP_005215.1 AT-rich interactive domain-containing protein 3A [...  105     2e-21
 NP_001275555.1 AT-rich interactive domain-containing protein 3...  104     4e-21  35%         
 NP_001275554.1 AT-rich interactive domain-containing protein 3...  103     7e-21  37%         
 XP_021328062.1 AT-rich interactive domain-containing protein 3...  101     1e-20  37%         
-XP_009304080.1 AT-rich interactive domain-containing protein 3...  101     2e-20  37%         
 NP_001294868.1 AT-rich interactive domain-containing protein 3...  99.8    1e-19  39%         
 NP_006456.1 AT-rich interactive domain-containing protein 3B i...  99.8    1e-19  39%         
 NP_001076471.1 AT-rich interactive domain-containing protein 3...  99.4    1e-19  34%         
@@ -4567,26 +4566,6 @@ Query  1122  DSKKSQPKIQ-------PPSPAGSGSMQGPQTPQSTSSSM  1154
 Sbjct  245   DSNRREGRRQGFGNSLFTYSPNGTPTMLS--SPKRTMSSM  282
 
 
->XP_009304080.1 AT-rich interactive domain-containing protein 3A isoform X1 [Danio 
-rerio]
-Length=524
-
- Score = 101 bits (252),  Expect = 2e-20, Method: Compositional matrix adjust.
- Identities = 59/160 (37%), Positives = 93/160 (58%), Gaps = 11/160 (7%)
-
-Query  1003  TTNEKITKLYELGGEPERKMWVDRYLAFTEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIG  1062
-             T  E+  +LYEL  +P+RK ++D   +F ++K   +  +P + ++ LDLY LY  V E G
-Sbjct  188   TYEEQFRQLYELDSDPKRKEFLDDLFSFMQKKGTPVNRIPIMAKQVLDLYMLYQLVTEKG  247
-
-Query  1063  GLTQVNKNKKWRELATNLNVGTS-SSAASSLKKQYIQCLYAFECKIERGEDPPPDIFAAA  1121
-             GL +V   K WRE+   LN+ TS +SAA +L+ QY++ LY +EC+ +R    P ++ AA 
-Sbjct  248   GLVEVINKKLWREITKGLNLPTSITSAAFTLRTQYMKYLYTYECE-KRALSNPNELKAAI  306
-
-Query  1122  DSKKSQPKIQ-------PPSPAGSGSMQGPQTPQSTSSSM  1154
-             DS + + + Q         SP G+ +M    +P+ T SSM
-Sbjct  307   DSNRREGRRQGFGNSLFTYSPNGTPTMLS--SPKRTMSSM  344
-
-
 >NP_001294868.1 AT-rich interactive domain-containing protein 3B isoform 1 [Homo 
 sapiens]
 Length=561
@@ -4729,10 +4708,34 @@ Query  1182  SNSVGI-QDAFNDGSDSTFQKRNSMTPNPGYQPSMNTSDMMGRMSYEPNKDP  1232
 Sbjct  265   GSASGLPAHACAQLSPSPVKKEESGIPPPRLALPMGLASEATREKLAPEEPP  316
 
 
+>NP_001017362.1 AT-rich interactive domain-containing protein 3C isoform 1 [Mus 
+musculus]
+Length=409
+
+ Score = 92.0 bits (227),  Expect = 8e-18, Method: Compositional matrix adjust.
+ Identities = 68/232 (29%), Positives = 116/232 (50%), Gaps = 13/232 (6%)
+
+Query  1003  TTNEKITKLYELGGEPERKMWVDRYLAFTEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIG  1062
+             T  E+  +LYEL  +P+RK ++D   +F +++   +  +P + ++ LDLY L+  V   G
+Sbjct  96    TYEEQFKQLYELDADPKRKEFLDDLFSFMQKRGTPVNRVPIMAKQVLDLYALFRLVTAKG  155
+
+Query  1063  GLTQVNKNKKWRELATNLNVGTS-SSAASSLKKQYIQCLYAFECKIERGEDPPPDIFAAA  1121
+             GL +V   K WRE+   L++ T+ +SAA +L+ QY++ LY +EC+  R    P ++ AA 
+Sbjct  156   GLVEVINRKVWREVTRGLSLPTTITSAAFTLRTQYMKYLYPYECET-RALSSPGELQAAI  214
+
+Query  1122  DSKKSQPKIQPPSPAGSGSMQGPQTPQSTSSSMAEGGDLKPPTPASTPHSQIPPLPGMSR  1181
+             DS + + + Q  +     ++ GP TP+      +  G    P P +TP+      PG ++
+Sbjct  215   DSNRREGRRQAYTAVPLFNLAGP-TPRGAPGPASSHG----PAPTATPNC-----PGPTQ  264
+
+Query  1182  SNSVGI-QDAFNDGSDSTFQKRNSMTPNPGYQPSMNTSDMMGRMSYEPNKDP  1232
+              ++ G+   A    S S  +K  S  P P     M  +    R    P + P
+Sbjct  265   GSASGLPAHACAQLSPSPVKKEESGIPPPRLALPMGLASEATREKLAPEEPP  316
+
+
   Database: Landmark database for SmartBLAST
-    Posted date:  Aug 22, 2020  10:36 PM
-  Number of letters in database: 240,609,256
-  Number of sequences in database:  419,132
+    Posted date:  Sep 6, 2020  12:14 AM
+  Number of letters in database: 241,691,599
+  Number of sequences in database:  420,249
 
 Lambda      K        H
    0.309    0.128    0.384 
@@ -4741,21 +4744,21 @@ Lambda      K        H
    0.267   0.0410    0.140 
 Matrix: BLOSUM62
 Gap Penalties: Existence: 11, Extension: 1
-Number of Sequences: 419132
-Number of Hits to DB: 138100658
-Number of extensions: 8125648
-Number of successful extensions: 107052
-Number of sequences better than 100: 3396
+Number of Sequences: 420249
+Number of Hits to DB: 150146310
+Number of extensions: 9726745
+Number of successful extensions: 145875
+Number of sequences better than 100: 4635
 Number of HSP's better than 100 without gapping: 0
-Number of HSP's gapped: 68198
-Number of HSP's successfully gapped: 10699
+Number of HSP's gapped: 84958
+Number of HSP's successfully gapped: 16129
 Length of query: 2285
-Length of database: 240609256
+Length of database: 241691599
 Length adjustment: 137
 Effective length of query: 2148
-Effective length of database: 183188172
-Effective search space: 393488193456
-Effective search space used: 393488193456
+Effective length of database: 184117486
+Effective search space: 395484359928
+Effective search space used: 395484359928
 T: 11
 A: 40
 X1: 16 (7.1 bits)
