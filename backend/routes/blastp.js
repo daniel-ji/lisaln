@@ -62,7 +62,7 @@ router.post('/text', (req, res) => {
 })
 
 //returning information to client and console - main function for blastp
-const runAndOutput = (input, req, res) => {
+const runAndOutput = (input, req, res, prevCheckpoints) => {
     //if some servers are down
     let serverDown = false;
     const serverTimer = setTimeout(() => {
@@ -74,7 +74,12 @@ const runAndOutput = (input, req, res) => {
     let tempNumber;
 
     //checkpoints for status bar
-    let checkpoints = ["Temp identifier for possible clear:", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
+    let checkpoints;
+    if (prevCheckpoints === undefined) {
+        checkpoints = ["Temp identifier for possible clear:", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
+    } else {
+        checkpoints = prevCheckpoints;;
+    }
     if (req.url === '/name') {
         checkpoints.splice(1, 0, "GeneName is ");
     }
@@ -82,12 +87,11 @@ const runAndOutput = (input, req, res) => {
     
     //NCBI_blast args
     let args = ['-LisAln', input];
-    if (!req.body.reUse) {
-        // not right position
-        args.splice(1, 0, '-force');
-    }
     if (req.body.sciName) {
         args.splice(1, 0, '-nochange');
+    }
+    if (!req.body.reUse) {
+        args.splice(1, 0, '-force');
     }
     if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
         args.splice(1, 0, '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)));
@@ -125,7 +129,7 @@ const runAndOutput = (input, req, res) => {
                                 });
                             })
                             // reruns program
-                            runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
+                            runAndOutput(`uploads/${filenameprefix}.fasta`, req, res, checkpoints);
                         }
                         checkpoints.splice(i, 1);
                         break;
@@ -138,9 +142,17 @@ const runAndOutput = (input, req, res) => {
                     case "Refseq saved in":
                         clientUpdater.emit('data', 'Found alignments, finding paralogues...');
                         break;
+                    case "=> Paralogues: Human homology proteins saved in":
+                        clientUpdater.emit('data', 'Got paralogues, finding orthalogues...');
+                        break;
+                    case "=> NCBI HomoloGene Orthologues: Protein across species saved as":
+                        clientUpdater.emit('data', 'Got orthologues, processing...')
+                        break;
+                    case "=> LisAln Final Orthologues":
+                        clientUpdater.emit('data', 'Finishing up...')
+                        break;
                 }
-                checkpoints.splice(i, 1);
-                console.log(checkpoints);
+                checkpoints.splice(i, 1);   
             }
         }
         process.stdout.write(data.toString());
@@ -221,9 +233,8 @@ router.get('/', (req, res) => {
         if (data === 'Done!') {
             res.end();
         }
+        return;
     })
-
-    return;
 
     //listening for exit
     res.on('close', () => {
