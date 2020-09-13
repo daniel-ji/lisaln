@@ -7,6 +7,9 @@ import { Button, TextField, Radio, RadioGroup, FormControl, FormControlLabel} fr
 import smoothscroll from 'smoothscroll-polyfill';
 
 const serverUrl = 'http://localhost:3000';
+const CancelToken = axios.CancelToken;
+const Csource = CancelToken.source();
+let scriptTimeElapsed;
 
 class BlastRequest extends Component {
     
@@ -43,7 +46,8 @@ class BlastRequest extends Component {
             emailErr: false,
 
             errorMessage: '',
-            showScrollIndicator: true
+            showScrollIndicator: true,
+            scriptDuration: '',
         }
 
         this.runscript = this.runscript.bind(this);
@@ -130,17 +134,33 @@ class BlastRequest extends Component {
 
         //requests
         if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid && !emailInvalid) {
-            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: '', updates: []})
-            //if protein name input
+            //resetting
+            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: '', updates: [], scriptDuration: ''})
             let rawData = [];
+            //timers
+            let startTime = new Date().getTime();
+            scriptTimeElapsed = setInterval(() => {
+                let diff = new Date().getTime();
+                let minutes = Math.floor((diff-startTime) / (1000 * 60));
+                let seconds = Math.floor(((diff-startTime) / 1000 ) % 60);
+                this.setState({scriptDuration:  <Header margin="2vh" size="0.5rem" className="updateMessage" title={`Time elapsed: ${minutes}m ${seconds}s`}/>});
+                if (minutes === 5) {
+                    clearInterval(scriptTimeElapsed);
+                    Csource.cancel('Web server may be down');
+                }
+            }, 1000)
+            //SSE events
             const source = new EventSource(serverUrl + '/api/blastp');
             source.onmessage = (e) => {
-                console.log(e.data);
                 rawData.push(e.data);
+                if (e.data === 'Done!') {
+                    clearInterval(scriptTimeElapsed);
+                }
                 this.setState({updates: rawData.map((item) => {
                     return <Header margin="2vh" key={item+Date.now()} size="0.5rem" className="updateMessage" title={item}/>
                 })})
             }
+            //if protein name input
             if (this.state.proteinName !== '') {
                 axios.post(serverUrl + '/api/blastp/name', {
                     proteinName: this.state.proteinName,
@@ -149,11 +169,13 @@ class BlastRequest extends Component {
                     sciName: this.state.sciName,
                     reUse: this.state.reUse,
                     email: this.state.email,
-                })
+                }, {cancelToken: Csource.token})
                 .then(response => {
+                    source.close();
                     this.runscriptRespHandle(response);
                 })
                 .catch(error => {
+                    source.close();
                     this.runscriptErrHandle(error.response);
                 })
                 this.setState({result: '', resultFormatted: ''});
@@ -169,12 +191,15 @@ class BlastRequest extends Component {
                 axios.post(serverUrl + '/api/blastp/file', blastForm, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
-                    }
+                    },
+                    cancelToken: Csource.token
                 })
                 .then(response => {
+                    source.close();
                     this.runscriptRespHandle(response);
                 })
                 .catch(error => {
+                    source.close();
                     this.runscriptErrHandle(error.response);
                 })
                 this.setState({result: '', resultFormatted: ''});
@@ -187,15 +212,19 @@ class BlastRequest extends Component {
                     sciName: this.state.sciName,
                     reUse: this.state.reUse,
                     email: this.state.email,
-                })
+                }, {cancelToken: source.token})
                 .then(response => {
+                    source.close();
                     this.runscriptRespHandle(response);
                 })
                 .catch(error => {
+                    source.close();
                     this.runscriptErrHandle(error.response);
                 })
                 this.setState({result: '', resultFormatted: ''});
-            }   
+            }
+            //scroll to bottom of page
+            setTimeout(() => document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'}), 1000);   
         } else {
             // error displaying
             this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid, rangeEndErr: rangeEndInvalid, emailErr: emailInvalid,
@@ -208,6 +237,7 @@ class BlastRequest extends Component {
 
     //handling files from response
     runscriptRespHandle(response) {
+        clearInterval(scriptTimeElapsed);
         let gifPreResults = [];
         let txtPreResults = [];
         let finalResults = [];
@@ -261,8 +291,11 @@ class BlastRequest extends Component {
 
     //resp err handling
     runscriptErrHandle(response) {
+        clearInterval(scriptTimeElapsed);
         if (response !== undefined && response.status === 503) {
-            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time."/>, result: ''})
+            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time."/>, result: '', updates: []})
+        } else {
+            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time."/>, result: '', updates: []})
         }
     }
 
@@ -389,6 +422,7 @@ class BlastRequest extends Component {
                 </div>
                 <Button className="sendButton" variant="contained" disableElevation onClick={this.runscript}>Go</Button>
                 <br/>
+                {this.state.scriptDuration !== '' && this.state.scriptDuration}
                 {this.state.errorMessage !== '' && this.state.errorMessage}
                 {this.state.updates.length !== 0 && this.state.updates}
                 {this.state.result !== '' && <Button className="downloadButton" variant="contained" disableElevation onClick={this.downloadResults}>Download Results</Button>}
