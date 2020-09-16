@@ -136,7 +136,6 @@ class BlastRequest extends Component {
         if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid && !emailInvalid) {
             //resetting
             this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: '', updates: [], scriptDuration: ''})
-            let rawData = [];
             //timers
             let startTime = new Date().getTime();
             scriptTimeElapsed = setInterval(() => {
@@ -152,13 +151,10 @@ class BlastRequest extends Component {
             //SSE events
             const source = new EventSource(serverUrl + '/api/blastp');
             source.onmessage = (e) => {
-                rawData.push(e.data);
                 if (e.data === 'Done!') {
                     clearInterval(scriptTimeElapsed);
                 }
-                this.setState({updates: rawData.map((item) => {
-                    return <Header margin="2vh" key={item+Date.now()} size="0.5rem" className="updateMessage" title={item}/>
-                })})
+                this.setState({updates: <Header margin="2vh" key={e.data+Date.now()} size="0.5rem" className="updateMessage" title={e.data}/>})
             }
             //if protein name input
             if (this.state.proteinName !== '') {
@@ -266,7 +262,8 @@ class BlastRequest extends Component {
                     value={indivRes.data}
                 />)
             })
-            let resultsFormatted = [...gifResults, ...finalResults];
+            let firstRemoved = gifResults.shift();
+            let resultsFormatted = [firstRemoved, ...finalResults, ...gifResults];
             this.setState({filenameprefix: response.data.filenameprefix, result: response.data.url, resultFormatted: resultsFormatted}, () => {
                 setTimeout(
                     () => {
@@ -368,7 +365,7 @@ class BlastRequest extends Component {
                 <Header margin="0 0 5vh 0" size="2rem" title="LisAln Blast Request" />
                 <div className="inputField">
                     <Header margin="3vh" size="1rem" title="Enter one of the three:"/>
-                    <Header margin="7vh" size="0.4rem" title="(If multiple selections filled, will default to Protein Name, then File Upload, and then Pasted Fasta)" />
+                    <Header margin="1vh 3vw 5vh 3vw" size="0.4rem" title="(If multiple selections filled, will default to Protein Name, then File Upload, and then Pasted Fasta)" />
                     <div className="rowInput">
                         <TextField error={this.state.proteinNameErr} label="Protein Name Here" variant="outlined" value={this.state.proteinName} onChange={this.updateName}/>
                         <Button className={this.state.fastaInputErr ? 'buttonError' : ''} disableElevation variant="contained" component="label">Upload Fasta {this.state.fastaInputTitle !== '' && `(Selected file: ${this.state.fastaInputTitle})`}

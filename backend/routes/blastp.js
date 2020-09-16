@@ -129,6 +129,7 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
                                 });
                             })
                             // reruns program
+                            //add delay here
                             runAndOutput(`uploads/${filenameprefix}.fasta`, req, res, checkpoints);
                         }
                         checkpoints.splice(i, 1);
@@ -208,6 +209,7 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
                 main().catch(console.error)
             }
             clientUpdater.emit('data', 'Done!');
+            return;
         } else if (serverDown) {
             //cleaning when server down 
             serverDownTmpExtList.forEach(item => {
@@ -217,6 +219,7 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
             })
             res.sendStatus(503);
         }
+        clientUpdater.emit('data', 'Done!');
     });
 }
 
@@ -239,6 +242,7 @@ router.get('/', (req, res) => {
     //listening for exit
     res.on('close', () => {
         res.end();
+        return;
     });
 
 })
