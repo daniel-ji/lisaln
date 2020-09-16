@@ -40,7 +40,8 @@ body {
     img {
         cursor: pointer;
         margin-left: 0.5rem;
-        height: 1rem;
+        height: 1.15rem;
+        width: 1.15rem;
     }
 
     .hintContainer::after {
@@ -115,6 +116,15 @@ body {
 
         .MuiTextField-root {
             width: 90%;
+        }
+
+        .MuiFormGroup-root {
+            flex-direction: row;
+        }
+
+        [class*=hint--]:after {
+            font-size: 0.9rem;
+            line-height: 0.9rem;
         }
     }
 
