@@ -1,0 +1,380 @@
+CLUSTAL O(1.2.4) multiple sequence alignment
+
+
+Human          MAAQVAPAAASSLGNPPPPPPSELKKAEQQQREEAGGEAAAAAAAERGEMKAAAGQESEG	60
+Mouse          MAAQVAPAAASSLGNPPP-PPSELKKAEQQQREEAGGEAAA-AAAERGEMKAAAGQESEG	58
+zebraFish      MAAQVA--------TLNTSPPAELKKPEREPQDESV--------------IGEKQQESKE	38
+fruitFly       -------------------MNEKIKSPQTQQQQQ-GGAPA--------------------	20
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          PAVGPPQPLGKELQDGAESNGGGGGGGAGSGGGPGAEPDLKNSNGNAGPRPALNNNLTEP	120
+Mouse          PAVGPPQPLGKELQDGAESNGGGGGGGAGSGGGPGAEPDLKNSNGNAGPRPALNNNLPEP	118
+zebraFish      PRADGGSPGQKELQDGADVGNAA------GGGGAGGDPDMKNGNGNPSR--VNNNNSQND	90
+fruitFly       PAATPP-------SAGA---------APGAATPPTSGPPTPNNNSNNGSDPSIQQQQQN-	63
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          PGGGGGG---SSDGVGAPPHSAAAALPPPAYGFGQPYGRSPSAVAAAA------------	165
+Mouse          PGGGGGGGSSSSDGVGAPPHSAAAALPPPAYGFGQAYGRSPSAVAAAA------------	166
+zebraFish      SGGPEGN-----SHPGMAPH-HPGAFPPPPYSYNQHYNRAPF------------------	126
+fruitFly       ----------------VAPH-PYGAPPPPGSGPGGPPGPDPAAVMHYHHLHQQQQQHPPP	106
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          -AAVFHQQHGGQQSPGLAALQSGGGGGLEPYAGPQQNSHDHGFPNHQYN-SYYPNRSAYP	223
+Mouse          -AAVFHQQHGGQQSPGLAALQSGGGGGLEPYAGPQQNSHDHGFPNHQYN-SYYPNRSAYP	224
+zebraFish      ------HQHGGQQSPGMAGP-----AVMDPY---PPNSHEHGYPNHFNNYSPFPNRTPYH	172
+fruitFly       PHMQQQQHHGGPAPPPPGGAPEHAPGVKEEYTHLPPPHPHPA----YGRYHADPNMDPYR	162
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          PPAPAYALSSPRGGTPGSGAAAAAGSKPPPSSSASASSSSSSFAQQRFGAMGGGGPSAAG	283
+Mouse          PPPQAYALSSPRGGTPGSGAAAAAGSKPPPSSSASASSSSSSFAQQRFGAMGGGGPSAAG	284
+zebraFish      Q-GQGYGMNSPRNSQPPAAGG-QPG-KQPPTGGTTPLATAASYNNQRY-----------N	218
+fruitFly       -----YGQPLPGG-KPPQQQQPHPQQQPPQQ--PGPGGSPNRPPQQRY-----------I	203
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          GGTPQPTATPTLNQLLTSPSSARGYQGYPGGDYSGGPQDGGAGKGPADMASQCWGAAAAA	343
+Mouse          GGTPQPTATPTLNQLLTSPSSARGYQGYPGGDYGGGPQDGGAGKGPADMASQCWGAAAAA	344
+zebraFish      MGNPQPTSTPTLNQLLTSPSSTRSYQNYPASEYGGQE---GAAKGPGDMGSSSQYGG---	272
+fruitFly       PGQPPQGPTPTLNSLLQSSNPPPPPQHRYANTYDPQQA---------------------A	242
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          AA-AAAASGGAQQRS-HHAPMSPGSSGGGGQPLARTPQPSSPMDQMGKMRPQPYGGT---	398
+Mouse          AAAAAAVSGGAQQRS-HHAPMSPGSSGGGGQPLARTPQSSSPMDQMGKMRPQPYGGT---	400
+zebraFish      ------GHPAWQQRSHHPPPMSPGNTGQ-----ANRTQPPGPMDQVGKIRGQHYGAG---	318
+fruitFly       -ASAAAAAAAQQQQAGGPPP--PG---HGPPP---------P-----QHQPSPYGGQQGG	282
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          -----NPYSQQQGPPSGPQQ---------GHGYPGQPYGSQTPQRYPMTMQGRAQSA---	441
+Mouse          -----NPYSQQQGPPSGPQQ---------GHGYPGQPYGSQTPQRYPMTMQGRAQSA---	443
+zebraFish      -----NPYSQQQGPPPSSQQ---------GPPYPGQGYGPPGPQRYPMGMQGRTSGN---	361
+fruitFly       WAPPPRPYSPQLGPSQQYRTPPPTNTSRGQSPYPPA--HGQNSGSYPSSPQQQQQQQQQQ	340
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          -------MGGLSYTQ------------------QIPPYGQQGP-----SGYGQQGQTPYY	471
+Mouse          -------MGSLSYAQ------------------QIPPYGQQGP-----SAYGQQGQTPYY	473
+zebraFish      -------LSGIQYGQ------------------QM-GYGQHGP-----GGYGQNQ-AGYY	389
+fruitFly       QQQAGQQPGGPVPGGPPPGTGQQPPQQNTPPTSQYSPYPQRYPTPPGLPAGGSNHRTAYS	400
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          NQQSPHPQ-----Q--QQPPYSQQPPSQTPHAQPSYQQQPQSQP--------------PQ	510
+Mouse          NQQSPHPQ-----Q---QPPYAQQPPSQTPHAQPSYQQQPQTQQ--------------PQ	511
+zebraFish      GQQGPSPH-----GGPQQSSYPQQP-STGPGSQPPYSQQPSGTPHGQSGTSYGQPQGPHV	443
+fruitFly       THQYPEPNRPWPGGSSPSPGSGHPLPPASPHHVPPLQQQPPPPP----------------	444
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          LQSSQPPYSQQPSQPPHQQSPAPYPSQQST--------TQQHPQSQPPYSQPQAQS----	558
+Mouse          LQSSQPPYSQQPSQPPHQQSPTPYPSQQST--------TQQHPQSQPPYSQPQAQS----	559
+zebraFish      PNQGQPPYSQTPQSQ---SGQSPFPQSQGPTQSQGPSQGQQGSQSQPGYTHPPSGSGQPA	500
+fruitFly       ----------------HVSAGG--------------------------------------	450
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          ----PYQQ-------QQP------------QQPAPSTLSQQAAYPQPQSQQSQQTAYSQQ	595
+Mouse          ----PYQQ-------QQP------------QQPASSSLSQQAAYPQPQPQQSQQTAYSQQ	596
+zebraFish      QQQGPSQQQQGPPQSQTPSSAPPQPSQQTSGQGQPSPYSQTPPLQTQQQQQQQQQSPFQR	560
+fruitFly       --------------------------------PPPSSSPGHAPSPSPQPS--------QA	470
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          RFPPPQELSQDSFGSQASSAPSMTSSKGGQEDMNLSLQSRPSSLPDLSGSIDD--LPMGT	653
+Mouse          RFPPPQELSQDSFGSQASSAPSMTSSKGGQEDMNLSLQSRPSSLPDLSGSIDD--LPMGT	654
+zebraFish      FPPPPQELSQDSFSSQSSAPSSNQPIVSSKSGQDDTMQGRPSSLPDLSGSIDD--LPTGT	618
+fruitFly       SPSPHQELIGQNSND--------SSSGGAHSGMG----SGPPGTPNPQQVMRPTPSPTGS	518
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          EGA--LSPGVSTS--------GISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSP	703
+Mouse          EGA--LSPGVSTS--------GISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSP	704
+zebraFish      EGA--LSPGVSTS--------GVSSSQGEQSNPAQSPFSPHTSPHLSGIRGPSPSPVGSP	668
+fruitFly       SGSRSMSPAVAQNHPISRPASNQSSSGGPMQQPPVGAGGPPPMPPHPGMPGGPPQQQQSQ	578
+roundWorm      ------------------------------------------------------------	0
+                                                                           
+
+Human          ASVAQSRSGPLSPAAVPGNQMPPRPPSGQSDSIMHPSMNQSSIAQDRGYMQRNPQMPQYS	763
+Mouse          ASVAQSRSGPLSPAAVPGNQMPPRPPSGQSDSIMHPSMNQSSIAQDRGYMQRNPQMPQYT	764
+zebraFish      ASGPASRTGPLSPGTMPGNQMPPRPSSVQSDGMLHSSMGQ-----DRVYM-RNPQM-PYG	721
+fruitFly       QQQA--SNSASSASNSPQQTPPPAPPPNQGMNN----------------MA-TPPPPPQG	619
+roundWorm      --------------------------------MMMTSLS------GRLYLDGRRDC-LLG	21
+                                                                :          
+
+Human          SPQPGSALSPRQPSGGQIHTG--MGSYQQ-------NSMGSYGPQGGQYGPQGGYPR-QP	813
+Mouse          SPQPGSALSPRQPSGGQMHSG--VGSYQQ-------NSMGSYGPQGSQYGPQGGYPR-QP	814
+zebraFish      SPQSGSTLSPRQTSGSQMHAG--MGSYPQN------NSMGNYGPQSGQYGPQ-GYPR-PP	771
+fruitFly       AAGGGYPMPP------HMHGGYKMGGPGQS------PGAQGYPPQQPQQYPPGNYPP-RP	666
+roundWorm      EDADKYAASV----AEVAHGG---GGPKKDDQVPPAPDASMPTPQQQQQQP--NLPPPQQ	72
+                                 * *   *.  :        .     **  *  *  . *    
+
+Human          NYNALPNANYP----SA-GMAGGINPMGAGGQMHGQPG---------IPPYGTLPPG---	856
+Mouse          NYNALPNANYP----NA-GMAGSMNPMGAGGQMHGQPG---------IPPYGTLPPG---	857
+zebraFish      GYGGMPNANYP----GGPGMGGSMNP------MAGQGG---------GGPYGGMPPG---	809
+fruitFly       QYPPGAYATGPPPPPTSQAGAGGANSMPSGAQAGGYPGRGMPNHTGQYPPYQWVPPSPQQ	726
+roundWorm      PYEHP-AQQHPPQ---HHSVP--PN------SFAPPPGQHHPQHPG-MPPMEWRPPGAEY	119
+                *        *       .     *            *           *    **.   
+
+Human          -----RMSHASMGNRPYGP------NMANMPPQVGSGMCPPPGGMNRKTQ----------	895
+Mouse          -----RMAHASMGNRPYGP------NMANMPPQVGSGMCPPPGGMNRKTQ----------	896
+zebraFish      -----RMGPGQMGTRPYGPGMG--PNMGGMPPQVASGMCPPPGMNRKPQD----------	852
+fruitFly       TVPGGAPGGAMVGNHVQGKGTPPPPVVGGPPPPQGSGSPRPLNYLKQHLQHKGGYGGSPT	786
+roundWorm      QMPPGYPAG----YPPYG-----------MPPRHHPGYPHPAYGY--------------P	150
+                      .         *            **    *   *                   
+
+Human          ---------ETAVAM----HVAANSIQNRPPGYP------------NMNQ----------	920
+Mouse          ---------ESAVAM----HVAANSIQNRPPGYP------------NMNQ----------	921
+zebraFish      ---------PAAAGM----HHGPSNSIHRPPGYP------------NMNQ----------	877
+fruitFly       PPQGPQGYGNGPTGMHPGMPMGPPHHMGPPHGPTNMGPPTSTPPQSQMLQGGQPQGQGAS	846
+roundWorm      PPGAPYGY--PPQMMRPP-MMAPGDMVRMPPGPTPTEWAAQQ--QAQAASRSVPPKE---	202
+                             *      .       * *              :  .          
+
+Human          --------------GGMMGTGPPYGQGINSMAGMINPQGPPY----------SMGGTMAN	956
+Mouse          --------------GGMMGTGPPYGQGINSMAGMINPQGPPY----------PMGGTMAN	957
+zebraFish      ---------------GMMGAGSPYAPPMNSMQGMMNQAG-QY----------PMPGNMSN	911
+fruitFly       GGPESGGPEHISQDNGISSSGPTGAAGMHAVTSVVTTGPDGT-----SMDEVSQQSTLSN	901
+roundWorm      --------------------GPNGNPATPSSSSQPIPSPSASSIAEESLDDKPSGTKMPA	242
+                                   *        :  .                       .:  
+
+Human          NSAGMAASP---------------------------EM--MGLGDV-----KLTPA----	978
+Mouse          NSAGMAASP---------------------------EM--MGLGDV-----KLTPA----	979
+zebraFish      NSAGMAPSP---------------------------EF-----GMD-----KLNQS----	930
+fruitFly       ASAASGEDPQCTTPKSRKNDPYSQSHLAPPSTSPHPVV--MHPGGGPGEEYDMSSPPNWP	959
+roundWorm      -----QPPP--------------QQHPPPP--QPQQIMSPMPPQAPPSQQATPSS-----	276
+                       *                            .               .      
+
+Human          --TKMNNKADGTPKTESKSK-KSSSSTTTNEKITKLYELGGEPERKMWVDRYLAFTEEKA	1035
+Mouse          --TKMNNKADGTPKTESKSK-KSSSSTTTNEKITKLYELGGEPERKMWVDRYLAFTEEKA	1036
+zebraFish      --QKLNNKVDGTPKTESKKK--SSSSTTTNEKITRLYELGPEPERKLWVDRYLAFAEEKA	986
+fruitFly       RPAGSPQVFNHVPVPQEPFR-STITTTKKSDSLCKLYEMDDNPDRRGWLDKLRAFMEERR	1018
+roundWorm      --SAASVAAPDTPKVSGKVLSKAELFEKLVGPITLHNPMKVMAERRGFFERLIEFCEHNG	334
+                          .*  .      :    .    :     :    :*: :.::   * *.. 
+
+Human          MGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSAASSLK	1093
+Mouse          MGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSAASSLK	1094
+zebraFish      MGMSNLPAVGRKPLDLFRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSAASSLK	1044
+fruitFly       TPITACPTISKQPLDLYRLYIYVKERGGFVEVTKSKTWKDIAGLLG--IGASSSAAYTLR	1076
+roundWorm      EPLTMVPQVSKQSIDLHRLYIGVRAKGGFQQVTKDKYWKNLCTEANPDLAESSAAGYQLR	394
+                 ::  * :.:: :**.***: *:  **: :*.*.* *:::.   .  :. **:*.  *:
+
+Human          KQYIQCLYAFECKIERGEDPPPDIFAAADS--KKSQPK-IQPPSPAGSGSMQ-----GPQ	1145
+Mouse          KQYIQCLYAFECKIERGEDPPPDIFAAADS--KKSQPK-IQPPSPAGSGSMQ-----GPQ	1146
+zebraFish      KQYIQCLYAFECKIERGEDPPPDFFNN-DP--KKNQAK-VQPPSPAGSGSLQ-----GPQ	1095
+fruitFly       KHYTKNLLTFECHFDRGDIDPLPIIQQVEAGSKKKTAKAASVPSPGG-GHLD-----AGT	1130
+roundWorm      KHYQRHLLMLECRETGRNPEDEVAFADKMKRQRKR--------EPAGGNAAAAAAVAAAQ	446
+               *:* : *  :**:    :      :       :*         .*.* .        .  
+
+Human          TPQSTSSSMAEG--GDLKPPTPASTPHSQIPPLPGMSRSNSVGIQDAFNDGSDSTFQ---	1200
+Mouse          TPQSTSSSMAEG--GDLKPPTPASTPHSQIPPLPGMSRSNSVGIQDAFPDGSDPTFQ---	1201
+zebraFish      TPQSTSSSMAEG--GDLKPPTPASTPHSQMPPMPGAR--SSVNLQDPFADGGDPAFS---	1148
+fruitFly       T-NSTGS--SNS--QDSFPAPPGSAPNAAIDGYPGYPGGSPY----PVASGPQPDYATAG	1181
+roundWorm      QGDQKSQHGAPGGSGAPPPGPPGAYPGNGA---PGGPPGGPP--QFPGHPGMDPNYHYYQ	501
+                 :....  : .      *  *.: *       **    .          * :  :    
+
+Human          -------KRNSMTPN---PGYQPSMNTSDMMGRMS-YEPNKDPYGSMRKAPGSDPFMSSG	1249
+Mouse          -------KRNSMTPN---PGYQPSMNTSDMMGRMS-YEPNKDPYGSMRKAPGSDPFMSSG	1250
+zebraFish      -------RRNSVTPN---SGYQPGMGGPDMMGRMGPFEPNKDPFGGMRKA--GEQFMNPG	1196
+fruitFly       QMQRPPSQNNPQTPH---PGAAAAVAAGDNISVSNPFEDPIAAGG--------GPGSGTG	1230
+roundWorm      -------QHGMMPPHPGHPGYPPQ--------HMNAFSPGQYPGH--QRPPGGPG-----	539
+                      :..   *:    *              . :.                      
+
+Human          QGPNGGMGDPYSRAAGP-GLGNVAMGPRQHYPYGGPYDRVRTEPGIGPEGNMSTGAPQPN	1308
+Mouse          QGPNGGMGDPYSRAAGP-GLGSVAMGPRQHYPYGGPYDRVRTEPGIGPEGNMGTGAPQPN	1309
+zebraFish      QGPNSGMGEQYNRASQG-PMGNMQMGQRQQYPYGPGYDRR-PDSSMGPDGNM---GPQPN	1251
+fruitFly       PGPGQGPGPGAASGGAG-AVGAVGGGPQPHPPPPHSPHT-AAQQAAG---Q------HQQ	1279
+roundWorm      -GP--PPGPQAMRAPMPQHMQEMDEHQRQWYA--HQ-------QAAAAHHHAQQQAAAQA	587
+                **    *     .     :  :    :                . .   :         
+
+Human          LMPSNPDSGMYSPSRYPPQQQQ-----Q-------------------------QQQRHDS	1338
+Mouse          LMPSTPDSGMYSPSRYPPQQQQQQQQQQ-------------------------QQQRHDS	1344
+zebraFish      MMPSGADAGMYSPNRPP------------------------------------QQQRHDS	1275
+fruitFly       QHPQHQHPGLP--GPPPPQQQQGQQGQQPPPSVGGGPPPAPQQHGPGQVPPSPQQHVRPA	1337
+roundWorm      QAAQAQQASTPAPSTTPAPQAAS--SSQAAPTSGANT-----------------QPATPS	628
+                  .  . .    .  *                                     *    :
+
+Human          YGNQFSTQ--------GTPSGSPFP---------------------------------SQ	1357
+Mouse          YGNQFSTQ--------GTPSSSPFP---------------------------------SQ	1363
+zebraFish      YSNQYAGQ--------GAPPSGPYP---------------------------------NQ	1294
+fruitFly       AGAPYPPGGSGYPTPVSRTPGSPYPSQPGAYGQYGSSDQYNATGPPGQPFGQGPGQYPPQ	1397
+roundWorm      ASNQPP-------TPASASASTTLHVEPASVA--GGS----QAGSRAPSAGPGPSATP--	673
+                .              .   .                                       
+
+Human          QTTMYQQQQQNY--KRPMDGTYGPPAKRHE-------GEMYSVPYSTGQGQPQQQQ--LP	1406
+Mouse          QTTMYQQQQQNY--KRPMDGTYGPPAKRHE-------GEMYSVPYSAGQGQPQQQQ--LP	1412
+zebraFish      QSGMYPQQQPNYTQKRPVDGVYGPPAKRHE-------GDMYPFSGQQ--QGP--------	1337
+fruitFly       NRNMYPPYGPEGEAPPTGANQYGPYGSR-----------PYSQPPPGGPQPPTQTVAGGP	1446
+roundWorm      DSSTIPSASAAADAQTTTSSETSTPGEPTSSTPSDTPAPSTSVPPPTSVQPPQPQQ----	729
+               :                  .  .  ..                        *        
+
+Human          PAQPQPAS---QQQAAQPSPQQDVY-----------------------------------	1428
+Mouse          AAQSQPAS---QPQAAQPSPQQDVY-----------------------------------	1434
+zebraFish      ------------QAPGAPQSQSDMY-----------------------------------	1350
+fruitFly       PAGGAPGAPPSSAYPTGRPSQQDYYQPPPDQSPQPRRHPDFIKDSQPYPGYNARPQIYGA	1506
+roundWorm      PPQGPPG------------------------------PPGPQQHPGPYPGYPG-------	752
+                                                                           
+
+Human          -----NQYGNAYPATATAAT--------ERRPA---GG---------------PQNQFPF	1457
+Mouse          -----NQYSNAYPASATAAT--------DRRPA---GG---------------PQNQFPF	1463
+zebraFish      -----NQYNT-YP------G--------SERRP---PG---------------PQSQFPF	1372
+fruitFly       WQSGTQQYRPQYPSSPAPQNWGGAPPRGAAPPPGAPHG---------------PPIQQPA	1551
+roundWorm      -------YGP-------P--GAMRPPAGFAPPPGAPYGYPPGAPPPAGFHPSHPQHPQHA	796
+                      *                             *               *      
+
+Human          Q---FGRDRVSAPPGTN---AQQNM--------PPQMMGGPIQASA---EVAQQGTMWQG	1500
+Mouse          Q---FGRDRVSAPPGSS---AQQNM--------PPQMMGGPIQASA---EVAQQGTMWQG	1506
+zebraFish      G---FGRDRGPNVGGPN---SQPSM--------PPQMMGSSMSGTMPSVPDGPQGPMWPG	1418
+fruitFly       GVAQWDQHRYPPQQGPPPPPQQQQQPQQQQQQPPYQQVAGPP-----GQQPPQAPPQWAQ	1606
+roundWorm      QYLAWQQQRYHQQQQHQ---QQQ-------------------------------------	816
+                   : :.*            *                                      
+
+Human          RNDMTYN-YANRQS-TGSAPQGPAYHG-VNRTDEMLHTDQRANHEGSWPS-------HG-	1549
+Mouse          RNDMTYN-YANRQN-TGSATQGPAYHG-VNRTDEMLHTDQRANHEGPWPS-------HG-	1555
+zebraFish      RNEMNYPNYHNRQGPPGVPSQSQVYHG-MNRSEDMMPSDQRMNQEGPWPG-------HVN	1470
+fruitFly       MNPGQTA--QSGIAPPGSPLRPPSGPGQQNRMPGMPAQQQQSQQQGGVPQPPPQQASHGG	1664
+roundWorm      -----------QQGAPGGPRPPYPYP----------------------------------	831
+                               *                                           
+
+Human          TR---QPPYGPSAPV-PPMTRPPPSNYQPPPSMQNHIPQV-------------SSPAPLP	1592
+Mouse          TR---QPPYGPSAPV-PPMTRPPPSNYQPPPSMPNHIPQV-------------SSPAPLP	1598
+zebraFish      QR---QPPYGPVASG-PPMSRPLQPNYQS---SQNHIPQV-------------SSPAPMP	1510
+fruitFly       VPSPGLPQVGPGGMVKPPYAMPPPP-------SQGVGQQVGQGPPGGMM---SQKPPPMP	1714
+roundWorm      --------GGPVPPGPPQNRMPPPPPAQGAPSPSGAAGSNGKQPRYGTPAPPSRASAPTP	883
+                        **     *    *            .   .                  * *
+
+Human          R------PMENRTSPSKSP--FLHSGMKMQKAGPPVPASHIAP----------APVQPPM	1634
+Mouse          R------PMENRTSPSKSP--FLHSGMKMQKAGPPVPASHIAP----------TPVQPPM	1640
+zebraFish      R------PMENRTSPNKSP--YMHPGMKIQKAGPPVPASHIAQ----------PPVQPPM	1552
+fruitFly       GQAMQQQPLQQQPPSHQHPHPHQHPQHQHPH---QMPPNQTAPGGY--GPPGMPGGGAQL	1769
+roundWorm      QPLSSTMPVVA-PSTSTQPTPT---------TGSYLANTLATPGPAHAPSSSMSHAHHVI	933
+                      *:         *                :  .  :                 :
+
+Human          IRRDITFPPGSVEATQPVL--KQRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTIN	1692
+Mouse          IRRDITFPPGSVEATQPVL--KQRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTIN	1698
+zebraFish      IRRDIAFPPGSIEASQPIL--KPRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTIN	1610
+fruitFly       VKKELIFPHDSVESTTPVL--YRRKRLMKADVCPVDPWRIFMAMRSGLLTECTWALDVLN	1827
+roundWorm      SQQQHQYPPGCIEATATSQNQVKRRKVYARELINATPRRLIMSLRSGLDAEAIWAINALN	993
+                :::  :* ..:*::        *:::   ::      *::*:::*** :*. **::.:*
+
+Human          ILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPGRFSK	1752
+Mouse          ILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPGRFTK	1758
+zebraFish      ILLYDDNSISNFNLNQLPGFLELVVEYFRRCLIEIFGILKEYEVGDPGQRTLIDPEAIDP	1670
+fruitFly       VLLFDDSTVQFFGISNLPGLLTLLLEHFQKNLAEMFDERENEEQS-----ALLAEDAD--	1880
+roundWorm      VLLYDDTNP-HPTLQQMPGLVNVIVEHLYATLSIMYPA--EFQLTEPGKPIIMDESKETV	1050
+               :**:**..     :.::**:: :::*::   *  ::    : :        ::       
+
+Human          VSSPAP------MEGGE-E-EEELLGPKL-------EEEEEEEV--VE-ND-EEI-AFSG	1792
+Mouse          VYSPAH------TE--E-E-EEEHLDPKL-------EEEEE-EG--VG-ND-EEM-AFLG	1795
+zebraFish      EMSDEEGPEAEQMEEDDEDDEEDLENNTVQTSQVQIKQEKEESMESPKSNDKNELEDREG	1730
+fruitFly       ----------------DDADSGTVMCEKLRTSGRQPRCVR--SISSYNRRRHYENMDRSG	1922
+roundWorm      EK----------MM----------------------KAEKDGGIKSII--EKMPVVPRKG	1076
+                                                   .  .                   *
+
+Human          KD--------------------KPASENSEEKLISKF---------DKLPVKIVQKNDPF	1823
+Mouse          KD--------------------KPSSENNEEKLVSKF---------DKLPVKIVQRNDPF	1826
+zebraFish      EDNSCKDH----LRSSTPLQ--DTSASQERPKQASKF---------DKLPIKIMRKKDPF	1775
+fruitFly       KDGAGNGSDSEDADEGIDLGQVRVQPNPEERSLLLSFTPNYTMVTRKGVPVRIQPAENDI	1982
+roundWorm      SD----------------------------------KTATFTMMSRNGLQVHFRDESIPT	1102
+               .*                                            . : :::   .   
+
+Human          VVD-----------------CSDKLGRVQEFDSGLLHWRIGGGDTTEHIQTHFESKTELL	1866
+Mouse          VVD-----------------CSDKLGRVQEFDSGLLHWRIGGGDTTEHIQTHFESKIELL	1869
+zebraFish      VIG-----------------HTSKLGRRQAFDSGLIHWSVGGGDTTEHIQTHFESKMELL	1818
+fruitFly       FVDERQK--------AWDIDTNRLYEQLEPVGSDAWTYGFTEPDPLDGIIDVFKSEIVNI	2034
+roundWorm      ALRKRFSRESGEKNSDAMVDHSISS----AYVEDRNSVGLGGG-LAERIATRLRDKLLHE	1157
+                :                   .          ..     .      : *   :..:    
+
+Human          PSRPHAPCPPAPRKHVTTAEGTPGTTDQ-----EGP------------P------PDGPP	1903
+Mouse          PSRPYVPCPTPPRKHLTTVEGTPGTTEQ-----EGP------------P------PDGLP	1906
+zebraFish      KHRKRVPVNVEPRKKVSQILETVTGEAEKVQTNEGPQQVQVLASKDQPSLEGKSTTTSST	1878
+fruitFly       PFARYIRSDKKGRKRTELASSS---RKPEIKTEENSTEEQTFNKKRR-LVSGGSSSSGAH	2090
+roundWorm      KTRP--------RPVFSKYLDD-------LET----------------------------	1174
+                           *                                               
+
+Human          EK--RITATMDDML------STRSSTLTEDGAKS-SEAIKESSKFPFGI-----------	1943
+Mouse          EK--RITATMDDML------STRSSTLTDEGAKS-AEATKESSKFPFGI-----------	1946
+zebraFish      ST--SITATIDDVL------SARRGSATEEAVRGNQDSDKEKNTFLFGI-----------	1919
+fruitFly       AEGKKSKLTSEEFAQPNAEVKKEPGTADSDCRPVDMDIEAPQQRLTNGVAPCSSTPAIFD	2150
+roundWorm      ----ESTETIDTVE-----VKKEI---EDEVAEEKKDVLLMRGARPDELSDCKH------	1216
+                     . * : .       . .     .:      :           :           
+
+Human          --------SPAQSHRNIKILEDEPHSKDETPLCTLLDWQDSLAKRCVCVSNTIRSLSFVP	1995
+Mouse          --------SPAQSHRNIKILEDEPHSKDETPLCTLLDWQDSLAKRCVCVSNTIRSLSFVP	1998
+zebraFish      --------DLAQQSRNIKILEDEPHSKDETPLCTLSDWQDALARRCICVSNIVRSLSFIP	1971
+fruitFly       PRTTAKDEARVLQRRRDSSFEDECYTRDEASLHLVSESQDSLARRCIALSNIFRNLTFVP	2210
+roundWorm      --------------------EVELAWPRPTALSPKSQAMEELAHRALALSNILRGFSFVA	1256
+                                   * *      : *    :  : **:*.:.:** .*.::*: 
+
+Human          GNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LTYEKEEE-QDQG	2040
+Mouse          GNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LTYEKEEE-QDQG	2043
+zebraFish      GNDLEMSKHPGLLLLLGRLVLLHHWHPERKQAP--------------VTYEKEEE-EDEG	2016
+fruitFly       GNETVLAKSTRFLAVLGRLLLLNHEHLRRTPKT--------------RNYDREED-TDFS	2255
+roundWorm      GSDVLMARNEALLFIIGRLLKLNVKEHKISSKRPGIVMSAEELKTAPKQLSADEKRAKEK	1316
+               *.:  :::   :* ::*:*: *:  . . .                    . :*.  .  
+
+Human          VSCNK----VEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPVLDGLLHWAVCPS	2096
+Mouse          VSCDK----VEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPVLDGLLHWAVCPS	2099
+zebraFish      VSCER----DEWWWDCLEVLRENCLVTLANISGQLDLSIYPESICLPLLDGLLHWAVCPS	2072
+fruitFly       DSCSSLQGEREWWWDYLITIRENMLVAMANIAGHLELSRYDELIARPLIDGLLHWAVCPS	2315
+roundWorm      SVLDEVDATTAQMVETANQLRDDAFVMLTHMSVSLNLVDLPDAIAYPIYDGLLRWSVSRV	1376
+                  .          :    :*:: :* :::::  *:*    : *. *: ****:*:*.  
+
+Human          AEAQDPFSTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLEKLYSTMVRFLS	2156
+Mouse          AEAQDPFSTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLEKLYSTMVRFLS	2159
+zebraFish      AEAIDPFPTLGLNGTLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLEKLYGSLVRMVG	2132
+fruitFly       AHGQDPFPSCGPNSVLSPQRLALEALCKLCVTDANVDLVIATPPFSRLEKLCAVLTRHLC	2375
+roundWorm      PEATDSSIPC----PVSPRDYSLEIMCKMVVIERNVDMFLSTGSWSRVEQFVHILTRLLT	1432
+                .. *          :**:   ** :.*: : : ***:.::*  :**:*::   :.* : 
+
+Human          DRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAATQFQQ-SQASL	2215
+Mouse          DRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAATQFQQ-SQASL	2218
+zebraFish      DRKVTVCREMAVVLLANLAQGDTVAARAIAVQKGSVGNLLGFLEDSLAATQFQQ-SQGSL	2191
+fruitFly       RNEDQVLREFSVNLLHYLAAADSAMARTVALQSPCISYLVAFIEQAEQTALGVANQHGIN	2435
+roundWorm      MNEETHYREFAIVILNALCIASEAVCYICAMETSAIAHLILFIDSADQNMHQVMQAHGMA	1492
+                .:    **::: :*  *. ..   .   *::. .:. *: *::.:          :.  
+
+Human          LHMQNPPFEPTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVSPLMNSLVSQVI	2275
+Mouse          LHMQNPPFEPTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVSPLMNSLVSQVI	2278
+zebraFish      LHLQGSPFEPTSVDMMRRAARALHALAKVEENHSEFTLYESRLLDISVSPLMNSLVSHVI	2251
+fruitFly       YLRENPDSMGTSLDMLRRAAGTLLHLAKHPDNRSLFMQQEQRLLGLVMSHILDQQVALII	2495
+roundWorm      ALRDNPELMGTSVGMLRRAASMLRLLVKVPKAYKIYMKHQTRLLQFTMSQLMDSRVAGMI	1552
+                  :.     **:.*:****  *  *.*  .  . :   : *** : :* :::. *: :*
+
+Human          CDVLFLIGQS--------------------------------------------------	2285
+Mouse          CDVLFLIGQS--------------------------------------------------	2288
+zebraFish      CDVLFLIGQS--------------------------------------------------	2261
+fruitFly       SRVLYQVSRGTGPIHSVEFRLLQQRQQQQLRPGPAGKQAASAGGSATVKAETASTETSST	2555
+roundWorm      ADTLYEIQEFVKEFGEDVPEPLKITYSEGYQPSQTDDKESTS-----TNSDAAAPPQKST	1607
+               . .*: : .                                                   
+
+Human          ------------------------------------------------------------	2285
+Mouse          ------------------------------------------------------------	2288
+zebraFish      ------------------------------------------------------------	2261
+fruitFly       EAKPAPAATTAVVNDENSN---------SSQQLPP---AATF------------NDVSNS	2591
+roundWorm      SSSPKPVEESAATTSVNVHGNGTLECETSSRPLSSEAAAAVITPYENHHKNEEEEDLKKE	1667
+                                                                           
+
+Human          ------------------------------------------------------------	2285
+Mouse          ------------------------------------------------------------	2288
+zebraFish      ------------------------------------------------------------	2261
+fruitFly       STNSNSCGTASSNQTNNSTTNSSHSSSAISSQSAITVAAPSAAATGAGSATAAAIASDQQ	2651
+roundWorm      IDEGESCDGYDTEA--------------------IRLSQK---------RSAAALIDEQS	1698
+                                                                           
+
+Human          ------------------------------------------------------------	2285
+Mouse          ------------------------------------------------------------	2288
+zebraFish      ------------------------------------------------------------	2261
+fruitFly       QVSKVAAAAAAAAALSNASAAAAAAAAAAAASVGPPTSSSVSAGAAVAQPAAPPPTNAGT	2711
+roundWorm      RSPPP----AKRAHLSNGFDKSKS-SVSTNGTLGDA---SQNDG--------------AL	1736
+                                                                           
+
+Human          -----	2285
+Mouse          -----	2288
+zebraFish      -----	2261
+fruitFly       TTAVA	2716
+roundWorm      TTAVA	1741
+                    

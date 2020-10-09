@@ -23,6 +23,9 @@ class BlastRequest extends Component {
             result: '',
             resultFormatted: '',
 
+            //disable go when running
+            goDisabled: false,
+
             fastaInput: '',
             fastaInputTitle: '',
             //to force fasta input and make clear button work
@@ -135,7 +138,7 @@ class BlastRequest extends Component {
         //requests
         if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid && !emailInvalid) {
             //resetting
-            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: '', updates: [], scriptDuration: ''})
+            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: '', updates: [], scriptDuration: '', goDisabled: true})
             //timers
             let startTime = new Date().getTime();
             scriptTimeElapsed = setInterval(() => {
@@ -143,9 +146,13 @@ class BlastRequest extends Component {
                 let minutes = Math.floor((diff-startTime) / (1000 * 60));
                 let seconds = Math.floor(((diff-startTime) / 1000 ) % 60);
                 this.setState({scriptDuration:  <Header margin="2vh" size="0.5rem" className="updateMessage" title={`Time elapsed: ${minutes}m ${seconds}s`}/>});
+                if (seconds === 5 && minutes === 0) {
+                    document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'});
+                }
                 if (minutes === 5) {
                     clearInterval(scriptTimeElapsed);
                     Csource.cancel('Web server may be down');
+                    this.setState({goDisabled: false});
                 }
             }, 1000)
             //SSE events
@@ -253,6 +260,7 @@ class BlastRequest extends Component {
         Promise.all(txtResults).then(txtResponse => {
             finalResults = txtResponse.map(indivRes => {
                 return (<TextField
+                    inputProps={{spellCheck: false}}
                     key={Date.now()}
                     className="textOutput"
                     label="Full Alignment Results"
@@ -264,7 +272,7 @@ class BlastRequest extends Component {
             })
             let firstRemoved = gifResults.shift();
             let resultsFormatted = [firstRemoved, ...finalResults, ...gifResults];
-            this.setState({filenameprefix: response.data.filenameprefix, result: response.data.url, resultFormatted: resultsFormatted}, () => {
+            this.setState({filenameprefix: response.data.filenameprefix, result: response.data.url, resultFormatted: resultsFormatted, goDisabled: false}, () => {
                 setTimeout(
                     () => {
                         this.setState({showScrollIndicator: true}, () => {
@@ -290,9 +298,9 @@ class BlastRequest extends Component {
     runscriptErrHandle(response) {
         clearInterval(scriptTimeElapsed);
         if (response !== undefined && response.status === 503) {
-            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time."/>, result: '', updates: []})
+            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time. Click here to enter your email to have results send to you when available."/>, result: '', updates: [], goDisabled: false})
         } else {
-            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time."/>, result: '', updates: []})
+            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time. Click here to enter your email to have results send to you when available."/>, result: '', updates: [], goDisabled: false})
         }
     }
 
@@ -412,12 +420,12 @@ class BlastRequest extends Component {
                             <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
                         </RadioGroup>
                     </FormControl>
-                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Email" help="To additionally send results to the email."/>
+                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Email" help="To additionally send results to the email. If servers are down, inputting your email will send results to you when they are available."/>
                     <div className="rowInput">
                         <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
                     </div>
                 </div>
-                <Button className="sendButton" variant="contained" disableElevation onClick={this.runscript}>Go</Button>
+                <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
                 <br/>
                 {this.state.scriptDuration !== '' && this.state.scriptDuration}
                 {this.state.errorMessage !== '' && this.state.errorMessage}

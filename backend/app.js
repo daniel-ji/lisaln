@@ -6,7 +6,7 @@ var logger = require('morgan');
 var cors = require('cors');
 
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+var deleteOldFilesRouter = require('./routes/deleteOldFiles');
 var blastpRouter = require('./routes/blastp');
 var downloadRouter = require('./routes/download');
 
@@ -24,7 +24,6 @@ app.use(cookieParser());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/api/blastp', blastpRouter);
 app.use('/api/download', downloadRouter);
 

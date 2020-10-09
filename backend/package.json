@@ -16,6 +16,7 @@
     "http-errors": "~1.6.3",
     "morgan": "~1.9.1",
     "multer": "^1.4.2",
-    "nodemailer": "^6.4.11"
+    "node-cron": "^2.0.3",
+    "nodemailer": "^6.4.13"
   }
 }
