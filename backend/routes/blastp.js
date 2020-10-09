@@ -7,29 +7,27 @@ const dotenv = require('dotenv');
 dotenv.config();
 const AdmZip = require('adm-zip');
 const events = require('events');
-const clientUpdater = new events.EventEmitter();
+let clientUpdater = new events.EventEmitter();
 
 // storing stuff
 const multer = require('multer');
 let filenameprefix;
+let extension; 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'dbandbash/codes/uploads')
     },
     filename: (req, file, cb) => {
+        extension = file.originalname.match(/\.[0-9a-z]+$/i);
         filenameprefix = "a" + (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)).toLowerCase();
-        cb(null, filenameprefix + ".fasta");
+        cb(null, filenameprefix + extension);
     }
 })
 const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 
 //file suffixes for files we're sending (will be combined with protein name)
 let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt'];
-//tmp file list to remove tmp files when execution is cancelled
-let tmpExtList = ['.tmp', '.tmp2', '.tmp6', '.tmp.allaln', '.tmp.fin', '.tmp.fin2', '.tmp.more']; 
 let serverDownTmpExtList = ['.tmp6', '.tmp.fasta.txt'];
-//ext list to rename files when exec cancelled
-let renameList = ['_blastp_landmark.txt', '_blastp_landmark.fasta.txt'];
 // email
 const nodemailer = require("nodemailer");
 const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -44,18 +42,23 @@ router.post('/name', (req, res) => {
 
 //when sends file
 router.post('/file', upload.single('fasta'), (req, res) => {
-    runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
+    oldfilenameprefix = filenameprefix;
+    filenameprefix = "a" + (fs.readFileSync(req.file.path).toString('utf8', 0, 32).replace(/([^a-z0-9]+)/gi, '0')).toLowerCase();
+    fs.rename(`./${req.file.path}`, `./dbandbash/codes/uploads/${filenameprefix}${req.file.path.replace(/^[^.]*/, '')}`, err => {
+        if (err) console.log(err);
+    })
+    runAndOutput(`uploads/${filenameprefix}${extension}`, req, res);
 });
 
 //when input in text box
 router.post('/text', (req, res) => {
     let fastaText = String(req.body.fastaText);
+    extension = ".fasta";
     if (fastaText.length !== 0 && fastaText.length < 10000) {
-        filenameprefix = "a" + (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)).toLowerCase();
-        fs.writeFile(`./dbandbash/codes/uploads/${filenameprefix}.fasta`, fastaText, err => {
-            if (err !== null) {
-                console.log(err);
-            }
+        filenameprefix = "a" + (fastaText.substr(0, 32).replace(/([^a-z0-9]+)/gi, '0')).toLowerCase();
+        console.log(filenameprefix);
+        fs.writeFile(`./dbandbash/codes/uploads/${filenameprefix}${extension}`, fastaText, err => {
+            if (err) console.log(err);
         })
     }
     runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
@@ -76,7 +79,7 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
     //checkpoints for status bar
     let checkpoints;
     if (prevCheckpoints === undefined) {
-        checkpoints = ["Temp identifier for possible clear:", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
+        checkpoints = ["Temp identifier for possible clear:", "Trying to get fasta seq for human", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
     } else {
         checkpoints = prevCheckpoints;;
     }
@@ -96,9 +99,9 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
     if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
         args.splice(1, 0, '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)));
     }
-
+    //starts process
     response = spawn('./dbandbash/codes/NCBI_blast', args);
-    //writing stuff to console for debug
+
     response.stdout.on("data", data => {
         for (let i = 0; i < checkpoints.length; i++) {
             if (data.toString().includes(checkpoints[i])) {
@@ -106,33 +109,8 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
                     case "Temp identifier for possible clear:": 
                         tempNumber = data.toString().split(' ').slice(5, 6).join(' ').slice(0, -1);
                         break;
-                    case "Best matching protein from":
-                        if (req.url !== '/name' && data.toString().split(' ').slice(9, 10).join(' ').toLowerCase() !== filenameprefix) {
-                            // stops program
-                            response.kill('SIGTERM');
-                            let oldfilenameprefix = filenameprefix;
-                            // gets name
-                            filenameprefix = data.toString().split(' ').slice(9, 10).join(' ').toLowerCase();
-                            // renames landmark & upload
-                            fs.rename(`./dbandbash/codes/${input}`, `./dbandbash/codes/uploads/${filenameprefix}.fasta`, err => {
-                                if (err) console.log(err);
-                            })
-                            renameList.forEach(item => {
-                                fs.rename(`./dbandbash/codes/${oldfilenameprefix}${item}`, `./dbandbash/codes/${filenameprefix}${item}`, err => {
-                                    if (err) console.log(err);
-                                })
-                            })
-                            //removes tmp files
-                            tmpExtList.forEach(item => {
-                                fs.unlink(`./dbandbash/codes/${tempNumber}${item}`, (err) => {
-                                    if (err) console.log(err);
-                                });
-                            })
-                            // reruns program
-                            //add delay here
-                            runAndOutput(`uploads/${filenameprefix}.fasta`, req, res, checkpoints);
-                        }
-                        checkpoints.splice(i, 1);
+                    case "Trying to get fasta seq for human":
+                        clientUpdater.emit('data', 'Getting fasta file');
                         break;
                     case "=> Use NCBI ":
                         clientUpdater.emit('data', 'Getting landmark file...');
@@ -165,6 +143,7 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
     response.on("exit", (code, signal) => {
         clearTimeout(serverTimer);
         if (signal !== 'SIGTERM') {
+            clientUpdater.emit('data', 'Done!');
             //prefix to add onto suffixes - so can get correct files produced from the NCBI_blast shell script
             let url = [];
             //copying them to public and adding the file to the response
@@ -174,6 +153,7 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
                     fs.copyFileSync(`./dbandbash/codes/${filenameprefix}${suffix}`, `./public/images/${filenameprefix}${suffix}`);
                 } catch (err) {
                     if (err.code === 'ENOENT') {
+                        console.log(`${filenameprefix}${suffix}`);
                         add = false;
                     }
                 }
@@ -208,8 +188,6 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
                 }
                 main().catch(console.error)
             }
-            clientUpdater.emit('data', 'Done!');
-            return;
         } else if (serverDown) {
             //cleaning when server down 
             serverDownTmpExtList.forEach(item => {
@@ -218,12 +196,60 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
                 });
             })
             res.sendStatus(503);
+            clientUpdater.emit('data', 'Done!');
+            if (emailRegex.test(String(req.body.email).toLowerCase())) {
+                setTimeout(() => {
+                    response = spawn('./dbandbash/codes/NCBI_blast', args);
+                    response.on("exit", () => {
+                        //prefix to add onto suffixes - so can get correct files produced from the NCBI_blast shell script
+                        let url = [];
+                        //copying them to public and adding the file to the response
+                        filesuffixes.forEach((suffix) => {
+                            let add = true;
+                            try {
+                                fs.copyFileSync(`./dbandbash/codes/${filenameprefix}${suffix}`, `./public/images/${filenameprefix}${suffix}`);
+                            } catch (err) {
+                                if (err.code === 'ENOENT') {
+                                    console.log(`${filenameprefix}${suffix}`);
+                                    add = false;
+                                }
+                            }
+                            add && url.push(`/public/images/${filenameprefix}${suffix}`);
+                        })
+                        //mail to them
+                        async function main() {
+                            const transporter = nodemailer.createTransport({
+                                host: 'smtp.ethereal.email' /* change (and also env)*/,
+                                port: 587,
+                                auth: {
+                                    user: 'alycia.swift@ethereal.email',
+                                    pass: 'bTNNgGC8BJtXYXkgSj'
+                                }
+                            });
+                            var zip = new AdmZip();
+                            url.forEach(element => {
+                                zip.addLocalFile('.' + element);
+                            })
+                            zip.writeZip(`./public/zipped/${filenameprefix}.zip`);  
+                            let info = await transporter.sendMail({
+                                from: '"LisAln Blast Request" <alycia.swift@ethereal.email>', // sender address - need to change
+                                to: req.body.email,
+                                subject: `LisAln Blast Request results for protein ${filenameprefix} at time: ${new Date().toLocaleString('en-US')}`, // Subject line
+                                text: "Results in attached zip file.",
+                                attachments: [{path: `./public/zipped/${filenameprefix}.zip`}]
+                            });
+                            console.log("Message sent: %s", info.messageId);
+                        }
+                        main().catch(console.error)
+                    })
+                }, 1000 * 60 * 59 * 3)
+            }
         }
-        clientUpdater.emit('data', 'Done!');
     });
 }
 
 router.get('/', (req, res) => {
+    clientUpdater = new events.EventEmitter();
     //starting SSE Events
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Content-Type', 'text/event-stream');
@@ -236,13 +262,11 @@ router.get('/', (req, res) => {
         if (data === 'Done!') {
             res.end();
         }
-        return;
     })
 
     //listening for exit
     res.on('close', () => {
         res.end();
-        return;
     });
 
 })

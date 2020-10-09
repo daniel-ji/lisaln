@@ -13,7 +13,7 @@ db='pdb'
 force=0;fforce=''
 dospecies=0
 snum=10 #Max number of species to display from both landmark db and homoloGene 
-dodomain=0;dohomo=1;doname=0;dorefseq=0;change='-change';docent=0
+dodomain=0;dohomo=1;doname=0;dorefseq=0;change='-change';change2='-change';docent=0
 predict=0;doaln=1;rstart=1;rend=60;rhalf=30;center=30
 doless=0;lless="";onlyshort=1;nohuman=0;quite=0
 docdd=1;noshort=1
@@ -63,8 +63,8 @@ if [ -n "$1" ] ; then
    -domain)db='cdd';dodomain=1;shift;;   
    -nohomo)dohomo=0;shift;;
    -name)doname=1;hname=$2;shift 2;;
-   -change)change=$1;shift;;
-   -nochange)change='';shift;;
+   -change)change=$1;change2=$1;shift;;
+   -nochange)change='';change2=$1;shift;;
    -less)doless=1;lless=$1;shift;;
    -all)onlyshort=0;shift;;
    -nohuman)nohuman=1;shift;;
@@ -246,7 +246,8 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
    -range StartResid EndResid : display seq align resid range for alignment. [default] ${rstart}-${rend}aa
    -half halfResidues : residue number around CenterResid. Must use before -center  [$rhalf]
    -center CenterResid : display seq align range from CenterResid-$rhalf to CenterResid+$rhalf
-   -nochange | [-change] : will not change species name to simply one as human, mouse. Mapping file saved in species_mapping.txt 
+   -nochange | [-change] : will not change species name to simply one as human, mouse. Mapping file saved in species_mapping.txt
+    But -nochange will force to rerun at current version 
    -nocdd : will not check CDD for domains
    -nopredict : Exclude PREDICTED seq in output named as XP_xxxxx. NP_ is currated 
     [default] : PREDICTED seq will keep as they are also reliable and can give longer sequence
@@ -605,7 +606,7 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
    for(i=1;i<=n;i++){if(a[i]==id){doit=1;break}}
    if(doit>0){print $_}
    }' > $outfastalnh
-   ./clustal_seq_align $fforce -less  -nopair -out $outalnh $outfastalnh > $temp6
+  ./clustal_seq_align $fforce -less  -nopair -out $outalnh $outfastalnh > $temp6
   [ $quite -ne 1 ] && cat $temp6
   nhomo2=`grep '>' $outfastalnh | wc -l | awk '{print $1}'`
 
@@ -766,10 +767,12 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   ./clustal_seq_align $fforce -less -species -nopair -out $outallaln $outallspec > $temp6
   [ $quite -ne 1 ] && cat $temp6
   echo "=> LisAln Final Orthologues ($outallaln): $nlisa proteins ($nspec from Landmark DB) across species are:"
-  ./seq_align_check -plotout ${outallaln}.gif -less -cd -range $rstart $rend -out $temp.out $outallaln | tee $temp.aln
+  ./seq_align_check $change2 -plotout ${outallaln}.gif -less -cd -range $rstart $rend -out $temp.out $outallaln | tee $temp.aln  
+  #cat $outallaln ; echo hahaha $change2 display ${outallaln}.gif ; exit
   echo ""
   ./clustal_identity -1 -nohead  $temp.out 
-  ./seq_align_check -range 1 3000 -plotout ${outallaln}_all.gif -less -cd  -out $temp.out $outallaln
+  #Generate image for full-range alignment: NOT working
+  #./seq_align_check $change2 -plotout ${outallaln}_all.gif -less -cd -range $rstart $naa  -out $temp.out $outallaln
   [ $quite -ne 1 ] && echo "  If new species shown without simple name, put it in $ed/$speciesfile"
 fi  #$dospecies -eq 1
 

@@ -13,7 +13,7 @@ istart=1;iend=100;name='NA';doname=0;keeporder=0;noid=0;head=1;dosel=0
 ncol=1;rhead=0;doref=0;front=0
 doless=0;doreplace=0
 space=2 #space between col 1 and 2
-change='-change'
+change='-change';dochange=1
 cap='-cap'
 speciesfile='species_mapping.txt'  #mapping file of species from scientific name to normal name
 plot=1;plotout=''
@@ -49,8 +49,8 @@ if [ -n "$1" ] ; then
    -less)doless=1;shift;;
    -replace)doreplace=1;repfile=$2;shift 2;;
    -space)space=$2;shift 2;;
-   -change)change=$1;shift;;
-   -nochange)change='';shift;;
+   -change)change=$1;dochange=1;shift;;
+   -nochange)change='';dochange=0;shift;;
    
    *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
   esac
@@ -494,7 +494,18 @@ fi #oldcode
 
 #cat $temp.out ; echo papapapa
 
-#replace protein name defined in $repfile
+#When replace human to shorter H.sapien. from: Human   homo sapiens
+if [ $dochange -eq 0 ] && [ $doreplace -eq 0 ]; then
+ doreplace=1
+ awk '{if(substr($1,1,1)!="#"){split($_,a,"\t");
+  u=split(a[2],x," ");sn="";for(j=1;j<u;j++){sn=sprintf("%s%s.",sn,toupper(substr(x[j],1,1)))}
+  species=sprintf("%s%s",sn,x[u])
+  print a[1],species
+ }}' $speciesfile > $temp.nam
+ repfile=$temp.nam
+fi
+
+#replace protein name defined in $repfile : It must have two cols, first col is ori seq protein name. 2nd col is the replacement name
 if [ $doreplace -eq 1 ] ; then
  #cat $temp.out
  if [ ! -s $repfile ] ; then
@@ -541,7 +552,7 @@ fi
 
 
 #change species name to simple as human mouse
-if [ "$change" == "-change" ] ; then
+if [ "$change" == "-change" ] && [ $doreplace -eq 0 ] ; then
  #Or use ./species_change to change species name
  [ $doless -ne 1 ] && echo "Change species name to simple ones as human, mouse or shorter one as H.sapien based on $speciesfile :"
  awk 'BEGIN{
