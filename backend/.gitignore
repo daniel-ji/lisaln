@@ -60,6 +60,9 @@ typings/
 # next.js build output
 .next
 
-#db stuff
+#db files
 /dbandbash/[e, E, b]*
-/dbandbash/codes/uniprot_sprot_*
+/dbandbash/codes/*.tmp
+/dbandbash/codes/clustalo*
+/dbandbash/codes/uploads
+/dbandbash/codes/uniprot_sprot_202001.dat

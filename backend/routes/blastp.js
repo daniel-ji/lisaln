@@ -1,8 +1,7 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
 const router = express.Router();
+const fs = require('fs');
+const { spawn } = require('child_process');
 const dotenv = require('dotenv');
 dotenv.config();
 const AdmZip = require('adm-zip');
@@ -27,10 +26,12 @@ const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 
 //file suffixes for files we're sending (will be combined with protein name)
 let filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt'];
-let serverDownTmpExtList = ['.tmp6', '.tmp.fasta.txt'];
+let serverDownTmpExtList = ['.tmp', '.tmp6', '.tmp.fasta', '.tmp.fasta.txt'];
 // email
 const nodemailer = require("nodemailer");
 const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+
+//TODO: IMPLEMENT ONLY EMAIL F(X) - emailOnly OPTION from BlastRequest
 
 //when inputs protein name
 router.post('/name', (req, res) => {
@@ -42,30 +43,27 @@ router.post('/name', (req, res) => {
 
 //when sends file
 router.post('/file', upload.single('fasta'), (req, res) => {
-    oldfilenameprefix = filenameprefix;
-    filenameprefix = "a" + (fs.readFileSync(req.file.path).toString('utf8', 0, 32).replace(/([^a-z0-9]+)/gi, '0')).toLowerCase();
-    fs.rename(`./${req.file.path}`, `./dbandbash/codes/uploads/${filenameprefix}${req.file.path.replace(/^[^.]*/, '')}`, err => {
-        if (err) console.log(err);
-    })
-    runAndOutput(`uploads/${filenameprefix}${extension}`, req, res);
+    let fastaText = fs.readFileSync(`./${req.file.path}`).toString();
+    extension = ".fasta";
+    if (fastaText.length !== 0 && fastaText.length < 10000) {
+        filenameprefix = "a" + (fastaText.substr(0, 32).replace(/([^a-z0-9]+)/gi, '0')).toLowerCase();
+        fs.renameSync(req.file.path, `./dbandbash/codes/uploads/${filenameprefix}${extension}`);
+        runAndOutput(`uploads/${filenameprefix}${extension}`, req, res);
+    }
 });
 
 //when input in text box
 router.post('/text', (req, res) => {
-    let fastaText = String(req.body.fastaText);
     extension = ".fasta";
-    if (fastaText.length !== 0 && fastaText.length < 10000) {
-        filenameprefix = "a" + (fastaText.substr(0, 32).replace(/([^a-z0-9]+)/gi, '0')).toLowerCase();
-        console.log(filenameprefix);
-        fs.writeFile(`./dbandbash/codes/uploads/${filenameprefix}${extension}`, fastaText, err => {
-            if (err) console.log(err);
-        })
+    if (req.body.fastaText.length !== 0 && req.body.fastaText.length < 10000) {
+        filenameprefix = "a" + (req.body.fastaText.substr(0, 32).replace(/([^a-z0-9]+)/gi, '0')).toLowerCase();
+        fs.writeFileSync(`./dbandbash/codes/uploads/${filenameprefix}${extension}`, req.body.fastaText);
+        runAndOutput(`uploads/${filenameprefix}${extension}`, req, res);
     }
-    runAndOutput(`uploads/${filenameprefix}.fasta`, req, res);
 })
 
 //returning information to client and console - main function for blastp
-const runAndOutput = (input, req, res, prevCheckpoints) => {
+const runAndOutput = (input, req, res) => {
     //if some servers are down
     let serverDown = false;
     const serverTimer = setTimeout(() => {
@@ -77,12 +75,7 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
     let tempNumber;
 
     //checkpoints for status bar
-    let checkpoints;
-    if (prevCheckpoints === undefined) {
-        checkpoints = ["Temp identifier for possible clear:", "Trying to get fasta seq for human", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
-    } else {
-        checkpoints = prevCheckpoints;;
-    }
+    let checkpoints = ["Temp identifier for possible clear:", "Trying to get fasta seq for human", "Best matching protein from", "Best matching protein is from Blastp Refseq", "=> Use NCBI ", "by using 27 Landmark diverse species for SmartBLAST: ", "Refseq saved in", "=> Paralogues: Human homology proteins saved in", "=> NCBI HomoloGene Orthologues: Protein across species saved as", "=> LisAln Final Orthologues"];
     if (req.url === '/name') {
         checkpoints.splice(1, 0, "GeneName is ");
     }
@@ -90,16 +83,17 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
     
     //NCBI_blast args
     let args = ['-LisAln', input];
-    if (req.body.sciName) {
+    if (req.body.sciName === 'true') {
         args.splice(1, 0, '-nochange');
     }
-    if (!req.body.reUse) {
+    if (req.body.reUse === 'false') {
         args.splice(1, 0, '-force');
     }
     if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
         args.splice(1, 0, '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)));
     }
     //starts process
+    console.log(args);
     response = spawn('./dbandbash/codes/NCBI_blast', args);
 
     response.stdout.on("data", data => {
@@ -134,9 +128,11 @@ const runAndOutput = (input, req, res, prevCheckpoints) => {
                 checkpoints.splice(i, 1);   
             }
         }
-        process.stdout.write(data.toString());
+        //console.log(fs.existsSync('./dbandbash/codes/a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt'));
+        //process.stdout.write(data.toString());
     })
     response.stderr.on("data", data => {
+        //console.log(fs.existsSync('./dbandbash/codes/a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt'));
         //process.stderr.write(data.toString());
     })
 

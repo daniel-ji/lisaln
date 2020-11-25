@@ -7,8 +7,6 @@ import { Button, TextField, Radio, RadioGroup, FormControl, FormControlLabel} fr
 import smoothscroll from 'smoothscroll-polyfill';
 
 const serverUrl = 'http://localhost:3000';
-const CancelToken = axios.CancelToken;
-const Csource = CancelToken.source();
 let scriptTimeElapsed;
 
 class BlastRequest extends Component {
@@ -47,6 +45,7 @@ class BlastRequest extends Component {
             reUse: true,
             email: '',
             emailErr: false,
+            resubmitEmail: false,
 
             errorMessage: '',
             showScrollIndicator: true,
@@ -54,6 +53,7 @@ class BlastRequest extends Component {
         }
 
         this.runscript = this.runscript.bind(this);
+        this.scheduleEmail = this.scheduleEmail.bind(this);
         this.runscriptRespHandle = this.runscriptRespHandle.bind(this);
         this.runscriptErrHandle = this.runscriptErrHandle.bind(this);
         this.updateFile = this.updateFile.bind(this);
@@ -146,15 +146,12 @@ class BlastRequest extends Component {
                 let minutes = Math.floor((diff-startTime) / (1000 * 60));
                 let seconds = Math.floor(((diff-startTime) / 1000 ) % 60);
                 this.setState({scriptDuration:  <Header margin="2vh" size="0.5rem" className="updateMessage" title={`Time elapsed: ${minutes}m ${seconds}s`}/>});
-                if (seconds === 5 && minutes === 0) {
-                    document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'});
-                }
                 if (minutes === 5) {
+                    document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'});
                     clearInterval(scriptTimeElapsed);
-                    Csource.cancel('Web server may be down');
                     this.setState({goDisabled: false});
                 }
-            }, 1000)
+            }, 980)
             //SSE events
             const source = new EventSource(serverUrl + '/api/blastp');
             source.onmessage = (e) => {
@@ -172,7 +169,7 @@ class BlastRequest extends Component {
                     sciName: this.state.sciName,
                     reUse: this.state.reUse,
                     email: this.state.email,
-                }, {cancelToken: Csource.token})
+                })
                 .then(response => {
                     source.close();
                     this.runscriptRespHandle(response);
@@ -181,7 +178,6 @@ class BlastRequest extends Component {
                     source.close();
                     this.runscriptErrHandle(error.response);
                 })
-                this.setState({result: '', resultFormatted: ''});
             //if fasta file uploaded
             } else if (this.state.fastaInput !== '') {
                 let blastForm = new FormData();
@@ -191,12 +187,7 @@ class BlastRequest extends Component {
                 blastForm.append('sciName', this.state.sciName);
                 blastForm.append('reUse', this.state.reUse);
                 blastForm.append('email', this.state.email);
-                axios.post(serverUrl + '/api/blastp/file', blastForm, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    },
-                    cancelToken: Csource.token
-                })
+                axios.post(serverUrl + '/api/blastp/file', blastForm)
                 .then(response => {
                     source.close();
                     this.runscriptRespHandle(response);
@@ -205,7 +196,6 @@ class BlastRequest extends Component {
                     source.close();
                     this.runscriptErrHandle(error.response);
                 })
-                this.setState({result: '', resultFormatted: ''});
             //if fasta text pasted
             } else {
                 axios.post(serverUrl + '/api/blastp/text', {
@@ -215,7 +205,7 @@ class BlastRequest extends Component {
                     sciName: this.state.sciName,
                     reUse: this.state.reUse,
                     email: this.state.email,
-                }, {cancelToken: source.token})
+                })
                 .then(response => {
                     source.close();
                     this.runscriptRespHandle(response);
@@ -224,8 +214,8 @@ class BlastRequest extends Component {
                     source.close();
                     this.runscriptErrHandle(error.response);
                 })
-                this.setState({result: '', resultFormatted: ''});
             }
+            this.setState({result: '', resultFormatted: ''});
             //scroll to bottom of page
             setTimeout(() => document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'}), 1000);   
         } else {
@@ -297,16 +287,125 @@ class BlastRequest extends Component {
     //resp err handling
     runscriptErrHandle(response) {
         clearInterval(scriptTimeElapsed);
-        if (response !== undefined && response.status === 503) {
-            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time. Click here to enter your email to have results send to you when available."/>, result: '', updates: [], goDisabled: false})
+        if (this.state.email === '') {
+            if (response !== undefined && response.status === 503) {
+                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], goDisabled: true, resubmitEmail: true})
+            } else {
+                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], goDisabled: true, resubmitEmail: true})
+            }
         } else {
-            this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time. Click here to enter your email to have results send to you when available."/>, result: '', updates: [], goDisabled: false})
+            if (response !== undefined && response.status === 503) {
+                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: [], goDisabled: true})
+                this.scheduleEmail();
+            } else {
+                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: [], goDisabled: true})
+                this.scheduleEmail();
+            }
         }
+    }
+
+    scheduleEmail() {
+        //validation
+        let noInput = false;
+        let inputTooLong = 'false';
+        let rangeStartInvalid = false;
+        let rangeEndInvalid = false;
+        let emailInvalid = false;
+        let errorMessage = [];
+
+        //protein input
+        if (this.state.proteinName === '' && this.state.fastaInput === '' && this.state.fastaText === '') {
+            noInput = true;
+            errorMessage.push('Please enter a protein name, upload a file, or paste a fasta');
+        } else {
+            if (this.state.proteinName.length > 50) {
+                inputTooLong = 'name';
+                errorMessage.push('Please enter a valid Protein Name');
+            } else {
+                if (this.state.fastaInput.size > 20000) {
+                    inputTooLong = 'file';
+                    errorMessage.push('Please upload a file under 20KB.');
+                } else {
+                    if (this.state.fastaText.length > 20000) {
+                        inputTooLong = 'text';
+                        errorMessage.push('Please paste a valid fasta');
+                    }
+                }
+            }
+        }
+
+        //range input
+        if ((this.state.rangeStart === '' && this.state.rangeEnd !== '') || (this.state.rangeStart !== '' && (!Number.isInteger(parseInt(this.state.rangeStart)) || parseInt(this.state.rangeStart) < 0 || parseInt(this.state.rangeStart) > 10000))) {
+            rangeStartInvalid = true;
+            errorMessage.push('Please have a valid range start number');
+        }
+        
+        if ((this.state.rangeEnd === '' && this.state.rangeStart !== '') || (this.state.rangeEnd !== '' && (!Number.isInteger(parseInt(this.state.rangeEnd)) || parseInt(this.state.rangeEnd) < 0 || parseInt(this.state.rangeEnd) > 10000))) {
+            rangeEndInvalid = true;
+            errorMessage.push('Please have a valid range end number');
+        } else if (parseInt(this.state.rangeEnd) <= parseInt(this.state.rangeStart)) {
+            this.setState(prevState => ({rangeEnd: 50, rangeStart: 25}))
+        }
+
+        //email input
+        const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        if (this.state.email !== '' && !emailRegex.test(String(this.state.email).toLowerCase())) {
+            emailInvalid = true;
+            errorMessage.push('Please enter a valid email');
+        }
+
+        //requests
+        if (!noInput && inputTooLong === 'false' && !rangeStartInvalid && !rangeEndInvalid && !emailInvalid) {
+            //resetting
+            this.setState({proteinNameErr: false, fastaInputErr: false, fastaTextErr: false, rangeStartErr: false, rangeEndErr: false, errorMessage: '', updates: [], scriptDuration: '', goDisabled: true})
+            //if protein name input
+            if (this.state.proteinName !== '') {
+                axios.post(serverUrl + '/api/blastp/name', {
+                    type: 'emailOnly',
+                    proteinName: this.state.proteinName,
+                    rangeStart: this.state.rangeStart,
+                    rangeEnd: this.state.rangeEnd,
+                    sciName: this.state.sciName,
+                    reUse: this.state.reUse,
+                    email: this.state.email,
+                })
+            //if fasta file uploaded
+            } else if (this.state.fastaInput !== '') {
+                let blastForm = new FormData();
+                blastForm.append('type', 'emailOnly');
+                blastForm.append('fasta', this.state.fastaInput);
+                blastForm.append('rangeStart', this.state.rangeStart);
+                blastForm.append('rangeEnd', this.state.rangeEnd);
+                blastForm.append('sciName', this.state.sciName);
+                blastForm.append('reUse', this.state.reUse);
+                blastForm.append('email', this.state.email);
+                axios.post(serverUrl + '/api/blastp/file', blastForm)
+            //if fasta text pasted
+            } else {
+                axios.post(serverUrl + '/api/blastp/text', {
+                    type: 'emailOnly',
+                    fastaText: this.state.fastaText, 
+                    rangeStart: this.state.rangeStart,
+                    rangeEnd: this.state.rangeEnd,
+                    sciName: this.state.sciName,
+                    reUse: this.state.reUse,
+                    email: this.state.email,
+                })
+            }
+            this.setState({result: '', resultFormatted: '', updates: <Header margin="2vh" size="0.5rem" className="updateMessage" title="We're sorry about the inconvenience. A email will be sent in a couple hours if results are available. If not, please try again later."/>});
+        } else {
+            // error displaying
+            this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid, rangeEndErr: rangeEndInvalid, emailErr: emailInvalid,
+                errorMessage: errorMessage.map(element => {
+                    return <Header margin="2vh" key={element+Date.now()} size="0.5rem" className="errorMessage" title={element}/>
+                })
+            })
+        }        
     }
 
     updateFile(event) {
         if (typeof event.target.files[0] !== 'undefined') {
-            this.setState({fastaInput: event.target.files[0], fastaInputTitle: event.target.files[0].name, fastaInputErr: false})
+            this.setState({fastaInput: event.target.files[0], fastaInputTitle: event.target.files[0].name, fastaInputErr: false, proteinNameErr: false, fastaTextErr: false})
         }
     }
 
@@ -315,11 +414,11 @@ class BlastRequest extends Component {
     }
 
     updateName(event) {
-        this.setState({proteinName: event.target.value, proteinNameErr: false})
+        this.setState({proteinName: event.target.value, fastaInputErr: false, proteinNameErr: false, fastaTextErr: false})
     }
 
     updateFastaPaste(event) {
-        this.setState({fastaText: event.target.value, fastaTextErr: false})
+        this.setState({fastaText: event.target.value, fastaInputErr: false, proteinNameErr: false, fastaTextErr: false})
     }
 
     updateRangeStart(event) {
@@ -424,6 +523,7 @@ class BlastRequest extends Component {
                     <div className="rowInput">
                         <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
                     </div>
+                    {this.state.resubmitEmail && <Button className="resubmitButton" disableElevation variant="contained" onClick={this.scheduleEmail}>Resubmit</Button>}
                 </div>
                 <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
                 <br/>

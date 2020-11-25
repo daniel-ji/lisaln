@@ -6,7 +6,7 @@ var logger = require('morgan');
 var cors = require('cors');
 
 var indexRouter = require('./routes/index');
-var deleteOldFilesRouter = require('./routes/deleteOldFiles');
+var deleteOldFiles = require('./deleteOldFiles');
 var blastpRouter = require('./routes/blastp');
 var downloadRouter = require('./routes/download');
 
@@ -42,5 +42,8 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+//clean up / deleting old files
+deleteOldFiles.cleanUp();
 
 module.exports = app;
