@@ -1,8 +1,0 @@
-Using 8 threads
-Read 10 sequences (type: Protein) from clustalo-R20200906-000404-0027-12594340-p1m.sequence
-not more sequences (10) than cluster-size (100), turn off mBed
-Calculating pairwise ktuple-distances...
-Ktuple-distance calculation progress: 0 % (0 out of 55)Ktuple-distance calculation progress: 1 % (1 out of 55)Ktuple-distance calculation progress: 3 % (2 out of 55)Ktuple-distance calculation progress: 5 % (3 out of 55)Ktuple-distance calculation progress: 7 % (4 out of 55)Ktuple-distance calculation progress: 10 % (6 out of 55)Ktuple-distance calculation progress: 52 % (29 out of 55)Ktuple-distance calculation progress: 63 % (35 out of 55)Ktuple-distance calculation progress: 76 % (42 out of 55)Ktuple-distance calculation progress: 80 % (44 out of 55)Ktuple-distance calculation progress done. CPU time: 0.22u 0.00s 00:00:00.22 Elapsed: 00:00:00
-Guide-tree computation done.
-Progressive alignment progress: 11 % (1 out of 9)Progressive alignment progress: 22 % (2 out of 9)Progressive alignment progress: 33 % (3 out of 9)Progressive alignment progress: 44 % (4 out of 9)Progressive alignment progress: 55 % (5 out of 9)Progressive alignment progress: 66 % (6 out of 9)Progressive alignment progress: 77 % (7 out of 9)Progressive alignment progress: 88 % (8 out of 9)Progressive alignment progress: 100 % (9 out of 9)Progressive alignment progress done. CPU time: 14.45u 1.48s 00:00:15.93 Elapsed: 00:00:09
-Alignment written to clustalo-R20200906-000404-0027-12594340-p1m.clustal_num

@@ -1,0 +1,612 @@
+a0sp0o144970ari1a0human0at0rich0i
+false
+Temp identifier for possible clear: 9522
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//web_blast.pl': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_seq_align': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_rearrange': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_check': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//mutation_check': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//sequence_search_SMART.pl': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//Pfam_domain': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sequence_download': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//NCBI_homoloGene': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//protein_fasta_refseq_convert': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//blastp_display'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//blast_trim': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//blast_merge': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//NCBI_blast_PDBs': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//pymol_all': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//list_mergeTwo': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//UniProt_get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_getNth': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_counts': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//blastp_display_more': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_merge_species': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_LisAln': No such file or directory
+false
+=> Use NCBI blastp on SMARTBLAST%2Flandmark database for fasta uploads/a0sp0o144970ari1a0human0at0rich0i.fasta (2285a.a.) saved in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.txt
+false
+=> NCBI blast output is a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.txt
+false
+Found 51 alned seq (0 PREDICTED) by using 27 Landmark diverse species for SmartBLAST: 
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+false
+ WARNing: Total Sequences producing significant alignments from landmark is 48 . Will download all 48 seqs in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.fasta.txt
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: false
+cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_check': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//html_removebracket': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//pdb_returnChain': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removedup': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//CSV_getCol': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_seq_align': No such file or directoryfalse
+
+false
+ 48 records in 9522.tmp.fin requested to get fasta sequence saved in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.fasta.txt
+false
+1 false
+2 false
+3 false
+4 false
+5 false
+6 false
+7 false
+8 false
+9 false
+10 false
+11 false
+12 false
+13 false
+14 false
+15 false
+16 false
+17 false
+18 false
+19 false
+20 false
+21 false
+22 false
+23 false
+24 false
+25 false
+26 false
+27 false
+28 false
+29 false
+30 false
+31 false
+32 false
+33 false
+34 false
+35 false
+36 false
+37 false
+38 false
+39 false
+40 false
+41 false
+42 false
+43 false
+44 false
+45 false
+46 false
+47 false
+48 false
+
+false
+Remove duplicate sequences in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.fasta.txt of 48 to save 48 sequences (fuzzy=1) in ./sequence_download_9623.tmp
+false
+=> 48 Output fasta sequence for 48 requested from 9522.tmp.fin saved in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.fasta.txt
+false
+=> Download 48 seqs for 48 Refseq saved in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.fasta.txt 
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+false
+ No need re-process 9522.tmp
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//chembl': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//pdb_download': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//KEGG_pathway': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//GO_annotation': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//pymol_all': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//NCBI_blast': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//Pfam_domain'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sequence_download': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//NCBI_blast_PDBs': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_check': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//html_removebracket': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//pdb_returnChain': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removedup': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//CSV_getCol': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_seq_align'false
+: No such file or directory
+false
+ Best matching protein from Landmark DB is Homo ARID1A NP_006006.3 @100.0%
+
+=> Paralogues: Human homology proteins saved in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_human.fasta.txt
+false
+ Will only keep first one of all isoforms. Also remove precursor or isoform from protein full name for clean display
+false
+cp: cannot stat '/home/holi/database/pipeline_script//clustalo_lwp.pl': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_identity': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//pdb_renumber_residue': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_rearrange': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_check'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//phylotree_convert': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_contactmap': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_getNth': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sequence_download': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//bin_plot'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_change': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//do_gnuplot': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removeblank': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_LisAln': No such file or directory
+false
+./clustal_seq_align: line 444: [: -eq: unary operator expected
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt'false
+: No such file or directory
+false
+ls: false
+cannot access '*.clustal_num'false
+: No such file or directory
+false
+mv: missing destination file operand after 'a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt'
+Try 'mv --help' for more information.
+false
+ls: cannot access '*.phylotree.ph': No such file or directory
+false
+mv: false
+missing destination file operand after 'a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh_phylotree.ph'
+Try 'mv --help' for more information.
+false
+ls: cannot access '*.pim'false
+: No such file or directory
+false
+mv: missing destination file operand after 'a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh_pim.txt'
+Try 'mv --help' for more information.
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+false
+awk: fatal: cannot open file `a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh_phylotree.ph' for reading (No such file or directory)
+false
+awk: fatal: cannot open file `a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh_pim.txt' for reading (No such file or directory)
+false
+awk: fatal: cannot open file `a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh_pim.txt' for reading (No such file or directory)
+false
+ Convert human proteins into short name:
+false
+=> LisAln Paralogue: Seq aln across human homology at range 1112-1172 a.a. Use -range/-center to change:
+false
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_LisAln': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//CSV_getCol': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_rearrange': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_seq_align': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//blast_trim': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+false
+awk: fatal: cannot open file `a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt' for reading (No such file or directory)
+false
+awk: cmd. line:3: fatal: cannot open file `a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt' for reading (No such file or directory)
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//similarity.spl': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//do_gnuplot': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getNthCompound': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getName': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getNCompound': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getFromName_many': No such file or directoryfalse
+
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//cluster': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//lists_compare_different': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//mapfile_addpad': No such file or directory
+false
+awk: cmd. line:1: BEGIN{max=;resdigmax=;front=0}{
+awk: cmd. line:1:           ^ syntax error
+awk: cmd. line:1: BEGIN{max=;resdigmax=;front=0}{
+awk: cmd. line:1:                      ^ syntax error
+false
+awk: cmd. line:1: fatal: cannot open file `10071.tmp.matrix' for reading (No such file or directory)
+false
+awk: false
+cmd. line:false
+2: fatal: cannot open file `10071.tmp.matrix' for reading (No such file or directory)
+false
+cp: false
+cannot stat '/home/holi/database/pipeline_script//back'false
+: No such file or directoryfalse
+
+cp: cannot stat '/home/holi/database/pipeline_script//get'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+false
+./sdf_contactmap: line 679: [: -eq: unary operator expected
+false
+awk: false
+cmd. line:1: {if(NR>&&length($1)>max){max=length($1)}}END{print max}
+awk: false
+cmd. line:1:        ^ syntax error
+awk: cmd. line:1: {if(NR>&&length($1)>max){max=length($1)}}END{print max}
+awk: cmd. line:1:                        ^ syntax error
+false
+awk: cmd. line:1: BEGIN{head=;max=;dom=0;cap=1}
+awk: cmd. line:1:            ^ syntax error
+awk: cmd. line:1: BEGIN{head=;max=;dom=0;cap=1}
+awk: cmd. line:1:                 ^ syntax error
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_contactmap': No such file or directory
+false
+cp: cannot stat '/home/holi/database/pipeline_script//back'false
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+false
+awk: cmd. line:1: (FILENAME=- FNR=1) fatal: division by zero attempted
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+nohup: failed to run command 'display': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: true
+cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+./sdf_contactmap: line 881: ./lists_remove_duplicate: No such file or directory
+true
+mv: cannot stat './sdf_contactmap_10264.tmp5': No such file or directory
+true
+./sdf_contactmap: line 974: [: -gt: unary operator expected
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+
+=> Landmark DB: Best match protein (max indentical residues at col 4) for each species are:
+true
+NP_006006.3     1       2285    2285    100.0%  Homo sapiens     AT-rich interactive domain-containing protein 1A isoform a
+XP_006539388.1  11      2285    2165    94.8%   Mus musculus     AT-rich interactive domain-containing protein 1A isoform X1
+XP_021323975.1  618     2285    1154    66.2%   Danio rerio      AT-rich interactive domain-containing protein 1A
+NP_001163639.1  1889    2284    290     42.1%   Drosophila melanogaster  osa, isoform D
+NP_001293325.1  1641    2282    225     28.3%   Caenorhabditis elegans   ARID domain-containing protein
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removeblank': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//html_removebracket': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sequence_download': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_seq_align': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_check': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//NCBI_blast'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+true
+ 1 records in ARID1A requested to get seq across species from NCBI HomoloGene saved in ARID1A_homoloGene.xls
+true
+RefseqID        ProteinName     Species Length  FullName
+true
+=> #1 ARID1A : HomoloGene seqs saved in ARID1A_homoloGene.fasta.txt . Clustal aln saved in ARID1A_homoloGene_aln.txt
+true
+NP_006006.3     ARID1A  H.sapiens       2285     AT rich interactive domain 1A (SWI-like)
+XP_513235.4     ARID1A  P.troglodytes   2285     AT rich interactive domain 1A (SWI-like)
+XP_002808326.1  LOC719949       M.mulatta       2224     AT-rich interactive domain-containing protein 1A-like
+XP_005617799.1  ARID1A  C.lupus 2285     AT rich interactive domain 1A (SWI-like)
+NP_001192714.1  ARID1A  B.taurus        2286     AT rich interactive domain 1A (SWI-like)
+NP_001074288.1  Arid1a  M.musculus      2283     AT rich interactive domain 1A (SWI-like)
+NP_001100105.1  Arid1a  R.norvegicus    1911     AT rich interactive domain 1A (SWI-like)
+XP_417693.4     ARID1A  G.gallus        1350     AT rich interactive domain 1A (SWI-like)
+XP_002934685.2  arid1a  X.tropicalis    2053     AT rich interactive domain 1A (SWI-like)
+XP_696565.6     arid1ab D.rerio 2261     AT rich interactive domain 1Ab (SWI-like)
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_check': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//html_removebracket': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//pdb_returnChain': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removedup': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//CSV_getCol': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_seq_align': No such file or directory
+true
+=> Protein across species from NCBI HomoloGene saved as ARID1A_homoloGene.fasta.txt
+=> HomoloGene output saved in ARID1A_homoloGene.xls
+true
+=> NCBI HomoloGene Orthologues: Protein across species saved as ARID1A_homoloGene.xls  ARID1A_homoloGene.fasta.txt 
+true
+As required to align at most 10 species but only 5 landmark db seqs. Will try to add 5 species from HomoloGene DB
+true
+cp: cannot stat '/home/holi/database/pipeline_script//lists_compare_different': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_counts'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removeblank': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: true
+cannot stat '/home/holi/database/pipeline_script//lists_remove_duplicate'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_contactmap': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getName': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//lists_compare': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//glide_rept2sdf': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getFromName_many': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: true
+cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removeblank': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removeblank': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//clustalo_lwp.pl': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_identity': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//pdb_renumber_residue': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_rearrange': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_check': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//phylotree_convert': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_contactmap': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_getNth': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sequence_download': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//bin_plot'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_change': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//do_gnuplot': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//fasta_removeblank': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_LisAln': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: true
+cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram'true
+: No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directory
+true
+=> LisAln Final Orthologues (a0sp0o144970ari1a0human0at0rich0i_landmark_homolo_aln.txt): 10 proteins (5 from Landmark DB) across species are:
+true
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_LisAln'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//CSV_getCol': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//seq_align_rearrange': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//clustal_seq_align': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//blast_trim': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//species_mapping.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//similarity.spl': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//do_gnuplot': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getNthCompound': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getName': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getNCompound': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_getFromName_many': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//gnuplot_dendogram': No such file or directorytrue
+
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//cluster': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//lists_compare_different': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//mapfile_addpad': No such file or directory
+true
+awk: cmd. line:1: fatal: cannot open file `11641.tmp.matrix' for reading (No such file or directory)
+true
+awk: cmd. line:2: fatal: cannot open file `11641.tmp.matrix' for reading (No such file or directory)
+true
+./sdf_contactmap: line 679: [: -eq: unary operator expected
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back'true
+: No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+H.sapiens       DPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQ 1172
+C.L.familiaris  DPPPDIFAASDS--KKSQPKI-QPPSPAGSGSMQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQ 1174
+B.taurus        DPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQ 1175
+R.norvegicus    DPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQ 790
+M.musculus      DPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQ 1173
+G.gallus        DPPPDIFAAADS--KKSQTKI-QPPSPAGSGSMQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQ 250
+X.tropicalis    DPPPDIFASAES--KK-QAKI-QPPSPAGSGSMQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSH 983
+D.rerio         DPPPDFFNN-DP--KKNQAKV-QPPSPAGSGSLQ-----GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQ 1122
+D.melanogaster  IDPLPIIQQVEAGSKKKTAKAASVPSPGG-GHLD-----AGTT-NSTGSS--NS--QDSFPAPPGSAPNAA 1154
+C.elegans       PEDEVAFADKMK----RQRKR----EPAGGNAAAAAAVAAAQQGDQKSQHGAPGGSGAPPPGPPGAYPGNG 475
+Consensus             :            *     .*.* .        .    :....    .      *  *.: *   
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//sdf_contactmap': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+nohup: true
+failed to run command 'display'true
+: No such file or directorytrue
+
+true
+./sdf_contactmap: line 881: ./lists_remove_duplicate: No such file or directory
+true
+mv: cannot stat './sdf_contactmap_12252.tmp5': No such file or directory
+true
+./sdf_contactmap: line 974: [: -gt: unary operator expected
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+true
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//symbol.txt': No such file or directory
+true
+
+true
+cp: cannot stat '/home/holi/database/pipeline_script//back': No such file or directory
+cp: cannot stat '/home/holi/database/pipeline_script//get': No such file or directory
+cp: true
+cannot stat '/home/holi/database/pipeline_script//alignment_ncbi2clustal': No such file or directory
+true
+Total residues in first protein = 61
+Total residues in second protein = 61
+=> Use first protein ( H.sapiens ) to calculate percentage:
+ Identity =  0.00 % (0)
+        : =  0.00 % (0)
+        . =  0.00 % (0)
+      Sum =  0.00 % (0)
+      Gap = 16.39 % (10)
+true
+
+=> NCBI blast results for uploads/a0sp0o144970ari1a0human0at0rich0i.fasta (2285a.a.) saved in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.txt
+true
+ 48 Fasta saved in a0sp0o144970ari1a0human0at0rich0i_blastp_landmark.fasta.txt
+Protein across species from NCBI HomoloGene saved as ARID1A_homoloGene.xls  ARID1A_homoloGene.fasta.txt 
+ LisAln orthologue for species saved in  a0sp0o144970ari1a0human0at0rich0i_landmark_homolo_aln.txt a0sp0o144970ari1a0human0at0rich0i_landmark_homolo.fasta.txt
+a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh_phylotree_dendo.xls.gif
+a0sp0o144970ari1a0human0at0rich0i_landmark_homolo_aln.txt_all.gif
+GET /api/blastp 200 1.873 ms - -
+POST /api/blastp/file 200 69955.147 ms - 391
+GET /public/images/a0sp0o144970ari1a0human0at0rich0i_landmark_homolo_aln.txt?1605552157288 200 4.650 ms - 47697
+GET /public/images/a0sp0o144970ari1a0human0at0rich0i_landmark_homolo_aln.txt.gif?1605552157288 200 1.049 ms - 46698
+GET /public/images/a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt.gif?1605552157288 200 1.284 ms - 1757
+GET /public/images/a0sp0o144970ari1a0human0at0rich0i_landmark_homolo_aln_phylotree_dendo.xls.gif?1605552157288 200 1.052 ms - 9078
