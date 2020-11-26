@@ -1,0 +1,650 @@
+CLUSTAL O(1.2.4) multiple sequence alignment
+
+
+Human           MAAQVAPAAASSLGNPPPPPPSELKKAEQ---QQREEAGGEAAAAAAAERGEMKAAAGQE	57
+Dog             MAAQVAPAAASSLGNPPPP-PSELKKAE---QQQREEAGGEAAAAAAAERGEMKAAAGQE	56
+Cattle          MAAQVAPAFASSLGNPPPPPPSELKKAEQQQQQQREEAGGEAAAAVAAERGEMKAAAGQE	60
+Rat             ------------------------------------------------------------	0
+Mouse           MAAQVAPAAASSLGNPPPP-PSELKKAEQ---QQREEAGGEA-AAAAAERGEMKAAAGQE	55
+Chicken         ------------------------------------------------------------	0
+clawedFrog      MAAQVAPASGPSLGGT--------------------------------------------	16
+zebraFish       MAAQVATL--------NTSPPAELKKPEREPQDES--VI---------------GEKQQE	35
+fruitFly        -------------------MNEKIKSP----QTQQQQQGGAPAP----------------	21
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           SEGPAVGPPQPLGKELQDGAESNGGGGGGGAGSGGGPGAEPDLKNSNGNAGPRPALNNNL	117
+Dog             SEGPAVGPPQPLGKELQDGAESNGGGGGGGAGAGGGPGAEPDLKNSNGNAGPRPALNNNL	116
+Cattle          SEGPAVGPPQPLGKELQDGAESNGGGGGGGA---GGPGAEPDLKNSNGNAGPRPALNNNL	117
+Rat             ------------------------------------------------------------	0
+Mouse           SEGPAVGPPQPLGKELQDGAESNGGGGGGGAGSGGGPGAEPDLKNSNGNAGPRPALNNNL	115
+Chicken         ------------------------------------------------------------	0
+clawedFrog      -----------------------------------PPAAGPDLKKSPGDPPPPS--NESQ	39
+zebraFish       SKEPRADGGSPGQKELQDGADVGNAAGG------GGAGGDPDMKNGNGNPSRVN--NNNS	87
+fruitFly        ----AATPP----------------SAGAAPGAATPPTSGPPTPNNNSNNGSDPSIQQQQ	61
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           TEPPGGG-------------GGG---SSDGVGAPPH-SAAAALPPPAYGFGQPYGRSPSA	160
+Dog             TEPPGGG-------------GGG---SSDGVGAPPH-SAAAALPPPAYGFGQPYGRSPSA	159
+Cattle          TEPPGGG-------------GGG---SSDGVGAPPH-SAAAALPPPAYGFGQPYGRSPSA	160
+Rat             ------------------------------------------------------------	0
+Mouse           PEPPGGG-------------GGGGSSSSDGVGAPPH-SAAAALPPPAYGFGQAYGRSPSA	161
+Chicken         ------------------------------------------------------------	0
+clawedFrog      QEAPVTASNETDSTEAANGTRTVPASSHQEPGDPPAASSASSHPPG--------------	85
+zebraFish       QNDSG------------------GPEGNSHPGMAPH--HPGAFPPPPYSYNQHYNRAPF-	126
+fruitFly        ------------------------------QNVAPH--PYGAPPPPGSGPGGPPGPDPAA	89
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           VAAAAAAVFHQQHGGQQ----SPGLAALQSGG-GGGLEPYAGPQQ--N---SH--DHG--	206
+Dog             VAAAAAAVFHQQHGGQQ----SPGLAALQSGGGGGGLEPYAGPQQ--N---SH--DHG--	206
+Cattle          VAAAAAAVFHQQHGGQQ----SPGLAALQSGGGGGGLEPYAGPQQ--N---SH--DHG--	207
+Rat             ------------------------------------------------------------	0
+Mouse           VAAAAAAVFHQQHGGQQ----SPGLAALQSGG-GGGLEPYAGPQQ--N---SH--DHG--	207
+Chicken         ------------------------------------------------------------	0
+clawedFrog      ---------------------------------GFGFSPYPRGVF--QPGPGL--DYT--	106
+zebraFish       ----------HQHGGQQ----SPGMAGP------AVMDPYP--------PNSH--EHG--	154
+fruitFly        -----VMHYHHLHQQQQQHPPPPHMQQQQHHG--GPAPPPPGGAPEHAPGVKEEYTHLPP	142
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           -FPNHQYNSY--YPNRS---AYPPPAPAYALSSPRGGTPGSGAAA-AAGSKPPPSSSASA	259
+Dog             -FPNHQYNSY--YPNRS---AYPPPPQAYALSSPRGGTPGSGAAA-AAGSKPPPSSSASA	259
+Cattle          -FPNHQYNSY--YPNRS---AYPPPPQAYALSSPRGGTPGSGAAAAAAGSKPPPSSSASA	261
+Rat             ------------------------------------------------------------	0
+Mouse           -FPNHQYNSY--YPNRS---AYPPPPQAYALSSPRGGTPGSGAAA-AAGSKPPPSSSASA	260
+Chicken         ------------------------------------------------------------	0
+clawedFrog      -PPTDAYNSYPAYPNRAYPPGYPPPRPPVST----------GKPP-AP-AYPPP------	147
+zebraFish       -YPNH-FNNYSPFPNRTP---YH-QGQGYGMNSPRNSQPPAA--GGQPGKQ-PPTGGTTP	205
+fruitFly        PHPHPAYGRYHADPNMDP---Y-----RYGQPLPGGKPPQQQQ--PHPQQQPPQQPG--P	190
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           SSSSSSFAQQRFGAMGGGGPSAAGGGTPQPTATPTLNQLLTSPSSARGYQGYPGGDYSGG	319
+Dog             SSSSSSFAQQRFGAMGGGGPSAAGGGTPQPTATPTLNQLLTSPSSARGYQGYPGGDYGGG	319
+Cattle          SSSSSSFAQQRFGAMGGGGPSAAAGGTPQPTATPTLNQLLTSPSSARGYQGYPGGDYGGG	321
+Rat             ------------------------------------------------------------	0
+Mouse           SSSSSSFAQQRFGAMGGGGPSAAGGGTPQPTATPTLNQLLTSPSSARGYQGYPGGDYGGG	320
+Chicken         ------------------------------------------------------------	0
+clawedFrog      --------PPRF------------GPPQPAAATPTLNQLLTAPSPGRGYPAYPGGDYPDQ	187
+zebraFish       LATAASYNNQRYN-----------MGNPQPTSTPTLNQLLTSPSSTRSYQNYPASEYGGQ	254
+fruitFly        GGSPNRPPQQRYI-----------PGQPPQGPTPTLNSLLQSSNPPPPPQHRYANTYDPQ	239
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           PQDGGAGKGPADMASQC-WGAAAAAA-AAAAASGGAQQRSHH-APMSPGSSGGGGQPLAR	376
+Dog             PQDGGAGKGPADMASQC-WGAAAAAAAAAAAASGGAQQRSHH-APMSPGSSGGGAQPLAR	377
+Cattle          PQDGGAGKGPADMASQC-WGAAAAAAAAAAAASGGAQQRSHH-APMSPGSSGGGGQPLVR	379
+Rat             ------------------------------------------------------------	0
+Mouse           PQDGGAGKGPADMASQC-WGAAAAAAAAAAAVSGGAQQRSHH-APMSPGSSGGGGQPLAR	378
+Chicken         ------------------------------------------------------------	0
+clawedFrog      HKGAE-------GYTAG-WAA---------------GQRGVH----PPGSPGSSGQGLPR	220
+zebraFish       EG---AAKGPGDMGSSSQYGGGH----------PAWQQRSHHPPPMSPGNTG-----QAN	296
+fruitFly        QA----------------------AASAAAAAA-AQQQQAGGPP--PPGH---GP-----	266
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           TPQPSSPMDQMGKMRPQPYGGT--------NPYSQQQGPPSGPQQGHGYPGQPYGSQTPQ	428
+Dog             TPQPSSPMDQMGKMRPQPYGGT--------NPYSQQQGPSSGPQQGHGYPGQPYGSQTPQ	429
+Cattle          TPQPSSPMDQMGKMRPQPYGGT--------NPYSQQQGPPSGPQQGHGYPGQPYGSQTPQ	431
+Rat             -------MDQMGKMRPQPYGGT--------NPYSQQQGPPSGPQQGHGYPGQPYGSQTPQ	45
+Mouse           TPQSSSPMDQMGKMRPQPYGGT--------NPYSQQQGPPSGPQQGHGYPGQPYGSQTPQ	430
+Chicken         ------------------------------------------------------------	0
+clawedFrog      TPQPATPMDQMGKMRPQPYGSS--------NPYSQQQGAQQG---HSGYPVQPYSSQSPQ	269
+zebraFish       RTQPPGPMDQVGKIRGQHYGAG--------NPYSQQQGPPPSSQQGPPYPGQGYGPPGPQ	348
+fruitFly        ----PPP-----QHQPSPYGGQQGGWAPPPRPYSPQLGPSQ-----------QYRTPPPT	306
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           RYPMTMQGRAQSAMGGLSYTQQIPPYGQQGPSGYGQQGQTPYYNQQSPHPQQ-QQPPYSQ	487
+Dog             RYPMAMQGRAQSAMGGLSYAQQIPPYGQQGPSGYGQQGQTPYYNQQSPHPQQ-QQPPYSQ	488
+Cattle          RYPMTMQGRAQSTMGGLSYAQQIPPYGQQGPSGYGQQGQTPYYNQQSPHPQQ-QQPPYSQ	490
+Rat             RYPMTMQGRAQSAMGSLSYAQQIPPYGQQGPSAYGQQGQTPYYNQQSPHPQQQQQPPYSQ	105
+Mouse           RYPMTMQGRAQSAMGSLSYAQQIPPYGQQGPSAYGQQGQTPYYNQQSPHPQ--QQPPYAQ	488
+Chicken         ------------------------------------------------------------	0
+clawedFrog      RYPMSMQGRPQGGM-SMQYGQQMSPYTQQGPGSYSQQSQSPYYNQQSLHPPQQPQTTPPQ	328
+zebraFish       RYPMGMQGRTSGNLSGIQYGQQM-GYGQHGPGGYGQN-QAGYYGQQGPSPHGGPQQSSYP	406
+fruitFly        NT-----SRGQ-----SPY----PPAHGQNSGSYPSSPQQQ------QQQQQQQQQQAGQ	346
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           QPPSQTPHAQPSY--QQQPQ------------SQPPQLQSSQPPYSQQPSQPPHQQSPAP	533
+Dog             QPPSQNPHAQPSY--QQQPQ------------SQPPQLQASQPPYSQQPSQPPHQQSPTP	534
+Cattle          QPPSQTPHAQPSY--QQQPQ------------SQPPQLQSSQPPYSQQPSQPPHQPSPTP	536
+Rat             QPPSQTPHAQPSY--QQQPQ------------TQQPQLQSSQPPYSQQPSQPPHQQSQTP	151
+Mouse           QPPSQTPHAQPSY--QQQPQ------------TQQPQLQSSQPPYSQQPSQPPHQQSPTP	534
+Chicken         ------------------------------------------------------------	0
+clawedFrog      TQYSQQQSGPQSYSQQQAPS------------SQPTPTQSGQPTFTQQQ-----SPSPSP	371
+zebraFish       QQPSTGPGSQPPYSQQPSGTPHGQSGTSYGQPQGPHVPNQGQPPYSQTPQS---QSGQSP	463
+fruitFly        QPGGPVPGGPPPGTGQQ-------------------PPQQNTPPTS----------QYSP	377
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           YPSQQSTT--------Q---------QHPQ---SQPPYSQPQAQ-------------SPY	560
+Dog             YPSQQPTT--------Q---------QHPQ---SQPPYSQPQAQ-------------SPY	561
+Cattle          YPSQQSST--------Q---------QHPQ---SQPPYSQPQAQ-------------SPY	563
+Rat             YPSQQSTT--------Q---------QHPQ---SQPPYSQPQAQ-------------APY	178
+Mouse           YPSQQSTT--------Q---------QHPQ---SQPPYSQPQAQ-------------SPY	561
+Chicken         ------------------------------------------------------------	0
+clawedFrog      YTQQQGAP------------------TS------------SQSQ-------------SPY	388
+zebraFish       FPQSQGPTQSQGPSQGQ---------QGSQ---SQPGYTHPPSGSGQPAQQQ-----GPS	506
+fruitFly        YPQRYPTPPG-LPAGGSNHRTAYSTHQYPEPNRPWPGGSSPSPGSGHPLPPASPHHVPPL	436
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           QQQQPQ-----------QPA--PSTLSQQAAYPQP-----QSQQSQQTAYSQQRF-PPPQ	601
+Dog             QQQQPQ-----------QPA--SSTLSQQAAYPQP-----QSQQSQQTAYSQQRF-PPPQ	602
+Cattle          QQQQPQ-----------QPA--SSTLSQQAAYPQP-----QSQQSQQTAYSQQRF-PPPQ	604
+Rat             QQQQPQ-----------QPA--SSTLSQQAAYPQP-----QPQQSQQTAYSQQRF-PPPQ	219
+Mouse           QQQQPQ-----------QPA--SSSLSQQAAYPQP-----QPQQSQQTAYSQQRF-PPPQ	602
+Chicken         ------------------------------------------------------------	0
+clawedFrog      TQQTGQ-----------YT----STQQQVSSYP-------STGAQQSGTYSQQRF-PPPQ	425
+zebraFish       QQQQGPPQSQTPSSAPPQPSQQTSGQGQPSPYSQTPPLQTQQQQQQQQQSPFQRFPPPPQ	566
+fruitFly        QQQPPPPP-HVSAGGPPPS---SSPGHAPSPSPQP----------------SQASPSPHQ	476
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           ELSQDSFGSQASSAPS---MTSSKGGQEDMNLSLQSRPSSLPDLSGSIDDLPMGTEGA--	656
+Dog             ELSQDSFGSQASSAPS---MTSSKGGQEDMNLSLQSRPSSLPDLSGSIDDLPMGTEGA--	657
+Cattle          ELSQDSFGSQASSAPS---MTSSKGGQEDMNLSLQSRPSSLPDLSGSIDDLPMGTEGA--	659
+Rat             ELSQDSFGSQASSAPS---MTSSKGGQEDMNLSLQSRPSSLPDLSGSIDDLPMGTEGA--	274
+Mouse           ELSQDSFGSQASSAPS---MTSSKGGQEDMNLSLQSRPSSLPDLSGSIDDLPMGTEGA--	657
+Chicken         ------------------------------------------------------------	0
+clawedFrog      ELSQDSFTSQASSTPS---LGSSK-GQDDLSMGMQPRPSSLPDLSGSIDDLPMGAEGA--	479
+zebraFish       ELSQDSFSSQSSAPSSNQPIVSSKSGQD---DTMQGRPSSLPDLSGSIDDLPTGTEGA--	621
+fruitFly        ELIGQNSND-SSSGGAHSGMGSGPPGTPNPQQVMRPTPS------------PTGSSGSRS	523
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           LSPGVST--------SGISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSPASVAQ	708
+Dog             LSPGVST--------SGISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSPASVAQ	709
+Cattle          LSPGVST--------SGISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSPASVAQ	711
+Rat             LSPGVST--------SGISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSPASVAQ	326
+Mouse           LSPGVST--------SGISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSPASVAQ	709
+Chicken         ------------------------------------------------------------	0
+clawedFrog      LSPGVST--------SGISSSQGEQSNPAQSPFSPHTSPHLPGIRGPSPSPVGSPASVAP	531
+zebraFish       LSPGVST--------SGVSSSQGEQSNPAQSPFSPHTSPHLSGIRGPSPSPVGSPASGPA	673
+fruitFly        MSPAVAQNHPISRPASNQSSSGGPMQQPPVGAGGPPPMPPHPGMPGGPPQQQQSQQQQA-	582
+roundWorm       ------------------------------------------------------------	0
+                                                                            
+
+Human           SRSGPLS-PAAVP-GNQMPPRPPSGQSDSIMHPSMNQSSIAQDRGYMQRNPQMPQYSSPQ	766
+Dog             SRSGPLS-PAAVPAGNQMPPRPPSGQSDSIMHPSMNQSSIAQDRGYMQRNPQMPQYSSPQ	768
+Cattle          SRSGPLS-PAAVP-GNQMPPRPPSGQSDSIMHPSMNQSSIAQDRGYMQRNPQMPQYSSPQ	769
+Rat             SRSGPLS-PAAVP-GNQMPPRPPSGQSDSIMHPSMNQSSIAQDRGYMQRNPQMPQYTSPQ	384
+Mouse           SRSGPLS-PAAVP-GNQMPPRPPSGQSDSIMHPSMNQSSIAQDRGYMQRNPQMPQYTSPQ	767
+Chicken         ------------------------------------------------------------	0
+clawedFrog      SRSGPLS-PTAVP-GTQMPPRPPSGQSDGLIHPTMNQASLGQERGYMQRNAQIPQYGSPQ	589
+zebraFish       SRTGPLS-PGTMP-GNQMPPRPSSVQSDGMLHSSMG-----QDRVYM-RNPQM-PYGSPQ	724
+fruitFly        --SNSASSASNSP-QQTPPPAPPPNQGMN----------------NMA-TPPPPPQGAAG	622
+roundWorm       -----------------------------MMMTSLSG------RLYLDGRRDC-LLGEDA	24
+                                                                            
+
+Human           PGSALSPRQPSGGQIHTG--MGSYQQ-------NSMGSYGPQGGQYGPQGGYPR-QPNYN	816
+Dog             PGSALSPRQPSGGQMHTG--MGSYQQ-------NSMGSYGPQGSQYGPQGGYPR-QPNYN	818
+Cattle          PGSALSPRQPSGGQMHTG--MGSYQQ-------NSMGSYGPQGSQYGPQGGYPR-QPNYN	819
+Rat             PGSALSPRQPSGGQMHSG--MGSYQQ-------NSMGSYGPQGSQYGPQGGYPR-QPNYN	434
+Mouse           PGSALSPRQPSGGQMHSG--VGSYQQ-------NSMGSYGPQGSQYGPQGGYPR-QPNYN	817
+Chicken         ------------------------------------------------------------	0
+clawedFrog      PGPALSPRQSTAAQMHSG--MGPYQQ-------NSMGSYGPQGGQYGPQGGYPR-QPNYN	639
+zebraFish       SGSTLSPRQTSGSQMHAG--MGSYPQN------NSMGNYGPQSGQYGPQ-GYPR-PPGYG	774
+fruitFly        GGYPMP------PHMHGGYKMGGPGQS------PGAQGYPPQQPQQYPPGNYPP-RPQYP	669
+roundWorm       DKYAAS----VAEVAHGG---GGPKKDDQVPPAPDASMPTPQQQQQQP--NLPPPQQPYE	75
+                                                                            
+
+Human           ALPNANYPS----A-GMAGGINPMGAGGQMHGQP---------GIPPYG-----------	851
+Dog             ALPNANYPS----A-GMAGSMNPMGAGGQMHGQP---------GIPPYG-----------	853
+Cattle          ALPNANYPS----A-GMAGSMNPMGAGGQMHGQP---------GIPPYG-----------	854
+Rat             ALPNANYPS----A-GMAGSMNPLGAGGQMHGQP---------GIPPYG-----------	469
+Mouse           ALPNANYPN----A-GMAGSMNPMGAGGQMHGQP---------GIPPYG-----------	852
+Chicken         ------------------------------------------------------------	0
+clawedFrog      TMPNAGYSA----G-----GMTPLVAGGQMHGQG---------GMPQYT-----------	670
+zebraFish       GMPNANYPG----GPGMGGSMNPM------AGQG---------GGGPYG-----------	804
+fruitFly        PGAYATGPPPPPTSQAGAGGANSMPSGAQAGGYPGRGMPNHTGQYPPYQWVPPSPQQTVP	729
+roundWorm       HPAQ-QHPP---QH-------HSVPP-NSFAPPPGQHHP-QHPGMPPMEWRPPGAEYQMP	122
+                                                                            
+
+Human           -----------------------------------------------------TLPPGRM	858
+Dog             -----------------------------------------------------TLPPGRM	860
+Cattle          -----------------------------------------------------TLPPGRM	861
+Rat             -----------------------------------------------------TLPPGRM	476
+Mouse           -----------------------------------------------------TLPPGRM	859
+Chicken         ------------------------------------------------------------	0
+clawedFrog      ---------------------------------------------------------GRM	673
+zebraFish       -----------------------------------------------------GMPPGRM	811
+fruitFly        GGAPGGAMVGNHVQGKGTPPPPVVGGPPPPQGSGSPRPLNYLKQHLQHKGGYGGSPTPPQ	789
+roundWorm       PGYPAGYPPYG------MPPR--------------------------HHPG--------Y	142
+                                                                            
+
+Human           SHASMGNRPYGP----NMA----NM-PPQVGS-GMC-PPPG-----GMNRKTQETAVAMH	902
+Dog             SHASMGNRPYGP----NMA----NM-PPQVGS-GMC-PPPG-----GMNRKTQETAVAMH	904
+Cattle          SHASMGNRPYGP----NMA----NM-PPQVGS-GMC-PPPG-----GMNRKTQETAVAMH	905
+Rat             THASMGNRPYGP----NMA----NM-PPQVGS-GMC-PPPG-----GMNRKTQESAVAMH	520
+Mouse           AHASMGNRPYGP----NMA----NM-PPQVGS-GMC-PPPG-----GMNRKTQESAVAMH	903
+Chicken         ------------------------------------------------------------	0
+clawedFrog      GHSGMGNRPYGP----NMG----SM-PPQVAS-GMC-PPPA-----GMNRKAQEA-AGMH	716
+zebraFish       GPGQMGTRPYGPGMGPNMG----GM-PPQVAS-GMC-PPPG-----MNRKPQDPAAAGMH	859
+fruitFly        GPQGYGNGPTGMHPGMPMGPPHHMG-PPHGPT-NMG-PPTSTPPQSQMLQGGQPQGQGAS	846
+roundWorm       PHPAYGYPPPGA----PYGYPPQMMRPPMMAPGDMVRMPPGPTPT-EWAAQQQAQAASRS	197
+                                                                            
+
+Human           VAANSIQNRPPGYPNM-NQGGMMGTGPPYGQGINSMAGMINPQGPPYSM-----GGTMAN	956
+Dog             VAANSIQNRPPGYPNM-NQGGMMGTGPPYGQGINSMAGMINPQGPPYPM-----GGTMAN	958
+Cattle          VAANSIQNRPPGYPNM-NQGGIMGTGPPYGQGINSMAGMINPQGPPYPM-----GGTMAN	959
+Rat             VAANSIQNRPPGYPNM-NQGGIMGTGPPYGQGINSMAGMINPQGPPYPM-----GGTMAN	574
+Mouse           VAANSIQNRPPGYPNM-NQGGMMGTGPPYGQGINSMAGMINPQGPPYPM-----GGTMAN	957
+Chicken         ---------------------MMGTGPPYGQGINSMAGMINPQGPPYPM-----GGNMAN	34
+clawedFrog      ATPNSLQSRSPGYPNM-NQGGMMGSGTAYGQGMNSMAAIMNTQGNPYMS-----GNMV--	768
+zebraFish       HGPSNSIHRPPGYPNM-NQ-GMMGAGSPYAPPMNSMQGMMNQAG-QYPM-----PGNMSN	911
+fruitFly        GGPES-----GGPEHISQDNGISSSGPTGAAGMHAVTSVVTTGPDGTSMDEVSQQSTLSN	901
+roundWorm       VPPKE--------------------GPNGNPATPSSS----SQPIPSPS-----ASSIAE	228
+                                         *        :                    . :  
+
+Human           NSAGMAASPEMMGLG--------DVKLTPA-----TK---------------------M-	981
+Dog             NSAGMAASPEMMGLG--------DVKLTPA-----TK---------------------M-	983
+Cattle          NSAGMAASPEMMGLG--------DVKLTPA-----SK---------------------M-	984
+Rat             NSAGMAASPEMMGLG--------DVKLTPA-----TK---------------------M-	599
+Mouse           NSAGMAASPEMMGLG--------DVKLTPA-----TK---------------------M-	982
+Chicken         NSAGMAASPEMMGLA--------DVKLTPA-----TK---------------------M-	59
+clawedFrog      NNSGMAGSPDLMGLP--------DVKLTPT-----PK---------------------M-	793
+zebraFish       NSAGMAPSPEF---G--------MDKLNQS-----QK---------------------L-	933
+fruitFly        ASAASGEDPQCTTPKSRKNDPYSQSHLAPPSTSPHPV--VMHPGGGPGEEY------DMS	953
+roundWorm       ES--LDDKPSGTKMP---AQPPPQQHPPPP--QPQQIMSPMPPQAPPSQQATPSSSAASV	281
+                 .     .*.               :                                  
+
+Human           ----NNKADG-------TPKTESKSKKSSSSTTTNEKITKLYELGGEPERKMWVDRYLAF	1030
+Dog             ----NNKADG-------TPKTESKSKKSSSSTTTNEKITKLYELGGEPERKMWVDRYLAF	1032
+Cattle          ----NNKADG-------TPKTESKSKKSSSSTTTNEKITKLYELGGEPERKMWVDRYLAF	1033
+Rat             ----NNKADG-------TPKTESKSKKSSSSTTTNEKITKLYELGGEPERKMWVDRYLAF	648
+Mouse           ----NNKADG-------TPKTESKSKKSSSSTTTNEKITKLYELGGEPERKMWVDRYLAF	1031
+Chicken         ----NNKADG-------TPKAESKSKKSSSSTTTNEKITKLYELGGEPERKIWVDRYLAF	108
+clawedFrog      ----NNKADG-------TPKSETKSKKSSSSTTTNEKITKLYELGVEPDRKMWVDRYLSF	842
+zebraFish       ----NNKVDG-------TPKTESKK-KSSSSTTTNEKITRLYELGPEPERKLWVDRYLAF	981
+fruitFly        SPPNWPRPAGSPQVFNHVPVPQEPFRSTITTTKKSDSLCKLYEMDDNPDRRGWLDKLRAF	1013
+roundWorm       AAPDTPKVSG------KVLSKAELF------EKLVGPITLHNPMKVMAERRGFFERLIEF	329
+                      :  *       .              .    :     :    :*: :.::   *
+
+Human           TEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	1088
+Dog             TEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	1090
+Cattle          TEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	1091
+Rat             TEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	706
+Mouse           TEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	1089
+Chicken         TEEKAMGMTNLPAVGRKPLDLYRLYISVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	166
+clawedFrog      TEEKAMGMTNLPAVGRKPLDLYRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	900
+zebraFish       AEEKAMGMSNLPAVGRKPLDLFRLYVSVKEIGGLTQVNKNKKWRELATNLN--VGTSSSA	1039
+fruitFly        MEERRTPITACPTISKQPLDLYRLYIYVKERGGFVEVTKSKTWKDIAGLLG--IGASSSA	1071
+roundWorm       CEHNGEPLTMVPQVSKQSIDLHRLYIGVRAKGGFQQVTKDKYWKNLCTEANPDLAESSAA	389
+                 *..   ::  * :.:: :**.***: *:  **: :*.*.* *:::.   .  :. **:*
+
+Human           ASSLKKQYIQCLYAFECKIERGEDPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ---	1142
+Dog             ASSLKKQYIQCLYAFECKIERGEDPPPDIFAASDS--KKSQPKI-QPPSPAGSGSMQ---	1144
+Cattle          ASSLKKQYIQCLYAFECKIERGEDPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ---	1145
+Rat             ASSLKKQYIQCLYAFECKIERGEDPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ---	760
+Mouse           ASSLKKQYIQCLYAFECKIERGEDPPPDIFAAADS--KKSQPKI-QPPSPAGSGSMQ---	1143
+Chicken         ASSLKKQYIQCLYAFECKIERGEDPPPDIFAAADS--KKSQTKI-QPPSPAGSGSMQ---	220
+clawedFrog      ASSLKKQYIQCLYAFECKIERGEDPPPDIFASAES--KK-QAKI-QPPSPAGSGSMQ---	953
+zebraFish       ASSLKKQYIQCLYAFECKIERGEDPPPDFFNN-DP--KKNQAKV-QPPSPAGSGSLQ---	1092
+fruitFly        AYTLRKHYTKNLLTFECHFDRGDIDPLPIIQQVEAGSKKKTAKAASVPSPGG-GHLD---	1127
+roundWorm       GYQLRKHYQRHLLMLECRETGRNPEDEVAFADKMK----RQRKR----EPAGGNAAAAAA	441
+                .  *:*:* : *  :**:    :      :            *     .*.* .      
+
+Human           --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQIPPLPGMSRSNSVGIQDAFNDGSDST	1198
+Dog             --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQIPPLPGMSRSNSVGIQDAFPDGSDPT	1200
+Cattle          --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQIPPLPGMSRSNSVGIQDAFPDGSDPT	1201
+Rat             --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQIPPLPGM-RSNSVGIQDAFPDGSEPT	815
+Mouse           --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQIPPLPGMSRSNSVGIQDAFPDGSDPT	1199
+Chicken         --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQMPPLPGI-RSNSVGLQDAFTDGSDPT	275
+clawedFrog      --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSHMPPMPGM-RNNSVGLQEAY-DGSDPS	1007
+zebraFish       --GPQTPQSTSSSMAEG--GDLKPPTPASTPHSQMPPMPGA--RSSVNLQDPFADGGDPA	1146
+fruitFly        --AGTT-NSTGSS--NS--QDSFPAPPGSAPNAAIDGYPGYPGGSP----YPVASGPQPD	1176
+roundWorm       VAAAQQGDQKSQHGAPGGSGAPPPGPPGAYPGNGA---PGGPPGGP--PQFPGHPGMDPN	496
+                  .    :....    .      *  *.: *       **    .          * :  
+
+Human           FQK----------RNSMTPN---PGYQPSMNTSDMMGRM-SYEPNKDPYGSMRKAPGSDP	1244
+Dog             FQK----------RNSMTPN---PGYQPSMNTSDMMGRM-SYEPNKDPYGSMRKAPGSDP	1246
+Cattle          FQK----------RNSMTPN---PGYQPSMNTSDMMGRM-SYEPNKDPYGSMRKAPGSDP	1247
+Rat             FQK----------RNSMTPN---PGYQPSMNTSDMMGRM-SYEPNKDPYGGMRKAPGSDP	861
+Mouse           FQK----------RNSMTPN---PGYQPSMNTSDMMGRM-SYEPNKDPYGSMRKAPGSDP	1245
+Chicken         FQK----------RNSMTPN---PGYQPSMNTSDMMGRM-SYEPNKDPYSSMRKAPGSDP	321
+clawedFrog      YQK----------RNSMTPN---PGYQA-----DMMGRM-PYETGKDPYGNMRK--GADP	1046
+zebraFish       FSR----------RNSVTPN---SGYQPGMGGPDMMGRMGPFEPNKDPFGGMRKA--GEQ	1191
+fruitFly        YATAGQMQRPPSQNNPQTPH---PGAAAAVAAGDNISVSNPFEDPIAA--------GGGP	1225
+roundWorm       YHYYQQ-------HGMMPPHPGHPGYPPQ--------HMNAFSPGQY--PGHQRPPGGPG	539
+                :            ..   *:    *                :.              .  
+
+Human           FMSSGQGPNGGMGDPYSRAAGP-GLGNVAMGPRQHYPYGGPYDRVRTEPGIGPEGNMSTG	1303
+Dog             FMSSGQGPNGGMGDPYSRAAGP-GLGNVAMGPRQHYPYGGPYDRVRTEPGIGPEGNMGTG	1305
+Cattle          FMSSGQGPNGGMGDPYSRAAGP-GLGNVAMGPRQHYPYGGPYDRVRTEPGIGPEGNMGTG	1306
+Rat             FMSSGQGPNGGMGDPYSRAAGP-GLGNVAMGPRQHYPYGGPYDRVRTEPGIGPEGNMGTG	920
+Mouse           FMSSGQGPNGGMGDPYSRAAGP-GLGSVAMGPRQHYPYGGPYDRVRTEPGIGPEGNMGTG	1304
+Chicken         FMSSGQGPNSGMGDPYNRAAGP-GMGNMAMGQRPHYPYGGPYDRVRTEPGMGPEGNLAAG	380
+clawedFrog      FMPSGQGPSGTIGDPYSRGTGP-GMP--SLGQRQHYPYGG-YDRVRGEPGLGPEGGMGSG	1102
+zebraFish       FMNPGQGPNSGMGEQYNRASQG-PMGNMQMGQRQQYPYGPGYDRR-PDSSMGPDGNMG--	1247
+fruitFly        GSGTGPGPGQGPGPGAASGGAG-AVGAVGGGPQPHPPPPHSPHTA-AQ--------QAAG	1275
+roundWorm       GPP--------PGPQAMRAPMPQHMQEMDEHQRQWYAHQQ--AAAAHH-----HAQQQAA	584
+                            *     .     :       :              .            
+
+Human           APQPNLMPSNPDSGMYSPSRYPPQQQQ------------------------------QQQ	1333
+Dog             APQPNLMPSNPDSGMYSPSRYPPQQQQ-------------------------------QQ	1334
+Cattle          APQPNLMPSNPDSGMYSPSRYPPQQQQ-------------------------------QQ	1335
+Rat             APQPNLMPSTPDSGMYSPSRYPPQQQQQQQQQ--------------------QQQQQQQQ	960
+Mouse           APQPNLMPSTPDSGMYSPSRYPPQQQQQQQ-------------------------QQQQQ	1339
+Chicken         TPQPNIMPSTSESGMYSPSRYPQQQQ--------------------------------QQ	408
+clawedFrog      GNQQNMMPSNTDSGMYSPGRYP-------------------------------------Q	1125
+zebraFish       -PQPNMMPSGADAGMYSPNRPP------------------------------------QQ	1270
+fruitFly        -QHQQQHPQHQHPGLP--GPPPPQQQQGQQGQQPPPSVGGGPPPAPQQHGPGQVPPSPQQ	1332
+roundWorm       AQ--AQAAQAQQASTPAPSTTPAPQAAS--SSQAAPTSGAN-----------------TQ	623
+                        .  . .    .  *                                     *
+
+Human           QRHDSYGNQFSTQ--------GTPSGSPFPSQQTTMYQQQ----QQNY------------	1369
+Dog             QRHDSYGNQFSTQ--------GTPSGSPFPSQQTTMYQQQ----QQNY------------	1370
+Cattle          QRHDSYGNQFSAQ--------GTPSGSPFPSQQTTMYQQQ----QQNY------------	1371
+Rat             QRHDSYGNQFSTQ--------GTPSSSPFPSQQTTMYQQQQ---QQNY------------	997
+Mouse           QRHDSYGNQFSTQ--------GTPSSSPFPSQQTTMYQQQ----QQNY------------	1375
+Chicken         QRHDSYGNQFSTQ--------GTSSGSPFPSQQTTMYQQQ----QQNY------------	444
+clawedFrog      QRHDSYGNQYPTQ--------GTAAGSPYPSQQNPLYQ------QQNY------------	1159
+zebraFish       QRHDSYSNQYAGQ--------GAPPSGPYPNQQSGMYPQQQP--NYTQ------------	1308
+fruitFly        HVRPAAGAPYPPGGSGYPTPVSRTPGSPYPSQPGAY-GQYGSSDQYNATGPPGQPFGQGP	1391
+roundWorm       PATPSASNQPPT-------PASASASTTLHVEPASVAGGS-------QAGSRAPSAGPGP	669
+                    : .              .   .     :                            
+
+Human           ------KRPMDGTYGPPAKR------HEGEMYSVPYSTGQGQPQQQQL-PPAQ---PQPA	1413
+Dog             ------KRPMDGTYGPPAKR------HEGEMYSVPYSTGQGQPQQQQL-PPAQ---PQPA	1414
+Cattle          ------KRPMDGTYGPPAKR------HEGEMYSVPYSAGQGQPQQQQL-PPAQ---PPPA	1415
+Rat             ------KRPMDGTYGPPAKR------HEGELYSVPYSTGQGQPQQQQL-PAAQ---SQSA	1041
+Mouse           ------KRPMDGTYGPPAKR------HEGEMYSVPYSAGQGQPQQQQL-PAAQ---SQPA	1419
+Chicken         ------KRPMDGSYGPPAKR------HEGEMYNVPYSAGQGQTQ-QQL-PPAQ---TQQP	487
+clawedFrog      ------KRPMDGSYGPSPKR------HEGELYGGPYSGGQAGQNQQQPQPPPQQ--QQPP	1205
+zebraFish       ------KRPVDGVYGPPAKR------HEGDMYPFS--GQQQGPQ----------------	1338
+fruitFly        GQYPPQNRNMYPPYGPEGEAPPTGANQYGPYGSRPYSQPPPG----GPQPPTQTVAGGPP	1447
+roundWorm       SATPDS--STIPSASAAADAQTTT-SSETSTPGEPTSSTPSD----TPAP---STSVPPP	719
+                              .   .                                         
+
+Human           ---------SQQQAAQPSPQQDVYNQYG----------------NAYPATATA-------	1441
+Dog             ---------SQQQAAQPSPQQDVYNQYG----------------NAYPATAAA-------	1442
+Cattle          ---------NQQQAAQPPPQQDVYNQYG----------------NAYPATAAA-------	1443
+Rat             ---------SQPQAAQPSPQQDVYNQYS----------------NAYPATATA-------	1069
+Mouse           ---------SQPQAAQPSPQQDVYNQYS----------------NAYPASATA-------	1447
+Chicken         ---------SQQQAAQPSPQQDLYNQYG----------------STYPAA----------	512
+clawedFrog      GSGAPPTPGQPPAATNAQQPQDPYGQYG----------------GSYPQG----------	1239
+zebraFish       ------------APGAPQSQSDMYNQYN----------------T-YPG-----------	1358
+fruitFly        AGGAPGAPPSSAYPTGRPSQQDYYQPPPDQSPQPRRHPDFIKDSQPYPGYNARPQIYGAW	1507
+roundWorm       TSVQP-----------PQPQQPPQGPPG--PPGPQ------QHPGPYPGYPGYGP-----	755
+                                    .                         **            
+
+Human           --ATERRPAGGPQNQFPFQFGRD--RVSAPPGTNAQQNMPPQMMGGP--------IQASA	1489
+Dog             --ATERRPAGGPQNQFPFQFGRD--RVSAPPGSNAQQNMPPQMMGGP--------IQASA	1490
+Cattle          --ATERRPAGGPQNQFPFQFGRD--RVSAPPGSNAQQNMPPQMMGGP--------IQASA	1491
+Rat             --ATERRPAGGPQNQFPFQFGRD--RVSAPPGSNAQQNMPPQMMGGP--------IQASA	1117
+Mouse           --ATDRRPAGGPQNQFPFQFGRD--RVSAPPGSSAQQNMPPQMMGGP--------IQASA	1495
+Chicken         ----DRRSAGGPQNQFPFQFGRD--RVSAPPGSNAQQNMPPQMMGGP--------IQSAP	558
+clawedFrog      ---TERRPVASGQNQFPFQFGRE--RVSAAPSSNSQPPLPSSVM------------SNSG	1282
+zebraFish       ----SERRPPGPQSQFPFGFGRD--RGPNVGGPNSQPSMPPQMMGSS--------MSGTM	1404
+fruitFly        QSGTQQYRPQYPSSPAPQNWGGAPPRGAAPP--------PGAPHGPP--------I----	1547
+roundWorm       --PGAMRP----------------PAGFAPP--------PGAPYGYPPGAPPPAGFHPSH	789
+                                                       *                    
+
+Human           ---EVAQQGTMWQGRNDMTY-NYANRQSTG-SAPQ---------GPAYH-----------	1524
+Dog             ---EVAQQGTMWQGRNDMTY-NYTNRQSTG-SAPQ---------GPAYH-----------	1525
+Cattle          ---EVAQQGTMWQGRNDMTY-NYANRQSTG-SAPQ---------GPTYH-----------	1526
+Rat             ---EVAQQGTMWQGRNDMTY-NYANRQNTG-SAPQ---------GPAYH-----------	1152
+Mouse           ---EVAQQGTMWQGRNDMTY-NYANRQNTG-SATQ---------GPAYH-----------	1530
+Chicken         ---EGPQQGAMWQGRNEIGY-SYPNRQSTG-SAPQ---------GPAYH-----------	593
+clawedFrog      ---EGNQQGAMWQGRNDMSY-NYQGRPGPPPANTQ---------GQGYH-----------	1318
+zebraFish       PSVPDGPQGPMWPGRNEMNYPNYHNRQGPPGVPSQ---------SQVYH-----------	1444
+fruitFly        ---QQPAGVAQWDQH------RYPPQQGPPPPPQQQQQPQQQQQQPPYQQVAGPPGQQPP	1598
+roundWorm       PQHPQHAQYLAWQQQ------RYHQQQQHQ---QQQQQGAPGGPRPPYPYPGGP------	834
+                           *  :       *  :        *            *            
+
+Human           --------------------------------GVN-RTDEMLHTDQRANHEGSWPS----	1547
+Dog             --------------------------------GVN-RTDEMLHTDQRANHEGPWPS----	1548
+Cattle          --------------------------------GVN-RTDEMLHTDQRANHEGPWPS----	1549
+Rat             --------------------------------GVN-RTDEMLHTDQRANHEGPWPS----	1175
+Mouse           --------------------------------GVN-RTDEMLHTDQRANHEGPWPS----	1553
+Chicken         --------------------------------GVT-RTDDILHSEQRVNHEGPWPS----	616
+clawedFrog      --------------------------------SVPPRGEDMMHSDQRLSHEGQWQP----	1342
+zebraFish       --------------------------------GMN-RSEDMMPSDQRMNQEGPWPG----	1467
+fruitFly        QAPPQWAQMNPGQTAQSGIAPPGSPLRPPSGPGQQNRMPGMPAQQQQSQQQGGVPQPPPQ	1658
+roundWorm       -------------------VPPGP--------P-QNRMPP----------------PPPA	850
+                                                    *                       
+
+Human           ---HG-------------T-RQPPYGPSAPVPPMTR-PPPSNYQPPPSMQ-NHIPQVSSP	1588
+Dog             ---HG-------------T-RQPPYGPSAPLPPMTR-PPPSNYQPRQSMQ-NHIPQVSSP	1589
+Cattle          ---HG-------------T-RQPPYGPSAPVPPMTR-PPPANYQPPPSMQ-NHIPQVSSP	1590
+Rat             ---HG-------------T-RQPPYGPSAPVPPMTR-PPPSNYQPPPSMQ-NHIPQVSSP	1216
+Mouse           ---HG-------------T-RQPPYGPSAPVPPMTR-PPPSNYQPPPSMP-NHIPQVSSP	1594
+Chicken         ---HG-------------N-RQPPYGPSAPVPPMTR-PPQSNYQTPPSMQ-NHIPQVSSP	657
+clawedFrog      ---HV-------------N-RQQPPYVPAPGPAMTRAPPQSGYQASPSMP-NHLPQVPSP	1384
+zebraFish       ---HV-------------NQRQPPYGPVASGPPMSR-PLQPNYQ---SSQ-NHIPQVSSP	1506
+fruitFly        QASHGGVPSPGLPQVGPGGMVKPPYAMPPP--PSQGVGQQVGQGPPGGMMSQKPPPMPGQ	1716
+roundWorm       Q----GAPSPSG--AAGSNGKQPRYGTPAPP--S-----------------------RAS	879
+                                     :                                    . 
+
+Human           APLPRPMENRTS-----PSKSPFLHSGMKMQKAGPPVPASHIAP----------APVQPP	1633
+Dog             APLPRPMENRTS-----PSKSPFLHSGMKMQKAGPPVPASHIAP----------APVQPP	1634
+Cattle          APLPRPMENRTS-----PSKSPFLHSGMKMQKAGPPVPASHIAP----------APVQPP	1635
+Rat             APLPRPMENRTS-----PSKSPFLHSGMKMQKAGPPVPASHIAP----------TPVQPP	1261
+Mouse           APLPRPMENRTS-----PSKSPFLHSGMKMQKAGPPVPASHIAP----------TPVQPP	1639
+Chicken         APLPRPLENRTS-----PSKSPFLHSGMKMQKAGPPVPASHITP----------AAVQPP	702
+clawedFrog      A-TPRPLEAHTS-----PSKSPFL----KMQKAGPPVPASHIVP----------TPTQPP	1424
+zebraFish       APMPRPMENRTS-----PNKSPYMHPGMKIQKAGPPVPASHIAQ----------PPVQPP	1551
+fruitFly        AMQQQPLQQQPP-----SHQHPHPHQHPQHQH-PHQMPPNQTAPGGY--GPPGMPGGGAQ	1768
+roundWorm       APTPQPLSSTMPVVAPSTSTQPTPTTGSYLAN-------TLATPGPAHAPSSSMSHAHHV	932
+                *   :*:.             *         :       .  .                 
+
+Human           MIRRDITFPPGSVEATQPV--LKQRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTI	1691
+Dog             MIRRDITFPPGSVEATQPV--LKQRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTI	1692
+Cattle          LIRRDITFPPGSVEATQPV--LKQRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTI	1693
+Rat             MIRRDITFPPGSVEATQPV--LKQRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTI	1319
+Mouse           MIRRDITFPPGSVEATQPV--LKQRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTI	1697
+Chicken         MIRRDITFPPGSVEATQPV--LKQRRRLTAKDIGTPEAWRVMMSLKSGLLAESTWALDTI	760
+clawedFrog      LIRRDITFPPGSVEATPPL--LKPRRRLTAKDIGTPEAWRVMMSLKSGLLAESTWALDTI	1482
+zebraFish       MIRRDIAFPPGSIEASQPI--LKPRRRLTMKDIGTPEAWRVMMSLKSGLLAESTWALDTI	1609
+fruitFly        LVKKELIFPHDSVESTTPV--LYRRKRLMKADVCPVDPWRIFMAMRSGLLTECTWALDVL	1826
+roundWorm       ISQQQHQYPPGCIEATATSQNQVKRRKVYARELINATPRRLIMSLRSGLDAEAIWAINAL	992
+                : :::  :* ..:*::        *:::   ::      *::*:::*** :*. **::.:
+
+Human           NILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPGRFS	1751
+Dog             NILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPGRFS	1752
+Cattle          NILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPGRFS	1753
+Rat             NILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPGRLT	1379
+Mouse           NILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPGRFT	1757
+Chicken         NILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILKEYEVGDPGQRTLLDPQRFC	820
+clawedFrog      NILLYDDNSIMTFNLSQLPGLLELLVEYFRRCLIEIFGILREYEVGEHAQKTLLQPFPSD	1542
+zebraFish       NILLYDDNSISNFNLNQLPGFLELVVEYFRRCLIEIFGILKEYEVGDPGQRTLIDPEAID	1669
+fruitFly        NVLLFDDSTVQFFGISNLPGLLTLLLEHFQKNLAEMFDERENEEQS-----ALLAEDADD	1881
+roundWorm       NVLLYDDTNP-HPTLQQMPGLVNVIVEHLYATLSIMYPA--EFQLTEPGKPIIMDESKET	1049
+                *:**:**..     :.::**:: :::*::   *  ::    : :        ::      
+
+Human           KVSSPAPMEG--------GEEEE-ELLGPKL-------------------------E--E	1775
+Dog             KACSPAPMEG--------E-REE-DLLGPKL-------------------------E--E	1775
+Cattle          KASSPAPVEG--------E-EEE-DLLGPKL-------------------------E--E	1776
+Rat             KVSSPAPTEE--------EEE-E-EHVDPKL-------------------------E--E	1402
+Mouse           KVYSPAHTEE---------EE-E-EHLDPKL-------------------------E--E	1779
+Chicken         RSSASSHEEG--------EEDEE--LRSLN------------------------------	840
+clawedFrog      SSSLLSGDAE--------MVDGD-DHQSVTD-------------------------GDPQ	1568
+zebraFish       PEMSDEEGPEAEQMEEDDEDDEE-DLENNTVQTSQVQI----------KQEKEESMESPK	1718
+fruitFly        D------------------ADSG-TVMCEKLRTSGRQPRCVRSISSYNRRRHYENMDRS-	1921
+roundWorm       VEK----------MMKAE-KDGGIKSIIEKM-----------------------------	1069
+                                             .                              
+
+Human           EEEEEVV-----ENDEEIAFSGK---------DKPASENSEEKLISK---------FDKL	1812
+Dog             EEEEEVV-----ENDEEMALSAK---------DKAATESSEEKLISK---------FDKL	1812
+Cattle          EEEEEVI-----ENDEEMAFSGK---------DKAASENSEEKLISK---------FDKL	1813
+Rat             EE-EEGV-----ENDEEMAFLGK---------DKPPSEKSEEKLVSK---------FDKL	1438
+Mouse           EE-EEGV-----GNDEEMAFLGK---------DKPSSENNEEKLVSK---------FDKL	1815
+Chicken         NEEEEDD-----EEEEEAAFSSK---------DKAPLECSEEKLVSK---------FDKL	877
+clawedFrog      SEDEEGL-----E--ERKAYN-----------TPFSSNEDTQQQSSK---------FDRL	1601
+zebraFish       SNDKNEL-----EDREGEDNSCKDHLRSSTPLQDTSASQERPKQASK---------FDKL	1764
+fruitFly        GKDGAGNGSDSEDADEGIDL-GQ--VR-------VQPNPEERSLLLSFTPNYTMVTRKGV	1971
+roundWorm       ------------------PV--------------------VPRKGSDKTATFTMMSRNGL	1091
+                                                              .          . :
+
+Human           PVKIVQKNDPFVV-----------------DCSDKLGRVQEFDSGLLHWRIGGGDTTEHI	1855
+Dog             PVKIVQKNDPFVV-----------------DCSDKLGRVQEFDSGLLHWRIGGGDTTEHI	1855
+Cattle          PVKIVQKNDPFVV-----------------DCSDKLGRVQEFDSGLLHWRIGGGDTTEHI	1856
+Rat             PVKIVQKNDPFVV-----------------DCSDKLGRVQEFDSGLLHWRIGGGDTTEHI	1481
+Mouse           PVKIVQRNDPFVV-----------------DCSDKLGRVQEFDSGLLHWRIGGGDTTEHI	1858
+Chicken         PIKIVQKNDPFVV-----------------DYSDKLGRVQEFESGLLHWRIGGGDTTEHI	920
+clawedFrog      PIKVVSKEDPFVL-----------------DCSHQLGRLQEFESGLLHWRIGGGDTTEHI	1644
+zebraFish       PIKIMRKKDPFVI-----------------GHTSKLGRRQAFDSGLIHWSVGGGDTTEHI	1807
+fruitFly        PVRIQPAENDIFVDERQK------A--WDIDTNRLYEQLEPVGSDAWTYGFTEPDPLDGI	2023
+roundWorm       QVHFRDESIPTALRKRFSRESGEKNSDAMVDHSISSA----YVEDRNSVGLGGG-LAERI	1146
+                 ::.   .    :                 . .          ..     .      : *
+
+Human           QTHFESKTELLPSRPHAPCPPAPRKHVTTAEGTPGT-TD----QEG--------------	1896
+Dog             QTHFESKTELLPNRPHVPCPPVTRKHVTAPEGTPGT-TE----QEG--------------	1896
+Cattle          QTHFESKTELLPSRPHVPCPPVPRKYVTAVEGTPGT-AE----QEG--------------	1897
+Rat             QTHFESKIELLPSRPCVPSPVPPRKHVTTVEGTPGT-TE----QEG--------------	1522
+Mouse           QTHFESKIELLPSRPYVPCPTPPRKHLTTVEGTPGT-TE----QEG--------------	1899
+Chicken         QTHFESKMELPMIHKRASCNSVSRKRA-AAESNPST-RE----GEA--------------	960
+clawedFrog      QTHFERRPEPPPRRRPP----VKRRS-----------RE----Q----------------	1669
+zebraFish       QTHFESKMELLKHRKRVPVNVEPRKKVSQILETVTGEAEKVQTNEGPQQVQVLASKDQPS	1867
+fruitFly        IDVFKSEIVNIPFARYIRSDKKGRKRTELASSSR---KPEIKTEENSTEEQTFNKKRRL-	2079
+roundWorm       ATRLRDKLLHEKTRPRP----VFSKYLDDLE-----------TE----------------	1175
+                   :. .                 :                                   
+
+Human           ----PPPDGPPEKR--ITATMDDM------LS---------TRSSTLTEDGAK-SSEAIK	1934
+Dog             ----PPPDGPPEKR--ITATMDDM------LS---------TRSSTLTEEGAK-STEATK	1934
+Cattle          ----PPPDGPPEKR--ITATMDDM------LS---------TRSSTLTEEGAK-SVEATK	1935
+Rat             ----PPPDGLPEKR--ITATMDDM------LS---------TRSSTLTDEGTK-STEANK	1560
+Mouse           ----PPPDGLPEKR--ITATMDDM------LS---------TRSSTLTDEGAK-SAEATK	1937
+Chicken         ----LPSDSSSEKR--ITATMDDM------LS---------ARPSSLSGEEEEAKASETE	999
+clawedFrog      -------QIPAAED--TTPTIDDV------LC---------ARPSSLSQETGE----TTE	1701
+zebraFish       LEGKSTTTSSTSTS--ITATIDDV------LS---------ARRGSATEEAVRGNQDSDK	1910
+fruitFly        VSGGSSSSGAHAEGKKSKLTSEEFAQPNAEVKKEPGTADSDCRPVDMDIEAPQQRLTNGV	2139
+roundWorm       ----------------STETIDTV-----EVKKE---------------------IEDEV	1193
+                                 . * : .      :                             
+
+Human           ESS---KFPFGI------SP-AQSHRNIKILEDEPHSKDETPLCTLLDWQDSLAKRCVCV	1984
+Dog             ESS---KFPFGI------SP-AQSHRNIKILEDEPHSKDETPLCTLLDWQDSLAKRCVCV	1984
+Cattle          ESS---KFPFGI------SP-AQSHRNIKILEDEPHSKDETPLCTLLDWQDSLAKRCICV	1985
+Rat             ESS---KFPFGI------SP-AQSHRNIKILEDEPHSKDETPLCTLLDWQDSLAKRCVCV	1610
+Mouse           ESS---KFPFGI------SP-AQSHRNIKILEDEPHSKDETPLCTLLDWQDSLAKRCVCV	1987
+Chicken         KES---KFPFGI------SP-AQSHRNIKILEDEPHSKDETPLCTIQDWQDSLAKRCICV	1049
+clawedFrog      EDC---EFSLGG------SPPPRNRHGMKILEDEPRSKDETPLCTLEDWQDALSRRCVCI	1752
+zebraFish       EKN---TFLFGI------DL-AQQSRNIKILEDEPHSKDETPLCTLSDWQDALARRCICV	1960
+fruitFly        APCSSTPAIFDPRTTAKDEARVLQRRRDSSFEDECYTRDEASLHLVSESQDSLARRCIAL	2199
+roundWorm       AEEK--KDVLLMRGARPDEL------SDCKHEVELAWPRPTALSPKSQAMEELAHRALAL	1245
+                         :        .            * *      : *    :  : *::*.:.:
+
+Human           SNTIRSLSFVPGNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LT	2030
+Dog             SNTIRSLSFVPGNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LT	2030
+Cattle          SNTIRSLSFVPGNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LT	2031
+Rat             SNAIRSLSFVPGNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LT	1656
+Mouse           SNTIRSLSFVPGNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LT	2033
+Chicken         SNIIRSLSFVPGNDFEMSKHPGLLLILGKLILLHHKHPERKQAP--------------LT	1095
+clawedFrog      SNILRSLSFVPGNDLEMSKHPGLLLLLGKLVLLHHKHPERKQAP--------------LT	1798
+zebraFish       SNIVRSLSFIPGNDLEMSKHPGLLLLLGRLVLLHHWHPERKQAP--------------VT	2006
+fruitFly        SNIFRNLTFVPGNETVLAKSTRFLAVLGRLLLLNHEHLRRTPKT--------------RN	2245
+roundWorm       SNILRGFSFVAGSDVLMARNEALLFIIGRLLKLNVKEHKISSKRPGIVMSAEELKTAPKQ	1305
+                ** .*.::*: *.:  :::   :* ::*:*: *:  . . .                   
+
+Human           YEKEEEQD-QGVSCNK----VEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPVL	2085
+Dog             YEKEEEQD-QGVSCNK----VEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPVL	2085
+Cattle          YEKEEEQD-QGVSCNK----VEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPVL	2086
+Rat             YEKEEEQD-QGVSCDK----VEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPVL	1711
+Mouse           YEKEEEQD-QGVSCDK----VEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPVL	2088
+Chicken         YEKEEEQD-QGVSCNK----VEWWWDCLEVLRENTLVTLANISGQLDLSPYPESICLPIL	1150
+clawedFrog      YEKEEERD-QGVSCNK----AEWWWDCLEMLRENTLVTLANISGQLDLSPYPESICLPIL	1853
+zebraFish       YEKEEEED-EGVSCER----DEWWWDCLEVLRENCLVTLANISGQLDLSIYPESICLPLL	2061
+fruitFly        YDREEDTD-FSDSCSSLQGEREWWWDYLITIRENMLVAMANIAGHLELSRYDELIARPLI	2304
+roundWorm       LSADEKRAKEKSVLDEVDATTAQMVETANQLRDDAFVMLTHMSVSLNLVDLPDAIAYPIY	1365
+                 . :*.        .          :    :*:: :* :::::  *:*    : *. *: 
+
+Human           DGLLHWAVCPSAEAQDPFSTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLE	2145
+Dog             DGLLHWAVCPSAEAQDPFSTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLE	2145
+Cattle          DGLLHWAVCPSAEAQDPFSTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLE	2146
+Rat             DGLLHWAVCPSAEAQDPFSTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLE	1771
+Mouse           DGLLHWAVCPSAEAQDPFSTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLE	2148
+Chicken         DGLLHWAVCPSAEAQDPFPTLGPNAVLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLE	1210
+clawedFrog      DGLLHWAVCPSAEAQDPFVTLGPNAVLSPQRLVLEALSKLSIQDSNVDLILATPPFSRLE	1913
+zebraFish       DGLLHWAVCPSAEAIDPFPTLGLNGTLSPQRLVLETLSKLSIQDNNVDLILATPPFSRLE	2121
+fruitFly        DGLLHWAVCPSAHGQDPFPSCGPNSVLSPQRLALEALCKLCVTDANVDLVIATPPFSRLE	2364
+roundWorm       DGLLRWSVSRVPEATDSSIPC----PVSPRDYSLEIMCKMVVIERNVDMFLSTGSWSRVE	1421
+                ****:*:*.   .. *          :**:   ** :.*: : : ***:.::*  :**:*
+
+Human           KLYSTMVRFLSDRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAA	2205
+Dog             KLYSTMVRFLSDRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAA	2205
+Cattle          KLYSTMVRFLSDRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAA	2206
+Rat             KLYSTMVRFLSDRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAA	1831
+Mouse           KLYSTMVRFLSDRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAA	2208
+Chicken         KLYSTLVRFLSDRKNPVCREMAVVLLANLAQGDSLAARAIAVQKGSIGNLLGFLEDSLAA	1270
+clawedFrog      KLYGTLVRFLSDRKNHVCREMAVVLLANLAQGDTLAARAIALQKGSIGNLLGFLEDSLAA	1973
+zebraFish       KLYGSLVRMVGDRKVTVCREMAVVLLANLAQGDTVAARAIAVQKGSVGNLLGFLEDSLAA	2181
+fruitFly        KLCAVLTRHLCRNEDQVLREFSVNLLHYLAAADSAMARTVALQSPCISYLVAFIEQAEQT	2424
+roundWorm       QFVHILTRLLTMNEETHYREFAIVILNALCIASEAVCYICAMETSAIAHLILFIDSADQN	1481
+                ::   :.* :  .:    **::: :*  *. ..   .   *::. .:. *: *::.:   
+
+Human           TQFQQSQA-SLLHMQNPPFEPTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVS	2264
+Dog             TQFQQSQA-SLLHMQNPPFEPTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVS	2264
+Cattle          TQFQQSQA-SLLHMQNPPFEPTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVS	2265
+Rat             TQFQQSQA-SLLHMQSPPFEPTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVS	1890
+Mouse           TQFQQSQA-SLLHMQNPPFEPTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVS	2267
+Chicken         TQFQQSQA-GLMHMQNAPFESTSVDMMRRAARALLALAKVDENHSEFTLYESRLLDISVS	1329
+clawedFrog      TQFQQSQA-AHLHGSSAPFEPTSTDMMRRASRALLALAKVEENHPEFTLYEARLLDISVS	2032
+zebraFish       TQFQQSQG-SLLHLQGSPFEPTSVDMMRRAARALHALAKVEENHSEFTLYESRLLDISVS	2240
+fruitFly        ALGVANQHGINYLRENPDSMGTSLDMLRRAAGTLLHLAKHPDNRSLFMQQEQRLLGLVMS	2484
+roundWorm       MHQVMQAHGMAALRDNPELMGTSVGMLRRAASMLRLLVKVPKAYKIYMKHQTRLLQFTMS	1541
+                     .        ..     ** .*:***:  *  *.*  .    :   : *** : :*
+
+Human           PLMNSLVSQVICDVLFLIGQS---------------------------------------	2285
+Dog             PLMNSLVSQVICDVLFLIGQS---------------------------------------	2285
+Cattle          PLMNSLVSQVICDVLFLIGQS---------------------------------------	2286
+Rat             PLMNSLVSQVICDVLFLIGQS---------------------------------------	1911
+Mouse           PLMNSLVSQVICDVLFLIGQS---------------------------------------	2288
+Chicken         PLMNSLVSQVICDVLFLIGQS---------------------------------------	1350
+clawedFrog      PLMNCSVSQVICDVLFLIGQS---------------------------------------	2053
+zebraFish       PLMNSLVSHVICDVLFLIGQS---------------------------------------	2261
+fruitFly        HILDQQVALIISRVLYQVSRGTGPIHSVEFRLLQQRQQQQLRPGPAGKQAASAGGSATVK	2544
+roundWorm       QLMDSRVAGMIADTLYEIQEFVKEFGEDVPEPLKITYSEGYQPSQTDDKESTS-----TN	1596
+                 :::  *: :*. .*: : .                                        
+
+Human           ------------------------------------------------------------	2285
+Dog             ------------------------------------------------------------	2285
+Cattle          ------------------------------------------------------------	2286
+Rat             ------------------------------------------------------------	1911
+Mouse           ------------------------------------------------------------	2288
+Chicken         ------------------------------------------------------------	1350
+clawedFrog      ------------------------------------------------------------	2053
+zebraFish       ------------------------------------------------------------	2261
+fruitFly        AETASTETSSTEAKPAPAATTAVVNDENSN---------SSQQLPP---AATF-------	2585
+roundWorm       SDAAAPPQKSTSSSPKPVEESAATTSVNVHGNGTLECETSSRPLSSEAAAAVITPYENHH	1656
+                                                                            
+
+Human           ------------------------------------------------------------	2285
+Dog             ------------------------------------------------------------	2285
+Cattle          ------------------------------------------------------------	2286
+Rat             ------------------------------------------------------------	1911
+Mouse           ------------------------------------------------------------	2288
+Chicken         ------------------------------------------------------------	1350
+clawedFrog      ------------------------------------------------------------	2053
+zebraFish       ------------------------------------------------------------	2261
+fruitFly        -----NDVSNSSTNSNSCGTASSNQTNNSTTNSSHSSSAISSQSAITVAAPSAAATGAGS	2640
+roundWorm       KNEEEEDLKKEIDEGESCDGYDTEA--------------------IRLSQK---------	1687
+                                                                            
+
+Human           ------------------------------------------------------------	2285
+Dog             ------------------------------------------------------------	2285
+Cattle          ------------------------------------------------------------	2286
+Rat             ------------------------------------------------------------	1911
+Mouse           ------------------------------------------------------------	2288
+Chicken         ------------------------------------------------------------	1350
+clawedFrog      ------------------------------------------------------------	2053
+zebraFish       ------------------------------------------------------------	2261
+fruitFly        ATAAAIASDQQQVSKVAAAAAAAAALSNASAAAAAAAAAAAASVGPPTSSSVSAGAAVAQ	2700
+roundWorm       RSAAALIDEQSRSPPP----AKRAHLSNGFDKSKS-SVSTNGTLGDA---SQNDG-----	1734
+                                                                            
+
+Human           ----------------	2285
+Dog             ----------------	2285
+Cattle          ----------------	2286
+Rat             ----------------	1911
+Mouse           ----------------	2288
+Chicken         ----------------	1350
+clawedFrog      ----------------	2053
+zebraFish       ----------------	2261
+fruitFly        PAAPPPTNAGTTTAVA	2716
+roundWorm       ---------ALTTAVA	1741
+                                

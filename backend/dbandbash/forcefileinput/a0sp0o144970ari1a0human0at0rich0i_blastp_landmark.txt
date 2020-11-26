@@ -20,7 +20,7 @@ compositionally adjusted substitution matrices", FEBS J.
 272:5101-5109.
 
 
-RID: VYK8KXFA013
+RID: VW0TW1EF016
 
 
 Database: Landmark database for SmartBLAST
