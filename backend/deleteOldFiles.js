@@ -1,17 +1,6 @@
 const cron = require('node-cron');
 const fs = require('fs');
-const blacklist = [
-    'sdf_contactmap',
-    'clustalo-',
-    'upload contents',
-    '_blastp_landmark.txt',
-    '_blastp_landmark.fasta.txt',
-    '_blastp_landmark_alnh_',
-    '_blastp_landmark_human',
-    '_blastp_landmark_spec',
-    '_landmark_homolo_aln',
-    '_landmark_homolo.fasta.txt'
-]
+//whitelist of files that even if 1 month old, will not be deleted
 const whitelist = [
     "NCBI_blast",
     "seq_align_check",
@@ -84,20 +73,27 @@ const whitelist = [
     "uploads"
 ];
 
+//function to delete month old files, given a directory 
+const deleteFiles = (dir) => {
+    fs.readdir(dir, {withFileTypes: true}, (err, files) => {
+        if (err === null) {
+            files.forEach((file) => {
+                const stats = fs.statSync(dir + file.name);
+                if ((new Date().getTime() - stats.mtime.getTime()) / (1000 * 60 * 60 * 24) > 30) {
+                    fs.unlink(dir + file.name, err => console.log(err))
+                }
+            })
+        }      
+    })
+}
+
 const cleanUp = () => {
     //every 1st and 15th, clear month old file
     cron.schedule('0 0 1,15 * *', () => {
-        //remove old uploads
-        fs.readdir('./dbandbash/codes/uploads', {withFileTypes: true}, (err, files) => {
-            if (err === null) {
-                files.forEach((file) => {
-                    const stats = fs.statSync('./dbandbash/codes/uploads/' + file.name);
-                    if ((new Date().getTime() - stats.mtime.getTime()) / (1000 * 60 * 60 * 24) > 30) {
-                        fs.unlink('./dbandbash/codes/uploads/' + file.name, err => console.log(err))
-                    }
-                })
-            }
-        })
+        deleteFiles('./dbandbash/codes/uploads/');
+        deleteFiles('./public/images/');
+        deleteFiles('./public/zipped/');
+        //removing generated files within the code directory, given month old and not on the whitelist
         fs.readdir('./dbandbash/codes', {withFileTypes: true}, (err, files) => {
             if (err === null) {
                 files.forEach(file => {

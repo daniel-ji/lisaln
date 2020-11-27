@@ -16,8 +16,8 @@ class BlastRequest extends Component {
     
         this.state = {
             //result from blastp request
-            filenameprefix: '',
-            updates: [],
+            filenamePrefix: '',
+            updates: '',
             result: '',
             resultFormatted: '',
 
@@ -158,11 +158,12 @@ class BlastRequest extends Component {
                 if (e.data === 'Done!') {
                     clearInterval(scriptTimeElapsed);
                 }
-                this.setState({updates: <Header margin="2vh" key={e.data+Date.now()} size="0.5rem" className="updateMessage" title={e.data}/>})
+                this.setState({updates: <Header margin="2vh" size="0.5rem" className="updateMessage" title={e.data}/>})
             }
             //if protein name input
             if (this.state.proteinName !== '') {
                 axios.post(serverUrl + '/api/blastp/name', {
+                    type: 'regular',
                     proteinName: this.state.proteinName,
                     rangeStart: this.state.rangeStart,
                     rangeEnd: this.state.rangeEnd,
@@ -181,6 +182,7 @@ class BlastRequest extends Component {
             //if fasta file uploaded
             } else if (this.state.fastaInput !== '') {
                 let blastForm = new FormData();
+                blastForm.append('type', 'regular');
                 blastForm.append('fasta', this.state.fastaInput);
                 blastForm.append('rangeStart', this.state.rangeStart);
                 blastForm.append('rangeEnd', this.state.rangeEnd);
@@ -199,6 +201,7 @@ class BlastRequest extends Component {
             //if fasta text pasted
             } else {
                 axios.post(serverUrl + '/api/blastp/text', {
+                    type: 'regular',
                     fastaText: this.state.fastaText, 
                     rangeStart: this.state.rangeStart,
                     rangeEnd: this.state.rangeEnd,
@@ -215,7 +218,7 @@ class BlastRequest extends Component {
                     this.runscriptErrHandle(error.response);
                 })
             }
-            this.setState({result: '', resultFormatted: ''});
+            this.setState({result: '', resultFormatted: '', updates: <Header margin="2vh" size="0.5rem" className="updateMessage" title="Starting..."/>});
             //scroll to bottom of page
             setTimeout(() => document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'}), 1000);   
         } else {
@@ -262,7 +265,7 @@ class BlastRequest extends Component {
             })
             let firstRemoved = gifResults.shift();
             let resultsFormatted = [firstRemoved, ...finalResults, ...gifResults];
-            this.setState({filenameprefix: response.data.filenameprefix, result: response.data.url, resultFormatted: resultsFormatted, goDisabled: false}, () => {
+            this.setState({filenamePrefix: response.data.filenamePrefix, result: response.data.url, resultFormatted: resultsFormatted, goDisabled: false}, () => {
                 setTimeout(
                     () => {
                         this.setState({showScrollIndicator: true}, () => {
@@ -284,7 +287,7 @@ class BlastRequest extends Component {
         });
     }
 
-    //resp err handling
+    //response err handling
     runscriptErrHandle(response) {
         clearInterval(scriptTimeElapsed);
         if (this.state.email === '') {
@@ -296,10 +299,8 @@ class BlastRequest extends Component {
         } else {
             if (response !== undefined && response.status === 503) {
                 this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: [], goDisabled: true})
-                this.scheduleEmail();
             } else {
                 this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: [], goDisabled: true})
-                this.scheduleEmail();
             }
         }
     }
@@ -403,6 +404,8 @@ class BlastRequest extends Component {
         }        
     }
 
+    //form updaters
+
     updateFile(event) {
         if (typeof event.target.files[0] !== 'undefined') {
             this.setState({fastaInput: event.target.files[0], fastaInputTitle: event.target.files[0].name, fastaInputErr: false, proteinNameErr: false, fastaTextErr: false})
@@ -446,7 +449,7 @@ class BlastRequest extends Component {
         if (this.state.result !== undefined && this.state.result !== '') {
             axios.post(serverUrl + '/api/download', {
                 url: this.state.result,
-                filenameprefix: this.state.filenameprefix
+                filenamePrefix: this.state.filenamePrefix
             }).then(response => {
                 window.open(serverUrl + '/api/download');
             }).catch(err => {
@@ -526,7 +529,6 @@ class BlastRequest extends Component {
                     {this.state.resubmitEmail && <Button className="resubmitButton" disableElevation variant="contained" onClick={this.scheduleEmail}>Resubmit</Button>}
                 </div>
                 <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
-                <br/>
                 {this.state.scriptDuration !== '' && this.state.scriptDuration}
                 {this.state.errorMessage !== '' && this.state.errorMessage}
                 {this.state.updates.length !== 0 && this.state.updates}
