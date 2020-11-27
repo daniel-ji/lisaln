@@ -6,26 +6,32 @@ const dotenv = require('dotenv');
 dotenv.config();
 const AdmZip = require('adm-zip');
 const events = require('events');
-let clientUpdater = new events.EventEmitter(); // global namespace issue
-
-// storing stuff
+const nodemailer = require("nodemailer");
+const { nextTick } = require('process');
+// storing fasta/txt files for when user inputs a file
 const multer = require('multer');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'dbandbash/codes/uploads')
     },
     filename: (req, file, cb) => {
+        //at first, generate random name before reading the file
         cb(null, "a" + (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)).toLowerCase() + file.originalname.match(/\.[0-9a-z]+$/i));
     }
 })
 const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 
-//file suffixes for files we're sending (will be combined with protein name)
+//file suffixes for output files (will be combined with protein name / filename prefix)
 const filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt']; 
+//when server is down, clearing these tmp files that may have been created mid-way
 const serverDownTmpExtList = ['.tmp', '.tmp6', '.tmp.fasta', '.tmp.fasta.txt'];
-// email
-const nodemailer = require("nodemailer");
+//emailRegex to verify email is actual email
 const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+
+//global variable containing all the eventEmitters for the real-time updates on client side (SSE Events)
+let clientUpdater = [];
+
+//following 3 routes - will scheduleEmail when the user is resubmitting request when server is down; otherwise, try to regularly run script and output results
 
 //when inputs protein name
 router.post('/name', (req, res) => {
@@ -34,12 +40,12 @@ router.post('/name', (req, res) => {
         if (req.body.type === 'emailOnly') {
             scheduleEmail(req, res, filenamePrefix, filenamePrefix);
         } else {
-            runAndOutput(req, res, filenamePrefix, filenamePrefix);
+            setTimeout(() => {runAndOutput(req, res, filenamePrefix, filenamePrefix, clientUpdater.length - 1)}, 2000);
         }
     }
 })
 
-//when sends file
+//when inputs file
 router.post('/file', upload.single('fasta'), (req, res) => {
     let fastaText = fs.readFileSync(`./${req.file.path}`).toString();
     if (fastaText.length !== 0 && fastaText.length < 10000) {
@@ -48,12 +54,12 @@ router.post('/file', upload.single('fasta'), (req, res) => {
         if (req.body.type === 'emailOnly') {
             scheduleEmail(req, res, `uploads/${filenamePrefix}${req.file.path.match(/\.[0-9a-z]+$/i)}`, filenamePrefix);
         } else {
-            runAndOutput(req, res, `uploads/${filenamePrefix}${req.file.path.match(/\.[0-9a-z]+$/i)}`, filenamePrefix);
+            setTimeout(() => {runAndOutput(req, res, `uploads/${filenamePrefix}${req.file.path.match(/\.[0-9a-z]+$/i)}`, filenamePrefix, clientUpdater.length - 1)}, 2000);
         }
     }
 });
 
-//when input in text box
+//when input sequence in text box
 router.post('/text', (req, res) => {
     if (req.body.fastaText.length !== 0 && req.body.fastaText.length < 10000) {
         const filenamePrefix = "a" + (req.body.fastaText.substr(0, 32).replace(/([^a-z0-9]+)/gi, '0')).toLowerCase();
@@ -61,36 +67,13 @@ router.post('/text', (req, res) => {
         if (req.body.type === 'emailOnly') {
             scheduleEmail(req, res, `uploads/${filenamePrefix}.fasta`, filenamePrefix);
         } else {
-            runAndOutput(req, res, `uploads/${filenamePrefix}.fasta`, filenamePrefix);
+            setTimeout(() => {runAndOutput(req, res, `uploads/${filenamePrefix}.fasta`, filenamePrefix, clientUpdater.length - 1)}, 2000);
         }
     }
 })
 
-//starting SSE Events
-router.get('/', (req, res) => {
-    clientUpdater = new events.EventEmitter();
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-
-    clientUpdater.on('data', (data) => {
-        res.write(`data: ${data}\n\n`);
-        if (data === 'Done!') {
-            res.end();
-        }
-    })
-
-    //listening for exit
-    res.on('close', () => {
-        res.end();
-    });
-
-})
-
 //returning information to client and console - main function for blastp
-const runAndOutput = (req, res, input, filenamePrefix) => {
+const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
     //if some servers are down
     let serverDown = false;
     const serverTimer = setTimeout(() => {
@@ -109,19 +92,19 @@ const runAndOutput = (req, res, input, filenamePrefix) => {
     
     //NCBI_blast args
     let args = ['-LisAln', input];
-    if (req.body.sciName === 'true') {
+    if (req.body.sciName === 'true' || req.body.sciName) {
         args.splice(1, 0, '-nochange');
     }
-    if (req.body.reUse === 'false') {
+    if (req.body.reUse === 'false' || !req.body.reUse) {
         args.splice(1, 0, '-force');
     }
     if (Number.isInteger(parseInt(req.body.rangeStart)) && Number.isInteger(parseInt(req.body.rangeEnd))) {
         args.splice(1, 0, '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)));
     }
-    console.log(args);
     //starts process
     let response = spawn('./dbandbash/codes/NCBI_blast', args);
 
+    //for SSE event updates on client side
     response.stdout.on("data", data => {
         for (let i = 0; i < checkpoints.length; i++) {
             if (data.toString().includes(checkpoints[i])) {
@@ -130,42 +113,40 @@ const runAndOutput = (req, res, input, filenamePrefix) => {
                         tempNumber = data.toString().split(' ').slice(5, 6).join(' ').slice(0, -1);
                         break;
                     case "Trying to get fasta seq for human":
-                        clientUpdater.emit('data', 'Getting fasta file');
+                        clientUpdater[updaterIndex].emit('data', 'Getting fasta file');
                         break;
                     case "=> Use NCBI ":
-                        clientUpdater.emit('data', 'Getting landmark file...');
+                        clientUpdater[updaterIndex].emit('data', 'Getting landmark file...');
                         break;
                     case "by using 27 Landmark diverse species for SmartBLAST: ":
-                        clientUpdater.emit('data', 'Got landmark file, finding sequence alignments...');
+                        clientUpdater[updaterIndex].emit('data', 'Got landmark file, finding sequence alignments...');
                         break;
                     case "Refseq saved in":
-                        clientUpdater.emit('data', 'Found alignments, finding paralogues...');
+                        clientUpdater[updaterIndex].emit('data', 'Found alignments, finding paralogues...');
                         break;
                     case "=> Paralogues: Human homology proteins saved in":
-                        clientUpdater.emit('data', 'Got paralogues, finding orthalogues...');
+                        clientUpdater[updaterIndex].emit('data', 'Got paralogues, finding orthalogues...');
                         break;
                     case "=> NCBI HomoloGene Orthologues: Protein across species saved as":
-                        clientUpdater.emit('data', 'Got orthologues, processing...')
+                        clientUpdater[updaterIndex].emit('data', 'Got orthologues, processing...')
                         break;
                     case "=> LisAln Final Orthologues":
-                        clientUpdater.emit('data', 'Finishing up...')
+                        clientUpdater[updaterIndex].emit('data', 'Finishing up...')
                         break;
                 }
                 checkpoints.splice(i, 1);   
             }
         }
-        //console.log(fs.existsSync('./dbandbash/codes/a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt'));
-        process.stdout.write(data.toString());
+        //process.stdout.write(data.toString());
     })
     response.stderr.on("data", data => {
-        //console.log(fs.existsSync('./dbandbash/codes/a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh.txt'));
-        process.stderr.write(data.toString());
+        //process.stderr.write(data.toString());
     })
 
     response.on("exit", (code, signal) => {
         clearTimeout(serverTimer);
         if (signal !== 'SIGTERM') {
-            clientUpdater.emit('data', 'Done!');
+            clientUpdater[updaterIndex].emit('data', 'Done!');
             //prefix to add onto suffixes - so can get correct files produced from the NCBI_blast shell script
             let url = [];
             //copying them to public and adding the file to the response
@@ -175,7 +156,6 @@ const runAndOutput = (req, res, input, filenamePrefix) => {
                     fs.copyFileSync(`./dbandbash/codes/${filenamePrefix}${suffix}`, `./public/images/${filenamePrefix}${suffix}`);
                 } catch (err) {
                     if (err.code === 'ENOENT') {
-                        console.log(`${filenamePrefix}${suffix}`);
                         add = false;
                     }
                 }
@@ -183,7 +163,7 @@ const runAndOutput = (req, res, input, filenamePrefix) => {
             })
             res.send({url: url, filenamePrefix: filenamePrefix});
 
-            //mail stuff
+            //sending results via mail to the user if requested so 
             if (emailRegex.test(String(req.body.email).toLowerCase())) {
                 async function main() {
                     const transporter = nodemailer.createTransport({
@@ -206,19 +186,17 @@ const runAndOutput = (req, res, input, filenamePrefix) => {
                         text: "Results in attached zip file.",
                         attachments: [{path: `./public/zipped/${filenamePrefix}.zip`}]
                     });
-                    console.log("Message sent: %s", info.messageId);
+                    //console.log("Message sent: %s", info.messageId);
                 }
-                main().catch(console.error)
+                main().catch(/*console.error*/)
             }
         } else if (serverDown) {
             //cleaning when server down 
             serverDownTmpExtList.forEach(item => {
-                fs.unlink(`./dbandbash/codes/${tempNumber}${item}`, (err) => {
-                    if (err) console.log(err);
-                });
+                fs.unlink(`./dbandbash/codes/${tempNumber}${item}`, (err) => {});
             })
             res.sendStatus(503);
-            clientUpdater.emit('data', 'Done!');
+            clientUpdater[updaterIndex].emit('data', 'Done!');
             if (emailRegex.test(String(req.body.email).toLowerCase())) {
                 scheduleEmail(args, req, filenamePrefix);
             }
@@ -226,12 +204,13 @@ const runAndOutput = (req, res, input, filenamePrefix) => {
     });
 }
 
+//function to send mail in 3-5 hours, trying request for two hours
 const scheduleEmail = (req, res, input, filenamePrefix) => {
     setTimeout(() => {
         //if some servers are down
         const serverTimer = setTimeout(() => {
             response.kill('SIGTERM');
-        }, 300000);
+        }, 1000 * 60 * 60 * 2);
 
         //NCBI_blast args
         let args = ['-LisAln', input];
@@ -256,7 +235,6 @@ const scheduleEmail = (req, res, input, filenamePrefix) => {
                     fs.copyFileSync(`./dbandbash/codes/${filenamePrefix}${suffix}`, `./public/images/${filenamePrefix}${suffix}`);
                 } catch (err) {
                     if (err.code === 'ENOENT') {
-                        console.log(`${filenamePrefix}${suffix}`);
                         add = false;
                     }
                 }
@@ -285,14 +263,49 @@ const scheduleEmail = (req, res, input, filenamePrefix) => {
                         text: "Results in attached zip file.",
                         attachments: [{path: `./public/zipped/${filenamePrefix}.zip`}]
                     });
-                    console.log("Message sent: %s", info.messageId);
+                    //console.log("Message sent: %s", info.messageId);
                 }
-                main().catch(console.error)
+                main().catch(/*console.error*/)
             }
         })
     }, 1000 * 60 * 59 * 3)
-    res.send(200);
+    res.sendStatus(200);
 }
 
+
+//starting SSE Events
+router.get('/', (req, res) => {
+    let clear = true;
+    clientUpdater.forEach((updater) => {
+        if (updater !== 'N/a') {
+            clear = false;
+        }
+    })
+    if (clear) {
+        clientUpdater = [];
+    }
+    let index = clientUpdater.length;
+    clientUpdater.push(new events.EventEmitter());
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    clientUpdater[index].on('data', (data) => {
+        console.log(data);
+        res.write(`data: ${data}\n\n`);
+        res.flush(); /* need to do b/c of compression npm package incompatibility with SSE */
+        if (data === 'Done!') {
+            res.write(`data: ${data}\n\n`);
+            res.end();
+            clientUpdater[index] = 'N/a';
+        }
+    })
+
+    //listening for exit
+    res.on('close', () => {
+        res.end();
+    });
+})
 
 module.exports = router;

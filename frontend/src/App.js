@@ -4,6 +4,7 @@ import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
 
 import './styles/App.scss';
 
+//color theme
 const theme = createMuiTheme({
   typography: {
     fontFamily: 'Recursive'

@@ -5,6 +5,7 @@ const router = express.Router();
 const AdmZip = require('adm-zip');
 let filenamePrefix;
 
+//post request to first generat the zip file with alignments and diagrams
 router.post('/', (req, res) => {
     var zip = new AdmZip();
     if (Array.isArray(req.body.url)) {
@@ -17,6 +18,7 @@ router.post('/', (req, res) => {
     res.sendStatus(200);
 })
 
+//get request to actually download the file for the user
 router.get('/', (req, res) => {
     res.download(`./public/zipped/${filenamePrefix}.zip`);
 })
