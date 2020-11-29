@@ -6,7 +6,7 @@ import { Button, TextField, Radio, RadioGroup, FormControl, FormControlLabel} fr
 
 import smoothscroll from 'smoothscroll-polyfill';
 
-const serverUrl = 'https://lisaln.org';
+const serverUrl = 'https://www.lisaln.org';
 let scriptTimeElapsed;
 
 class BlastRequest extends Component {
