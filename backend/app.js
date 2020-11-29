@@ -31,9 +31,9 @@ app.use('/api/blastp', blastpRouter);
 app.use('/api/download', downloadRouter);
 
 // serving react app
-app.use(express.static(path.join(__dirname, 'frontend')));
+app.use(express.static(path.join(__dirname, 'frontend-build')));
 app.get('/', function (req, res) {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+  res.sendFile(path.join(__dirname, 'frontend-build', 'index.html'));
 });
 
 // catch 404 and forward to error handler
