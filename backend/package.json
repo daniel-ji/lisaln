@@ -6,6 +6,7 @@
     "start": "nodemon ./bin/www"
   },
   "dependencies": {
+    "@sendgrid/mail": "^7.4.0",
     "adm-zip": "^0.4.16",
     "compression": "^1.7.4",
     "cookie-parser": "~1.4.5",

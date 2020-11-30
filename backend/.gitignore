@@ -66,3 +66,8 @@ typings/
 /dbandbash/codes/clustalo*
 /dbandbash/codes/uploads
 /dbandbash/codes/uniprot_sprot_202001.dat
+/dbandbash/codes/*[_landmark_]*
+/dbandbash/codes/*_homoloGene.xls
+
+sendgrid.env
+*.pem
