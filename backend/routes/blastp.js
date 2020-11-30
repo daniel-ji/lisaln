@@ -7,6 +7,8 @@ dotenv.config();
 const AdmZip = require('adm-zip');
 const events = require('events');
 const nodemailer = require("nodemailer");
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const { nextTick } = require('process');
 // storing fasta/txt files for when user inputs a file
 const multer = require('multer');
@@ -102,6 +104,7 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
         args.splice(1, 0, '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)));
     }
     //starts process
+    console.log(args);
     let response = spawn('./dbandbash/codes/NCBI_blast', args);
 
     //for SSE event updates on client side
@@ -137,10 +140,10 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
                 checkpoints.splice(i, 1);   
             }
         }
-        //process.stdout.write(data.toString());
+        process.stdout.write(data.toString());
     })
     response.stderr.on("data", data => {
-        //process.stderr.write(data.toString());
+        process.stderr.write(data.toString());
     })
 
     response.on("exit", (code, signal) => {
@@ -165,30 +168,28 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
 
             //sending results via mail to the user if requested so 
             if (emailRegex.test(String(req.body.email).toLowerCase())) {
-                async function main() {
-                    const transporter = nodemailer.createTransport({
-                        host: process.env.emailHost,
-                        port: 587,
-                        auth: {
-                            user: process.env.emailUsername,
-                            pass: process.env.emailPassword
-                        }
-                    });
-                    var zip = new AdmZip();
-                    url.forEach(element => {
-                        zip.addLocalFile('.' + element);
-                    })
-                    zip.writeZip(`./public/zipped/${filenamePrefix}.zip`);  
-                    let info = await transporter.sendMail({
-                        from: `"LisAln Blast Request" <${process.env.emailUsername}>`, 
-                        to: req.body.email,
-                        subject: `LisAln Blast Request results for protein ${filenamePrefix} at time: ${new Date().toLocaleString('en-US')}`, // Subject line
-                        text: "Results in attached zip file.",
-                        attachments: [{path: `./public/zipped/${filenamePrefix}.zip`}]
-                    });
-                    //console.log("Message sent: %s", info.messageId);
+                var zip = new AdmZip();
+                url.forEach(element => {
+                    zip.addLocalFile('.' + element);
+                })
+                zip.writeZip(`./public/zipped/${filenamePrefix}.zip`);  
+                const msg = {
+                    from: 'lisaln.results@gmail.com',
+                    to: req.body.email,
+                    subject: `LisAln Blast Request results for protein ${filenamePrefix} at time: ${new Date().toLocaleString('en-US')}`, // Subject line
+                    text: "Results in attached zip file.",
+                    attachments: [{
+                        content: fs.readFileSync(`./public/zipped/${filenamePrefix}.zip`).toString('base64'),
+                        filename: `${filenamePrefix}.zip`,
+                        type: 'application/zip',
+                        disposition: 'attachment'
+                    }] 
                 }
-                main().catch(/*console.error*/)
+                sgMail.send(msg).then(res => {
+                    console.log(res);
+                }).catch(err => {
+                    console.log(err.response.body.errors);
+                });        
             }
         } else if (serverDown) {
             //cleaning when server down 
@@ -241,31 +242,29 @@ const scheduleEmail = (req, res, input, filenamePrefix) => {
                 add && url.push(`/public/images/${filenamePrefix}${suffix}`);
             })
             //mail to them
-            if (url.length > 0) {
-                async function main() {
-                    const transporter = nodemailer.createTransport({
-                        host: process.env.emailHost,
-                        port: 587,
-                        auth: {
-                            user: process.env.emailUsername,
-                            pass: process.env.emailPassword
-                        }
-                    });
-                    var zip = new AdmZip();
-                    url.forEach(element => {
-                        zip.addLocalFile('.' + element);
-                    })
-                    zip.writeZip(`./public/zipped/${filenamePrefix}.zip`);  
-                    let info = await transporter.sendMail({
-                        from: `"LisAln Blast Request" <${process.env.emailUsername}>`, 
-                        to: req.body.email,
-                        subject: `LisAln Blast Request results for protein ${filenamePrefix} at time: ${new Date().toLocaleString('en-US')}`, // Subject line
-                        text: "Results in attached zip file.",
-                        attachments: [{path: `./public/zipped/${filenamePrefix}.zip`}]
-                    });
-                    //console.log("Message sent: %s", info.messageId);
+            if (url.length > 0 && emailRegex.test(String(req.body.email).toLowerCase())) {
+                var zip = new AdmZip();
+                url.forEach(element => {
+                    zip.addLocalFile('.' + element);
+                })
+                zip.writeZip(`./public/zipped/${filenamePrefix}.zip`);  
+                const msg = {
+                    from: 'lisaln.results@gmail.com',
+                    to: req.body.email,
+                    subject: `LisAln Blast Request results for protein ${filenamePrefix} at time: ${new Date().toLocaleString('en-US')}`, // Subject line
+                    text: "Results in attached zip file.",
+                    attachments: [{
+                        content: fs.readFileSync(`./public/zipped/${filenamePrefix}.zip`).toString('base64'),
+                        filename: `${filenamePrefix}.zip`,
+                        type: 'application/zip',
+                        disposition: 'attachment'
+                    }] 
                 }
-                main().catch(/*console.error*/)
+                sgMail.send(msg).then(res => {
+                    console.log(res);
+                }).catch(err => {
+                    console.log(err.response.body.errors);
+                });        
             }
         })
     }, 1000 * 60 * 59 * 3)
