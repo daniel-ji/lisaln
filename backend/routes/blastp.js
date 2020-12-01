@@ -81,7 +81,7 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
     const serverTimer = setTimeout(() => {
         serverDown = true;
         response.kill('SIGTERM');
-    }, 300000);
+    }, 420000);
 
     //temp file number - needs to delcare here just incase concurrent running of this file
     let tempNumber;
