@@ -146,12 +146,12 @@ class BlastRequest extends Component {
                 let minutes = Math.floor((diff-startTime) / (1000 * 60));
                 let seconds = Math.floor(((diff-startTime) / 1000 ) % 60);
                 this.setState({scriptDuration:  <Header margin="2vh" size="0.5rem" className="updateMessage" title={`Time elapsed: ${minutes}m ${seconds}s`}/>});
-                if (minutes === 5) {
+                if (minutes === 7) {
                     document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'});
                     clearInterval(scriptTimeElapsed);
                     this.setState({goDisabled: false});
                 }
-            }, 980)
+            }, 990)
             //SSE events
             const source = new EventSource(serverUrl + '/api/blastp');
             source.onmessage = (e) => {
@@ -292,15 +292,15 @@ class BlastRequest extends Component {
         clearInterval(scriptTimeElapsed);
         if (this.state.email === '') {
             if (response !== undefined && response.status === 503) {
-                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], goDisabled: true, resubmitEmail: true})
+                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], resubmitEmail: true})
             } else {
-                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], goDisabled: true, resubmitEmail: true})
+                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], resubmitEmail: true})
             }
         } else {
             if (response !== undefined && response.status === 503) {
-                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: [], goDisabled: true})
+                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: []})
             } else {
-                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: [], goDisabled: true})
+                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: []})
             }
         }
     }
@@ -393,7 +393,7 @@ class BlastRequest extends Component {
                     email: this.state.email,
                 })
             }
-            this.setState({result: '', resultFormatted: '', updates: <Header margin="2vh" size="0.5rem" className="updateMessage" title="We're sorry about the inconvenience. A email will be sent in a couple hours if results are available. If not, please try again later."/>});
+            this.setState({result: '', resultFormatted: '', resubmitEmail: false, updates: <Header margin="2vh" size="0.5rem" className="updateMessage" title="We're sorry about the inconvenience. A email will be sent in a couple hours if results are available. If not, please try again later."/>});
         } else {
             // error displaying
             this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid, rangeEndErr: rangeEndInvalid, emailErr: emailInvalid,
@@ -522,7 +522,7 @@ class BlastRequest extends Component {
                             <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
                         </RadioGroup>
                     </FormControl>
-                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Email" help="To additionally send results to the email. If servers are down, inputting your email will send results to you when they are available."/>
+                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Email" help="To additionally send results to the email (may take some time). If servers are down, inputting your email will send results to you when they are available."/>
                     <div className="rowInput">
                         <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
                     </div>
