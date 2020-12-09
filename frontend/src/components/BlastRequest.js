@@ -6,7 +6,9 @@ import { Button, TextField, Radio, RadioGroup, FormControl, FormControlLabel} fr
 
 import smoothscroll from 'smoothscroll-polyfill';
 
-const serverUrl = 'https://www.lisaln.org';
+import helpLogo from '../media/info.png';
+
+const serverUrl = 'http://localhost:3000';
 let scriptTimeElapsed;
 
 class BlastRequest extends Component {
@@ -146,7 +148,7 @@ class BlastRequest extends Component {
                 let minutes = Math.floor((diff-startTime) / (1000 * 60));
                 let seconds = Math.floor(((diff-startTime) / 1000 ) % 60);
                 this.setState({scriptDuration:  <Header margin="2vh" size="0.5rem" className="updateMessage" title={`Time elapsed: ${minutes}m ${seconds}s`}/>});
-                if (minutes === 7) {
+                if (minutes === 10) {
                     document.querySelector('.imageResults').scrollIntoView({block: 'end', behavior: 'smooth'});
                     clearInterval(scriptTimeElapsed);
                     this.setState({goDisabled: false});
@@ -244,8 +246,33 @@ class BlastRequest extends Component {
                 txtPreResults.push(file);
             }
         })
-        const gifResults = gifPreResults.map(image => {
-            return <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/>
+        const gifResults = gifPreResults.map((image, index) => {
+            if (index === 0 || index === 1) {
+                return (  
+                    
+                    <div className="hint--bottom hint--rounded hint--bounce imgContainer" aria-label="Key:&#xa;Yellow - Hydrophobic&#xa;Green - Hydrophilic&#xa;Cyan - Positive&#xa;Pink - Negative">
+                        <fieldset>
+                        <legend>{index === 0 ? "Local Alignment for Orthologs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "") : "Paralogs Alignment" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "")}</legend>
+                        <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/>
+                        </fieldset>
+                    </div>
+                    
+                );
+            } else if (index === 2) {
+                return <div></div>;
+            } else if (index === 3) {
+                return (
+                    <div className="imgContainer">
+                        <fieldset>
+                            <legend>Phylogenetic Trees</legend>
+                            <img key={`${serverUrl + gifPreResults[index-1]}?${Date.now()}`} alt="alignment result" src={`${serverUrl + gifPreResults[index-1]}?${Date.now()}`}/> 
+                            <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
+                        </fieldset>
+                    </div>
+                );
+            } else {
+                return <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
+            }
         })
         const txtResults = txtPreResults.map(txtFile => {
             return (axios.get(`${serverUrl + txtFile}?${Date.now()}`).then().catch());
@@ -254,9 +281,9 @@ class BlastRequest extends Component {
             finalResults = txtResponse.map(indivRes => {
                 return (<TextField
                     inputProps={{spellCheck: false}}
-                    key={Date.now()}
+                    key={Date.now() + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}
                     className="textOutput"
-                    label="Full Alignment Results"
+                    label={"Full Alignment Results for Orthologs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "")}
                     multiline
                     rows = "8"
                     variant="outlined"
@@ -290,17 +317,21 @@ class BlastRequest extends Component {
     //response err handling
     runscriptErrHandle(response) {
         clearInterval(scriptTimeElapsed);
-        if (this.state.email === '') {
-            if (response !== undefined && response.status === 503) {
-                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], resubmitEmail: true})
-            } else {
-                this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time. Enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], resubmitEmail: true})
-            }
+        if (response.status === 400) {
+            this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="Error: provided fasta does not exist. Please check input and try again."/>, result: '', updates: [], goDisabled: false})
         } else {
-            if (response !== undefined && response.status === 503) {
-                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: []})
+            if (this.state.email === '') {
+                if (response !== undefined && response.status === 503) {
+                    this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, please try again at another time or enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], resubmitEmail: true})
+                } else {
+                    this.setState({errorMessage: <Header onClick={this.promptEmail} margin="2vh 15vw" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, please try again at another time or enter your email above and click resubmit to send results to your email when available."/>, result: '', updates: [], resubmitEmail: true})
+                }
             } else {
-                this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: []})
+                if (response !== undefined && response.status === 503) {
+                    this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The database servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: []})
+                } else {
+                    this.setState({errorMessage: <Header margin="2vh" size="0.5rem" className="errorMessage" title="The website servers may be currently unavailable, we will send results to your provided email when it is available."/>, result: '', updates: []})
+                }
             }
         }
     }
@@ -474,8 +505,7 @@ class BlastRequest extends Component {
             <div className="BlastRequest">
                 <Header margin="0 0 5vh 0" size="2rem" title="LisAln Blast Request" />
                 <div className="inputField">
-                    <Header margin="3vh" size="1rem" title="Enter one of the three:"/>
-                    <Header margin="1vh 3vw 5vh 3vw" size="0.4rem" title="(If multiple selections filled, will default to Protein Name, then File Upload, and then Pasted Fasta)" />
+                    <Header margin="0 0 3vh 0" size="1rem" title="Main input (enter one)" help="If multiple selections filled, will default to Protein Name, then File Upload, and then Pasted Fasta"/>
                     <div className="rowInput">
                         <TextField error={this.state.proteinNameErr} label="Protein Name Here" variant="outlined" value={this.state.proteinName} onChange={this.updateName}/>
                         <Button className={this.state.fastaInputErr ? 'buttonError' : ''} disableElevation variant="contained" component="label">Upload Fasta {this.state.fastaInputTitle !== '' && `(Selected file: ${this.state.fastaInputTitle})`}
@@ -500,34 +530,37 @@ class BlastRequest extends Component {
                         error={this.state.fastaTextErr}
                         onChange={this.updateFastaPaste}
                     />
-                </div>
-                <div className="inputField">
-                    <Header margin="0 0 5vh 0" size="1.25rem" title="Optional Inputs" />
-                    <Header margin="0 0 5vh 0" size="1rem" title="Range" help="A range of which area of the protein to align"/>
+                    <Header margin="5vh 0 2vh 0" size="1rem" title="Optional Inputs" />
+                    <Header margin="0 0 3vh 0" size="0.7rem" title="Display Range" help="The sequence range to display alignment"/>
                     <div className="rowInput">
                         <TextField error={this.state.rangeStartErr} label="Starting #" variant="outlined" value={this.state.rangeStart} onChange={this.updateRangeStart}/>
                         <TextField error={this.state.rangeEndErr} label="Ending #" variant="outlined" value={this.state.rangeEnd} onChange={this.updateRangeEnd}/>
                     </div>
-                    <Header  margin="0 0 3vh 0" size="0.9rem" title="Use Scientific Name" help="Example: If marked yes, will output Homo Sapiens instead of Human"/>
-                    <FormControl>
-                        <RadioGroup aria-label="Scientific Name" value={this.state.sciName} onChange={this.updateSciName}>
-                            <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
-                            <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
-                        </RadioGroup>
-                    </FormControl>
-                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Use previous data?" help="Will use previous data if it already has been stored - can drastically improve speed."/>
-                    <FormControl>
-                        <RadioGroup aria-label="Recalc" value={this.state.reUse} onChange={this.updateReCalc}>
-                            <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
-                            <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
-                        </RadioGroup>
-                    </FormControl>
-                    <Header margin="5vh 0 3vh 0" size="0.9rem" title="Email" help="To additionally send results to the email (may take some time). If servers are down, inputting your email will send results to you when they are available."/>
+                    <div className="rowSelectInput">
+                            <Header margin="0 1rem 0 0" size="0.6rem" title="Use scientific name?" leftHelp help="Example: If marked yes, will output Homo Sapiens instead of Human"/>
+                            <FormControl>
+                                <RadioGroup aria-label="Scientific Name" value={this.state.sciName} onChange={this.updateSciName}>
+                                    <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
+                                    <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
+                                </RadioGroup>
+                            </FormControl>
+                    </div>
+                    <div className="rowSelectInput" style={{marginBottom: '3vh'}}>
+                        <Header margin="0 1rem 0 0" size="0.6rem" title="Use previous data?&nbsp;&nbsp;" leftHelp help="Will use previous data if it already has been stored - can drastically improve speed."/>
+                        <FormControl>
+                            <RadioGroup aria-label="Recalc" value={this.state.reUse} onChange={this.updateReCalc}>
+                                <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
+                                <FormControlLabel value={false} control={<Radio color='primary'/>} label="No" />
+                            </RadioGroup>
+                        </FormControl>
+                    </div>
                     <div className="rowInput">
+                        <div className="hint--left hint--rounded hint--bounce hintContainer" aria-label="To additionally send results to the email (may take some time). If servers are down, inputting your email will send results to you when they are available."><img src={helpLogo} alt="Info icon"/></div>
                         <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
                     </div>
                     {this.state.resubmitEmail && <Button className="resubmitButton" disableElevation variant="contained" onClick={this.scheduleEmail}>Resubmit</Button>}
                 </div>
+                
                 <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
                 {this.state.scriptDuration !== '' && this.state.scriptDuration}
                 {this.state.errorMessage !== '' && this.state.errorMessage}

@@ -26,7 +26,7 @@ const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 //file suffixes for output files (will be combined with protein name / filename prefix)
 const filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt']; 
 //when server is down, clearing these tmp files that may have been created mid-way
-const serverDownTmpExtList = ['.tmp', '.tmp6', '.tmp.fasta', '.tmp.fasta.txt'];
+const serverDownTmpExtList = ['.tmp', '.tmp6', '.tmp.fasta', '.tmp.fasta.txt', '.tmp.out', '.tmp2.dump'];
 //emailRegex to verify email is actual email
 const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
@@ -76,12 +76,14 @@ router.post('/text', (req, res) => {
 
 //returning information to client and console - main function for blastp
 const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
+    // for bad inputs
+    let badInput = false;
     //if some servers are down
     let serverDown = false;
     const serverTimer = setTimeout(() => {
         serverDown = true;
         response.kill('SIGTERM');
-    }, 420000);
+    }, 606000);
 
     //temp file number - needs to delcare here just incase concurrent running of this file
     let tempNumber;
@@ -104,7 +106,6 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
         args.splice(1, 0, '-range', (parseInt(req.body.rangeStart)), (parseInt(req.body.rangeEnd)));
     }
     //starts process
-    console.log(args);
     let response = spawn('./dbandbash/codes/NCBI_blast', args);
 
     //for SSE event updates on client side
@@ -125,13 +126,13 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
                         clientUpdater[updaterIndex].emit('data', 'Got landmark file, finding sequence alignments...');
                         break;
                     case "Refseq saved in":
-                        clientUpdater[updaterIndex].emit('data', 'Found alignments, finding paralogues...');
+                        clientUpdater[updaterIndex].emit('data', 'Found alignments, finding paralogs...');
                         break;
                     case "=> Paralogues: Human homology proteins saved in":
-                        clientUpdater[updaterIndex].emit('data', 'Got paralogues, finding orthalogues...');
+                        clientUpdater[updaterIndex].emit('data', 'Got paralogs, finding orthologs...');
                         break;
                     case "=> NCBI HomoloGene Orthologues: Protein across species saved as":
-                        clientUpdater[updaterIndex].emit('data', 'Got orthologues, processing...')
+                        clientUpdater[updaterIndex].emit('data', 'Got orthologs, processing...')
                         break;
                     case "=> LisAln Final Orthologues":
                         clientUpdater[updaterIndex].emit('data', 'Finishing up...')
@@ -144,11 +145,20 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
     })
     response.stderr.on("data", data => {
         process.stderr.write(data.toString());
+        if (data.toString().includes("Fatal error!")) {  
+            clientUpdater[updaterIndex].emit('data', "Done.")
+            badInput = true;
+        }
     })
 
     response.on("exit", (code, signal) => {
         clearTimeout(serverTimer);
-        if (signal !== 'SIGTERM') {
+        if (badInput) {
+            serverDownTmpExtList.forEach(item => {
+                fs.unlink(`./dbandbash/codes/${tempNumber}${item}`, (err) => {});
+            })
+            res.sendStatus(400);
+        } else if (signal !== 'SIGTERM') {
             clientUpdater[updaterIndex].emit('data', 'Done!');
             //prefix to add onto suffixes - so can get correct files produced from the NCBI_blast shell script
             let url = [];
@@ -165,7 +175,6 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
                 add && url.push(`/public/images/${filenamePrefix}${suffix}`);
             })
             res.send({url: url, filenamePrefix: filenamePrefix});
-
             //sending results via mail to the user if requested so 
             if (emailRegex.test(String(req.body.email).toLowerCase())) {
                 var zip = new AdmZip();
@@ -191,7 +200,7 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
                     console.log(err.response.body.errors);
                 });        
             }
-        } else if (serverDown) {
+        } else {
             //cleaning when server down 
             serverDownTmpExtList.forEach(item => {
                 fs.unlink(`./dbandbash/codes/${tempNumber}${item}`, (err) => {});
@@ -294,7 +303,7 @@ router.get('/', (req, res) => {
         console.log(data);
         res.write(`data: ${data}\n\n`);
         res.flush(); /* need to do b/c of compression npm package incompatibility with SSE */
-        if (data === 'Done!') {
+        if (data.includes('Done')) {
             res.write(`data: ${data}\n\n`);
             res.end();
             clientUpdater[index] = 'N/a';

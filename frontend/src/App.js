@@ -7,7 +7,7 @@ import './styles/App.scss';
 //color theme
 const theme = createMuiTheme({
   typography: {
-    fontFamily: 'Recursive'
+    fontFamily: 'JetBrains',
   },
   palette: {
     primary: {
