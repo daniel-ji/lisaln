@@ -8,7 +8,7 @@ import smoothscroll from 'smoothscroll-polyfill';
 
 import helpLogo from '../media/info.png';
 
-const serverUrl = 'http://localhost:3000';
+const serverUrl = 'https://lisaln.org';
 let scriptTimeElapsed;
 
 class BlastRequest extends Component {
@@ -530,14 +530,14 @@ class BlastRequest extends Component {
                         error={this.state.fastaTextErr}
                         onChange={this.updateFastaPaste}
                     />
-                    <Header margin="5vh 0 2vh 0" size="1rem" title="Optional Inputs" />
-                    <Header margin="0 0 3vh 0" size="0.7rem" title="Display Range" help="The sequence range to display alignment"/>
+                    <Header margin="5vh 0 2vh 0" size="0.8rem" title="Optional Inputs" />
+                    <Header margin="0 0 3vh 0" size="0.6rem" title="Display Range" help="The sequence range to display alignment"/>
                     <div className="rowInput">
                         <TextField error={this.state.rangeStartErr} label="Starting #" variant="outlined" value={this.state.rangeStart} onChange={this.updateRangeStart}/>
                         <TextField error={this.state.rangeEndErr} label="Ending #" variant="outlined" value={this.state.rangeEnd} onChange={this.updateRangeEnd}/>
                     </div>
                     <div className="rowSelectInput">
-                            <Header margin="0 1rem 0 0" size="0.6rem" title="Use scientific name?" leftHelp help="Example: If marked yes, will output Homo Sapiens instead of Human"/>
+                            <Header margin="0 1rem 0 0" size="0.5rem" title="Use scientific name?" leftHelp help="Example: If marked yes, will output Homo Sapiens instead of Human"/>
                             <FormControl>
                                 <RadioGroup aria-label="Scientific Name" value={this.state.sciName} onChange={this.updateSciName}>
                                     <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
@@ -546,7 +546,7 @@ class BlastRequest extends Component {
                             </FormControl>
                     </div>
                     <div className="rowSelectInput" style={{marginBottom: '3vh'}}>
-                        <Header margin="0 1rem 0 0" size="0.6rem" title="Use previous data?&nbsp;&nbsp;" leftHelp help="Will use previous data if it already has been stored - can drastically improve speed."/>
+                        <Header margin="0 1rem 0 0" size="0.5rem" title="Use previous data?&nbsp;&nbsp;" leftHelp help="Will use previous data if it already has been stored - can drastically improve speed."/>
                         <FormControl>
                             <RadioGroup aria-label="Recalc" value={this.state.reUse} onChange={this.updateReCalc}>
                                 <FormControlLabel value={true} control={<Radio color='primary'/>} label="Yes" />
@@ -555,7 +555,7 @@ class BlastRequest extends Component {
                         </FormControl>
                     </div>
                     <div className="rowInput">
-                        <div className="hint--left hint--rounded hint--bounce hintContainer" aria-label="To additionally send results to the email (may take some time). If servers are down, inputting your email will send results to you when they are available."><img src={helpLogo} alt="Info icon"/></div>
+                        <div className="hint--left hint--rounded hint--bounce hintContainer hintBigger" aria-label="To additionally send results to the email (may take some time). If servers are down, inputting your email will send results to you when they are available."><img src={helpLogo} alt="Info icon"/></div>
                         <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
                     </div>
                     {this.state.resubmitEmail && <Button className="resubmitButton" disableElevation variant="contained" onClick={this.scheduleEmail}>Resubmit</Button>}
