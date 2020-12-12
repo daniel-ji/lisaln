@@ -8,7 +8,7 @@ import smoothscroll from 'smoothscroll-polyfill';
 
 import helpLogo from '../media/info.png';
 
-const serverUrl = 'https://lisaln.org';
+const serverUrl = 'https://www.lisaln.org';
 let scriptTimeElapsed;
 
 class BlastRequest extends Component {
