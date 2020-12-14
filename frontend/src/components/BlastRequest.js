@@ -478,6 +478,15 @@ class BlastRequest extends Component {
 
     resetFields() {
         this.setState({
+            //result from blastp request
+            filenamePrefix: '',
+            updates: '',
+            result: '',
+            resultFormatted: '',
+
+            //disable go when running
+            goDisabled: false,
+
             fastaInput: '',
             fastaInputTitle: '',
             //to force fasta input and make clear button work
@@ -499,8 +508,10 @@ class BlastRequest extends Component {
             reUse: true,
             email: '',
             emailErr: false,
+            resubmitEmail: false,
 
-            errorMessage: []
+            errorMessage: '',
+            scriptDuration: '',
         })
     }
 
@@ -590,9 +601,9 @@ class BlastRequest extends Component {
                     {this.state.resubmitEmail && <Button className="resubmitButton" disableElevation variant="contained" onClick={this.scheduleEmail}>Resubmit</Button>}
                 </div>
                 <div className="userButtons">
-                    <Button className="resetButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.resetFields}>Reset</Button>
                     <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
                     {this.state.result !== '' && <Button className="downloadButton" variant="contained" disableElevation onClick={this.downloadResults}>Download Results</Button>}
+                    <Button className="resetButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.resetFields}>Reset</Button>
                 </div>
                 {this.state.scriptDuration !== '' && this.state.scriptDuration}
                 {this.state.errorMessage !== '' && this.state.errorMessage}
