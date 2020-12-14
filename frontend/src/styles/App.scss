@@ -175,8 +175,8 @@ body {
 
         .sendButton {
             width: 10vw;
-            font-size: 1.5rem;
-            text-transform: none;
+            font-size: 1.75rem;
+            font-weight: bold;
         }
     
         .downloadButton {
@@ -255,7 +255,8 @@ body {
             }
 
             textarea {
-                font-size: 1vw;
+                width: 100%;
+                font-size: 1rem;
                 font-family: monospace;
             }
         }
