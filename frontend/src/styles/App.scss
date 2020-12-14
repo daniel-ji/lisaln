@@ -158,20 +158,32 @@ body {
         margin-bottom: 5vh;
     }
 
-    .sendButton {
-        width: 10vw;
-        font-size: 1.5rem;
-        text-transform: none;
+    .userButtons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: stretch;
         margin-top: auto;
         margin-bottom: 2vh;
-    }
+        min-width: 40vw;
 
-    .downloadButton {
-        min-width: 13vw;
-        font-size: 1rem;
-        text-transform: none;
-        margin-top: auto;
-        margin-bottom: 5vh;
+        .resetButton {
+            width: 10vw;
+            font-size: 1rem;
+            text-transform: none;
+        }
+
+        .sendButton {
+            width: 10vw;
+            font-size: 1.5rem;
+            text-transform: none;
+        }
+    
+        .downloadButton {
+            min-width: 13vw;
+            font-size: 1rem;
+            text-transform: none;
+        }
     }
 
     .imageResults {

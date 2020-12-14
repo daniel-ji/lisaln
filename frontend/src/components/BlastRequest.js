@@ -67,6 +67,7 @@ class BlastRequest extends Component {
         this.updateSciName = this.updateSciName.bind(this);
         this.updateReCalc = this.updateReCalc.bind(this);
         this.updateEmail = this.updateEmail.bind(this);
+        this.resetFields = this.resetFields.bind(this);
         this.downloadResults = this.downloadResults.bind(this);
         this.scrollToGo = this.scrollToGo.bind(this);
     }
@@ -227,7 +228,7 @@ class BlastRequest extends Component {
             // error displaying
             this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid, rangeEndErr: rangeEndInvalid, emailErr: emailInvalid,
                 errorMessage: errorMessage.map(element => {
-                    return <Header margin="2vh" key={element+Date.now()} size="0.5rem" className="errorMessage" title={element}/>
+                    return <Header margin="2vh 0 0 0" key={element+Date.now()} size="0.5rem" className="errorMessage" title={element}/>
                 })
             })
         }
@@ -429,7 +430,7 @@ class BlastRequest extends Component {
             // error displaying
             this.setState({proteinNameErr: (noInput || inputTooLong === 'name') && true, fastaInputErr: (noInput || inputTooLong === 'file') && true, fastaTextErr: (noInput || inputTooLong === 'text'), rangeStartErr: rangeStartInvalid, rangeEndErr: rangeEndInvalid, emailErr: emailInvalid,
                 errorMessage: errorMessage.map(element => {
-                    return <Header margin="2vh" key={element+Date.now()} size="0.5rem" className="errorMessage" title={element}/>
+                    return <Header margin="2vh 0 0 0" key={element+Date.now()} size="0.5rem" className="errorMessage" title={element}/>
                 })
             })
         }        
@@ -473,6 +474,34 @@ class BlastRequest extends Component {
 
     updateEmail(event) {
         this.setState({email: event.target.value})
+    }
+
+    resetFields() {
+        this.setState({
+            fastaInput: '',
+            fastaInputTitle: '',
+            //to force fasta input and make clear button work
+            fastaInputKey: Math.random().toString(36),
+            fastaInputErr: false,
+
+            proteinName: '',
+            proteinNameErr: false,
+
+            fastaText: '',
+            fastaTextErr: false,
+
+            rangeStart: '',
+            rangeStartErr: false,
+            rangeEnd: '',
+            rangeEndErr: false,
+
+            sciName: false,
+            reUse: true,
+            email: '',
+            emailErr: false,
+
+            errorMessage: []
+        })
     }
 
     //has to post to make zip and then get
@@ -560,12 +589,14 @@ class BlastRequest extends Component {
                     </div>
                     {this.state.resubmitEmail && <Button className="resubmitButton" disableElevation variant="contained" onClick={this.scheduleEmail}>Resubmit</Button>}
                 </div>
-                
-                <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
+                <div className="userButtons">
+                    <Button className="resetButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.resetFields}>Reset</Button>
+                    <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
+                    {this.state.result !== '' && <Button className="downloadButton" variant="contained" disableElevation onClick={this.downloadResults}>Download Results</Button>}
+                </div>
                 {this.state.scriptDuration !== '' && this.state.scriptDuration}
                 {this.state.errorMessage !== '' && this.state.errorMessage}
                 {this.state.updates.length !== 0 && this.state.updates}
-                {this.state.result !== '' && <Button className="downloadButton" variant="contained" disableElevation onClick={this.downloadResults}>Download Results</Button>}
                 <div className="imageResults">{this.state.resultFormatted}</div>
                 <div className={`scrollIndicator ${this.state.showScrollIndicator ? 'shown': 'fadeOut'}`} onClick={this.scrollToGo}><span/></div>
             </div>
