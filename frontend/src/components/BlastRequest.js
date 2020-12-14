@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import axios from 'axios'
 import Header from './Header';
 
-import { Button, TextField, Radio, RadioGroup, FormControl, FormControlLabel} from '@material-ui/core'; 
+import { Card, Button, TextField, Radio, RadioGroup, FormControl, FormControlLabel } from '@material-ui/core'; 
 
 import smoothscroll from 'smoothscroll-polyfill';
 
@@ -52,6 +52,8 @@ class BlastRequest extends Component {
             errorMessage: '',
             showScrollIndicator: true,
             scriptDuration: '',
+
+            popUp: false,
         }
 
         this.runscript = this.runscript.bind(this);
@@ -70,6 +72,7 @@ class BlastRequest extends Component {
         this.resetFields = this.resetFields.bind(this);
         this.downloadResults = this.downloadResults.bind(this);
         this.scrollToGo = this.scrollToGo.bind(this);
+        this.descriptionToggle = this.descriptionToggle.bind(this);
     }
 
     componentDidMount() {
@@ -86,6 +89,10 @@ class BlastRequest extends Component {
         });
         const target = document.querySelector('.sendButton');
         observer.observe(target);
+    }
+
+    descriptionToggle() {
+        this.setState(state => {return {popUp: !state.popUp}})
     }
 
     runscript() {
@@ -167,7 +174,7 @@ class BlastRequest extends Component {
             if (this.state.proteinName !== '') {
                 axios.post(serverUrl + '/api/blastp/name', {
                     type: 'regular',
-                    proteinName: this.state.proteinName,
+                    proteinName: this.state.proteinName.toLowerCase(),
                     rangeStart: this.state.rangeStart,
                     rangeEnd: this.state.rangeEnd,
                     sciName: this.state.sciName,
@@ -543,7 +550,19 @@ class BlastRequest extends Component {
     render() {
         return (
             <div className="BlastRequest">
-                <Header margin="0 0 5vh 0" size="2rem" title="LisAln Blast Request" />
+                <div className={`popUp ${this.state.popUp && 'popUpShown'}`}>
+                    <Card elevation={10} className="popContent">
+                        <Header margin="0 0 5vh 0" title="About this Website"/>
+                        <div className="textContent">
+                            <Header margin="0 0 3vh 0" size="0.5rem" title={<div>Authors: Authors: Daniel Ji, Maggie Li, Sandra Li, Binghui Shen and Hongzhi Li (<a href="mailto:holi@coh.org">holi@coh.org</a>), City of Hope National Medical Center, Duarte, California, USA</div>} />
+                            <p>
+                            LisAln (LIberal Sequence ALigNment) is a hit-the-button website to find orthologs (same genes/proteins across species) and paralogs (similar genes/proteins inside human) of a protein for general scientists or amateurs. It is developed at City of Hope National Medical Center. Users can either input a protein name, fasta sequence, or fasta file to search for a protein. Users can also select the sequence range of human protein and name type for species (scientific or general names) to display the alignment results from EMBL Clustal Omega and Uniprot. LisAln will automatically search the orthologs and paralogs from NCBI Landmark and Homologene databases. It will pick the appropriate proteins to display the results of whole sequence alignments, local aligned sequences that users are interested in, phylogenetic trees, sequence identity heatmap, etc. 
+                            </p>
+                        </div>
+                        <Button className="popButton" disableElevation variant="outlined" component="label" onClick={this.descriptionToggle}>Ok</Button>
+                    </Card>
+                </div>
+                <Header className="title" margin="0 0 5vh 0" size="2rem" title="LisAln (LIberal Sequence ALigNment)" onClick={this.descriptionToggle}/>
                 <div className="inputField">
                     <Header margin="0 0 3vh 0" size="1rem" title="Main input (enter one)" help="If multiple selections filled, will default to Protein Name, then File Upload, and then Pasted Fasta"/>
                     <div className="rowInput">
@@ -599,6 +618,7 @@ class BlastRequest extends Component {
                         <TextField className="longTextField" error={this.state.emailErr} label="Email address" variant="outlined" value={this.state.email} onChange={this.updateEmail}/>
                     </div>
                     {this.state.resubmitEmail && <Button className="resubmitButton" disableElevation variant="contained" onClick={this.scheduleEmail}>Resubmit</Button>}
+                    <Header maxWidth="90%" margin="2vh 0 0 0" size="0.5rem" title={<div>For support, questions, comments, and concerns, contact: <a href="mailto:lisaln.results@gmail.com">lisaln.results@gmail.com</a></div>} />
                 </div>
                 <div className="userButtons">
                     <Button className="sendButton" variant="contained" disableElevation disabled={this.state.goDisabled} onClick={this.runscript}>Go</Button>
