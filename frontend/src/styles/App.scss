@@ -9,9 +9,32 @@
     transition: 0.5s;
 }
 
-html {
-    font-size: 16px;
+@media (min-width: 0px) {
+    html {
+        font-size: 9px;
+    }
 }
+@media (min-width: 720px) {
+    html {
+        font-size: 10px;
+    }
+}
+@media (min-width: 1280px) {
+    html {
+        font-size: 12px;
+    }
+}
+@media (min-width: 1440px) {
+    html {
+        font-size: 14px;
+    }
+}
+@media (min-width: 1600px) {
+    html {
+        font-size: 16px;
+    }
+}
+
 
 body {
     margin: 0;
@@ -35,6 +58,10 @@ body {
 
     h1 {
         margin: 0;
+
+        a {
+            color: inherit;
+        }
     }
 }
 
@@ -75,6 +102,61 @@ body {
 
     .lessMargin {
         margin-bottom: 2vh!important;
+    }
+
+    .popUp {
+        position: fixed;
+        top: 0;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding-bottom: 15%;
+        height: 70%;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.75s z-index 0.5s;
+
+        .popContent {
+            text-align: center;
+            max-width: 50vw;
+            border-radius: 0.6rem;
+            padding: 5vh 3vw;
+            background-color: rgb(230, 230, 230);
+
+            .textContent {
+                margin-bottom: 5vh;
+
+                p {
+                    margin: 0;
+                }
+
+                * {
+                    text-align: justify !important;
+                }
+            }
+        }
+
+        .popButton {
+            font-size: 1rem;
+            min-width: 10vw;
+            background-color: rgb(200, 200, 200);
+
+            &:hover {
+                background-color: rgb(150, 150, 150);
+            }
+        }
+    }
+
+    .popUpShown {
+        opacity: 1;
+        z-index: 2;
+    }
+
+    .title {
+        cursor: pointer;
     }
 
     .inputField {
