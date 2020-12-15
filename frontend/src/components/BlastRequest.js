@@ -246,7 +246,7 @@ class BlastRequest extends Component {
         clearInterval(scriptTimeElapsed);
         let gifPreResults = [];
         let txtPreResults = [];
-        let finalResults = [];
+        let finalTxtResults = [];
         response.data.url.forEach(file => {
             if (file.substr(-3, 3) === 'gif') {
                 gifPreResults.push(file);
@@ -260,7 +260,7 @@ class BlastRequest extends Component {
                     
                     <div className="hint--bottom hint--rounded hint--bounce imgContainer" aria-label="Key:&#xa;Yellow - Hydrophobic&#xa;Green - Hydrophilic&#xa;Cyan - Positive&#xa;Pink - Negative">
                         <fieldset>
-                        <legend>{index === 0 ? "Local Alignment for Orthologs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "") : "Paralogs Alignment" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "")}</legend>
+                        <legend>{index === 0 ? "Local Alignment for Orthologs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "") : "Local Alignment for Paralogs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "")}</legend>
                         <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/>
                         </fieldset>
                     </div>
@@ -286,20 +286,27 @@ class BlastRequest extends Component {
             return (axios.get(`${serverUrl + txtFile}?${Date.now()}`).then().catch());
         })
         Promise.all(txtResults).then(txtResponse => {
-            finalResults = txtResponse.map(indivRes => {
+            finalTxtResults = txtResponse.map((indivRes, index) => {
+                let label;
+                if (index === 0) {
+                    label = "Full Alignment Results for Orthologs";
+                } else {
+                    label = "Full Alignment Results for Paralogs";
+                }
                 return (<TextField
                     inputProps={{spellCheck: false}}
                     key={Date.now() + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}
                     className="textOutput"
-                    label={"Full Alignment Results for Orthologs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "")}
+                    label={label + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "")}
                     multiline
                     rows = "8"
                     variant="outlined"
                     value={indivRes.data}
                 />)
             })
-            let firstRemoved = gifResults.shift();
-            let resultsFormatted = [firstRemoved, ...finalResults, ...gifResults];
+            console.log(gifResults);
+            console.log(finalTxtResults);
+            let resultsFormatted = [gifResults[0], finalTxtResults[0], gifResults[1], finalTxtResults[1], gifResults[2], gifResults[3]];
             this.setState({filenamePrefix: response.data.filenamePrefix, result: response.data.url, resultFormatted: resultsFormatted, goDisabled: false}, () => {
                 setTimeout(
                     () => {
@@ -554,7 +561,7 @@ class BlastRequest extends Component {
                     <Card elevation={10} className="popContent">
                         <Header margin="0 0 5vh 0" title="About this Website"/>
                         <div className="textContent">
-                            <Header margin="0 0 3vh 0" size="0.5rem" title={<div>Authors: Authors: Daniel Ji, Maggie Li, Sandra Li, Binghui Shen and Hongzhi Li (<a href="mailto:holi@coh.org">holi@coh.org</a>), City of Hope National Medical Center, Duarte, California, USA</div>} />
+                            <Header margin="0 0 3vh 0" size="0.5rem" title={<div>Authors: Daniel Ji, Maggie Li, Sandra Li, Binghui Shen and Hongzhi Li (<a href="mailto:holi@coh.org">holi@coh.org</a>), City of Hope National Medical Center, Duarte, California, USA</div>} />
                             <p>
                             LisAln (LIberal Sequence ALigNment) is a hit-the-button website to find orthologs (same genes/proteins across species) and paralogs (similar genes/proteins inside human) of a protein for general scientists or amateurs. It is developed at City of Hope National Medical Center. Users can either input a protein name, fasta sequence, or fasta file to search for a protein. Users can also select the sequence range of human protein and name type for species (scientific or general names) to display the alignment results from EMBL Clustal Omega and Uniprot. LisAln will automatically search the orthologs and paralogs from NCBI Landmark and Homologene databases. It will pick the appropriate proteins to display the results of whole sequence alignments, local aligned sequences that users are interested in, phylogenetic trees, sequence identity heatmap, etc. 
                             </p>

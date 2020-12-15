@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 
 //file suffixes for output files (will be combined with protein name / filename prefix)
-const filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt']; 
+const filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt', '_blastp_landmark_alnh.txt']; 
 //when server is down, clearing these tmp files that may have been created mid-way
 const serverDownTmpExtList = ['.tmp', '.tmp6', '.tmp.fasta', '.tmp.fasta.txt', '.tmp.out', '.tmp2.dump'];
 //emailRegex to verify email is actual email
