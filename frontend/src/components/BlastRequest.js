@@ -267,7 +267,16 @@ class BlastRequest extends Component {
                     
                 );
             } else if (index === 2) {
-                return <div></div>;
+                if (gifPreResults.length === 3) {
+                    <div className="imgContainer">
+                        <fieldset>
+                            <legend>Phylogenetic Trees</legend>
+                            <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
+                        </fieldset>
+                    </div>
+                } else {
+                    return <div></div>;
+                }
             } else if (index === 3) {
                 return (
                     <div className="imgContainer">
