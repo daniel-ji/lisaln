@@ -8,7 +8,9 @@ import smoothscroll from 'smoothscroll-polyfill';
 
 import helpLogo from '../media/info.png';
 
-const serverUrl = 'https://www.lisaln.org';
+//const serverUrl = 'https://www.lisaln.org';
+const serverUrl = 'http://localhost:3000';
+
 let scriptTimeElapsed;
 
 class BlastRequest extends Component {
@@ -257,23 +259,23 @@ class BlastRequest extends Component {
         const gifResults = gifPreResults.map((image, index) => {
             if (index === 0 || index === 1) {
                 return (  
-                    
                     <div className="hint--bottom hint--rounded hint--bounce imgContainer" aria-label="Key:&#xa;Yellow - Hydrophobic&#xa;Green - Hydrophilic&#xa;Cyan - Positive&#xa;Pink - Negative">
                         <fieldset>
                         <legend>{index === 0 ? "Local Alignment for Orthologs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "") : "Local Alignment for Paralogs" + (response.data.filenamePrefix.length < 10 ?  " of "  + response.data.filenamePrefix : "")}</legend>
                         <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/>
                         </fieldset>
                     </div>
-                    
                 );
             } else if (index === 2) {
                 if (gifPreResults.length === 3) {
-                    <div className="imgContainer">
-                        <fieldset>
-                            <legend>Phylogenetic Trees</legend>
-                            <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
-                        </fieldset>
-                    </div>
+                    return (
+                        <div className="imgContainer">
+                            <fieldset>
+                                <legend>Phylogenetic Trees</legend>
+                                <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
+                            </fieldset>
+                        </div>
+                    )
                 } else {
                     return <div></div>;
                 }
