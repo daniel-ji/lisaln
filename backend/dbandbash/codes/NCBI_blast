@@ -564,7 +564,11 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   echo ""
   echo "=> Paralogues: Human homology proteins saved in $outalnh $outfastalnh"
   #$temp.allaln: NP_476473.1     NA      9999    9899    99%     Rat      transforming protein RhoA precursor  (or: isoform X1)
-  sort -k 6 $temp.allaln | grep Human > $temp6  #find human genes
+  if [ "$change" = "" ] ; then
+    sort -k 6 $temp.allaln | grep Homo > $temp6  #find human genes
+  else 
+    sort -k 6 $temp.allaln | grep Human > $temp6  #find human genes
+  fi 
   #remove isoforms and precursor in names: Only keep one record for all isoforms
   echo " Will only keep first one of all isoforms. Also remove precursor or isoform from protein full name for clean display"
   awk 'BEGIN{n=0}{k=split($_,a,"\t");name=a[k]
@@ -753,7 +757,7 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   ./seq_align_check $change2 -plotout ${outallaln}.gif -less -cd -range $rstart $rend -out $temp.out $outallaln | tee $temp.aln  
   #cat $outallaln ; echo hahaha $change2 display ${outallaln}.gif ; exit
   echo ""
-  ./clustal_identity -1 -nohead  $temp.out 
+  ./clustal_identity -multi -1 -nohead  $temp.out
   #Generate image for full-range alignment: NOT working
   #./seq_align_check $change2 -plotout ${outallaln}_all.gif -less -cd -range $rstart $naa  -out $temp.out $outallaln
   [ $quite -ne 1 ] && echo "  If new species shown without simple name, put it in $ed/$speciesfile"

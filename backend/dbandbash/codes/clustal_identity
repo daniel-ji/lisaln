@@ -7,6 +7,7 @@ do1=0   #=1: Use first line/protein to count percentage. =0: Use both
 ncbi=0  #=1: alignment is from NCBI
 thisfile=$0
 header=1
+multi=0 #=1: multiple seq aln lines, will only count first 2 lines
 
 oldline=$*   #all argvs
 #echo $0 $oldline
@@ -18,6 +19,7 @@ if [ -n "$1" ] ; then
    -2) do1=2; shift;;
    -1) do1=1; shift;;
    -ncbi)ncbi=1;shift;;
+   -multi)multi=1;shift;;
    *) $0; echo "***Fatal error @ $0! Argument $1 is unrecoginized and ignored : $0 $oldline!" 1>&2 ; exit;;
   esac
   [ -n "$1" ] && aaa=`echo "$1" | awk '{print substr($1,1,1)}'` || aaa='NA'
@@ -29,6 +31,7 @@ if [ -n "$1" ] ; then
 else
 cat << ttt
  Calculate identity percentage from Clustal alignment file obtained from http://www.ebi.ac.uk/Tools/clustalw2/index.html?
+ Can ONLY count for two seqs, NOT multiple seqs!
    Will not count resname as: x X . - or empty space
     or NCBI Blastp website
      Format of NCBI Alignement file:
@@ -45,6 +48,12 @@ RLIP76          HKEEKHKEKKSKDLTAADVVKQWKEKKKKKKPIQEPEVPQIDVPNLKPIFGIPLADAVER
 1XA6            --------------------VRCSDCGLNVHKQCSKHVPNDCQPDLKRIKKVYCCDLTTL
                                      : .:   : :   . .**:   *:** *  :  .* .
 
+ Format of multiple seqs: from ./NCBI_blast (will only count seq identity of first two lines when -multi)
+Human         GIHHPTPIQIQGIPTILSGRDMIGIAFTGSGKTLVFTLPVIMFCLEQEKRLPFSKREGPYGLIICPSRELA  270
+Mouse         GILHPTPIQIQGIPTILSGRDMIGIAFTGSGKTLVFTLPVIMFCLEQEKRLPFSKREGPYGLIICPSRELA  137
+zebraFish     GIVHPTPIQIQGIPTILSGRDMIGIAFTGSGKTLVFTLPIIMFCLEQEKRLPFCKREGPYGLIICPSRELA  261
+
+
  Usage: $0 [Options] Clustal_Alignment file
  Options:
   -nohead : input clustal align file has no header
@@ -52,13 +61,15 @@ RLIP76          HKEEKHKEKKSKDLTAADVVKQWKEKKKKKKPIQEPEVPQIDVPNLKPIFGIPLADAVER
   -1: Use first line/protein to count percentage only
   -2: Use 2nd line/protein to count percentage only
   -ncbi : alignment is from NCBI, not default Clustal
+  -multi : multiple seqs alignment is from ./NCBI_blast. Will only count seq identity of first two lines/proteins. Will not use concensus line.
 
  Example: 
       $0 RecB_DNA2-1.clustalw 
-        #Alignment file is from Clustal
+        #Alignment file is from Clustal for two seqs/proteins by using concensus line
       $0 -ncbi RecB_DNA2.ncbi
-        #Alignment file is from NCBI, which could be better
+        #Alignment file is from NCBI, which could be better, for two seqs/proteins
 
+  NOTE: Can ONLY count for two seqs, NOT multiple seqs!
   NOTE: NCBI alignment could be better than Clustal alignment. See ./alignment_ncbi2clustal ./web_blast.pl
     Can adjust blastp parameter to find more homology when identity is low. See ARI1/
   NOTE: To use EBI Clustal to align seq file, run ./clustal_seq_align    
@@ -90,6 +101,8 @@ if [ $ncbi -eq 1 ] ; then
  input=$temp
 fi
 
+
+if [ $multi -ne 1 ] ; then  #only use consensus line to cal indentity 
 cat $input | awk 'BEGIN{s=0;s1=0;n1=0;n2=0;c1=0;c2=0;c3=0;g1=0;g2=0;do1='$do1';head='$header'}
 {if(NR>(3*head)&&NF==3){s=1};if(s==1&&NF>=1){s1++};
  if(s==1&&NF==0){s1=0;for(i=1;i<=999;i++){w[i]=1}}  #empty line for a block (NF=0)
@@ -104,7 +117,7 @@ cat $input | awk 'BEGIN{s=0;s1=0;n1=0;n2=0;c1=0;c2=0;c3=0;g1=0;g2=0;do1='$do1';h
  }  #count line2
  if(s1==2){na=length($2);for(i=1;i<=na;i++){a=substr($2,i,1);if(a=="-"){g2++}}}  #count line2
  if(s1>=3){na=length($_);for(i=1;i<=na;i++){v=i-idx+1;a=substr($_,i,1);if(a=="*"){if(w[v]==1){c1++}};
-  if(a==":"){if(w[v]==1){c2++}};if(a=="."){if(w[v]==1){c3++}}}}  #count from line3 for consensus line
+  if(a==":"){if(w[v]==1){c2++}};if(a=="."){if(w[v]==1){c3++}}}}  #count from line3 for consensus line. The thrid line is concensus only!
 }END{
  print "Total residues in first protein =", n1
  print "Total residues in second protein =", n2
@@ -122,5 +135,46 @@ cat $input | awk 'BEGIN{s=0;s1=0;n1=0;n2=0;c1=0;c2=0;c3=0;g1=0;g2=0;do1='$do1';h
   printf("      Gap = %5.2f % (%d)\n",g1/n1*100,g1)
  }
 }'
+else  #multiple seqs alignment is from ./NCBI_blast. Will only count seq identity of first two lines/proteins. Will not use concensus line
+
+cat $input | awk 'BEGIN{s=0;s1=0;n1=0;n2=0;c1=0;c2=0;c3=0;g1=0;g2=0;do1='$do1';head='$header'}
+{if(NR>(3*head)&&NF==3){s=1};if(s==1&&NF>=1){s1++};
+ if(s==1&&NF==0){s1=0;for(i=1;i<=999;i++){w[i]=1}}  #empty line for a block (NF=0)
+ if(s1==1){if(NF!=3){print "Error line1: ",$_};fn=$1;a=$2;na=split(a,d,"-");idx=index($_,$2)
+  for(i=1;i<=length(a);i++){x=substr(a,i,1);if(tolower(x)!="x"&&x!="."&&x!="-"&&x!=" "){n1++}else{w[i]=0}}
+  #for(i=1;i<=na;i++){n1=n1+length(d[i])} #old before 2020/2
+ }  #count line1
+ if(s1==1){all=$2;na=length($2);for(i=1;i<=na;i++){a=substr($2,i,1);if(a=="-"){g1++}}}  #count line1 for gap
+ if(s1==2){if(NF!=3){print "Error line2: ",$_};fn2=$1;a=$2;na=split(a,d,"-");
+  for(i=1;i<=length(a);i++){x=substr(a,i,1);if(tolower(x)!="x"&&x!="."&&x!="-"&&x!=" "){n2++}else{w[i]=0}}
+  #for(i=1;i<=na;i++){n2=n2+length(d[i])} #old before 2020/2
+ }  #count line2
+ if(s1==2){na=length($2);for(i=1;i<=na;i++){a=substr($2,i,1);if(a=="-"){g2++}}
+  nn=length(all)
+  for(i=1;i<=na;i++){a=substr($2,i,1)
+   b=substr(all,i,1)
+   if(a==b&&a!="-"&&a!=" "){c1++}
+  }
+ }  #count line2
+ if(s1>=3){exit}
+}END{
+ print "Total residues in first protein =", n1
+ print "Total residues in second protein =", n2
+ if(do1==2){print "=> Use 2nd protein (",fn2,") to calculate percentage:", n1=n2;g1=g2}else{print "=> Use first protein (",fn,") to calculate percentage:"} 
+ printf(" Identity = %5.2f % (%d)\n",c1/n1*100,c1)
+ printf("        : = %5.2f % (%d)\n",c2/n1*100,c2)
+ printf("        . = %5.2f % (%d)\n",c3/n1*100,c3)
+ printf("      Sum = %5.2f % (%d)\n",(c3+c2+c1)/n1*100,c3+c2+c1)
+ printf("      Gap = %5.2f % (%d)\n",g1/n1*100,g1)
+ if(do1==0){print " ";print "=> Use 2nd protein (",fn2,") to calculate percentage:", n1=n2;g1=g2
+  printf(" Identity = %5.2f % (%d)\n",c1/n1*100,c1)
+  printf("        : = %5.2f % (%d)\n",c2/n1*100,c2)
+  printf("        . = %5.2f % (%d)\n",c3/n1*100,c3)
+  printf("      Sum = %5.2f % (%d)\n",(c3+c2+c1)/n1*100,c3+c2+c1)
+  printf("      Gap = %5.2f % (%d)\n",g1/n1*100,g1)
+ }
+}'
+
+fi
 
 rm -f $temp $temp2 $temp3 $temp4 $temp5 $temp6; exit

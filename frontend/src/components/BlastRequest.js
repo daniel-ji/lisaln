@@ -267,23 +267,24 @@ class BlastRequest extends Component {
                     </div>
                 );
             } else if (index === 2) {
-                if (gifPreResults.length === 3) {
-                    return (
-                        <div className="imgContainer">
-                            <fieldset>
-                                <legend>Phylogenetic Trees</legend>
-                                <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
-                            </fieldset>
-                        </div>
-                    )
-                } else {
-                    return <div></div>;
-                }
+                return <div></div>;
             } else if (index === 3) {
                 return (
                     <div className="imgContainer">
                         <fieldset>
                             <legend>Phylogenetic Trees</legend>
+                            <img key={`${serverUrl + gifPreResults[index-1]}?${Date.now()}`} alt="alignment result" src={`${serverUrl + gifPreResults[index-1]}?${Date.now()}`}/> 
+                            <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
+                        </fieldset>
+                    </div>
+                );
+            } else if (index === 4) {
+                return <div></div>;
+            } else if (index === 5) {
+                return (
+                    <div className="imgContainer">
+                        <fieldset>
+                            <legend>Sequence Identity Heatmap for Orthologs/Paralogs</legend>
                             <img key={`${serverUrl + gifPreResults[index-1]}?${Date.now()}`} alt="alignment result" src={`${serverUrl + gifPreResults[index-1]}?${Date.now()}`}/> 
                             <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
                         </fieldset>
@@ -315,9 +316,8 @@ class BlastRequest extends Component {
                     value={indivRes.data}
                 />)
             })
-            console.log(gifResults);
-            console.log(finalTxtResults);
-            let resultsFormatted = [gifResults[0], finalTxtResults[0], gifResults[1], finalTxtResults[1], gifResults[2], gifResults[3]];
+
+            let resultsFormatted = [gifResults[0], finalTxtResults[0], gifResults[1], finalTxtResults[1], gifResults[2], gifResults[3], gifResults[4], gifResults[5]];
             this.setState({filenamePrefix: response.data.filenamePrefix, result: response.data.url, resultFormatted: resultsFormatted, goDisabled: false}, () => {
                 setTimeout(
                     () => {

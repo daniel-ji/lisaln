@@ -676,7 +676,7 @@ mapfile=${temp2}_map.txt2
 ###### Convert Matrix file to the required firstCol increase first instead of 2ndCol increased first
 if [ $filetype -eq 1 ] ; then
  ord=`awk 'BEGIN{head='$head';s=0;}{if(NR>head){if(s==1){if(pre!=$1){d=1}else{d=0};print d; exit};if(s==0){pre=$1;s=1}}}' $mapfile`
- if [ $ord -eq 0 ] ; then
+ if [[ $ord -eq 0 ]] ; then
   echo "Revert matrix file:"
   awk 'BEGIN{head='$head';s=0;max1=0;max2=0}{if(NR>head&&NF>0){score[$1,$2]=$3;n1[$1]=$4;n2[$2]=$5;c1[$1]=$1;c2[$2]=$2
   if($1>max1){max1=$1}

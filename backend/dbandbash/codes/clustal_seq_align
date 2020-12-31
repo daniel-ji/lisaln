@@ -631,10 +631,16 @@ if [ $display -eq 1 ] ; then
  fill1='max'
  totalp=`awk '{if(NF>0&&substr($1,1,1)!="#"){n++}}END{print n}' $outmatrix`
  mapout=$outputpre'_map'$heatmap'.xls'
- others=$others' -out '$mapout' '$mapled
+ #others=$others' -out '$mapout' '$mapled
+ others=$others' -out '$mapout
+ if [ $force -eq 1 ] ; then
+  rm $mapout $outputpre'_map'${heatmap}*'.map' $outputpre'_map'$heatmap'_map.gif'  
+ fi
  #./sdf_contactmap -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor  $others -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $totalp -labelName -title "$title" $temp.matrix >& $temp
- nohup ./sdf_contactmap -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor  $others -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $totalp -labelName -title "$title" $temp.matrix &
+ #nohup ./sdf_contactmap -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor  $others -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $totalp -labelName -title "$title" $temp.matrix &
+ ./sdf_contactmap $others -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $totalp -labelName -title "$title" $temp.matrix
 [ $debug -eq 1 ] && cat $temp
+
 fi
 
 #Heatmap and dendo of pairwise seq id
@@ -643,8 +649,12 @@ if [ -s $outpair ] && [ $dopair -eq 1 ] ; then
  title="Pairwise Seq Identity Heatmap (%)"
  fill1='max'
  mapout=$outputpre'_pairwise.xls'
- others=$others' -out '$mapout' '$mapled
- ./sdf_contactmap -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor $others -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $npro -labelName -title "$title" $outpair >& $temp
+ #others=$others' -out '$mapout' '$mapled
+ $others' -out '$mapout
+ if [ $force -eq 1 ] ; then
+  rm $mapout $outputpre'_pairwise'*'.map' $outputpre'_pairwise_map.gif'
+ fi
+ ./sdf_contactmap $others -reverse -fillpad 0 -zrange $zrange -barcolor $sidecolor -fontcolor $fontcolor -map  -fill0 min -fill1 $fill1 -labelstep 1 -labeltic $npro -labelName -title "$title" $outpair >& $temp
 [ $debug -eq 1 ] && cat $temp
  title2="Pairwise Seq Identity"
  #clusterout2=$outputpre'_pwclu'$heatmap'.xls'
