@@ -1,3 +1,5 @@
+// Blast page, immediate only child (currently) of App.js 
+
 import React, { Component } from 'react'
 import axios from 'axios'
 import Header from './Header';
@@ -8,8 +10,8 @@ import smoothscroll from 'smoothscroll-polyfill';
 
 import helpLogo from '../media/info.png';
 
-const serverUrl = 'https://www.lisaln.org';
-//const serverUrl = 'http://localhost:3000';
+//const serverUrl = 'https://www.lisaln.org';
+const serverUrl = 'http://localhost:3000';
 
 let scriptTimeElapsed;
 
@@ -30,6 +32,7 @@ class BlastRequest extends Component {
 
             fastaInput: '',
             fastaInputTitle: '',
+
             //to force fasta input and make clear button work
             fastaInputKey: Math.random().toString(36),
             fastaInputErr: false,
@@ -77,6 +80,7 @@ class BlastRequest extends Component {
         this.descriptionToggle = this.descriptionToggle.bind(this);
     }
 
+    //show scroll indicator on load
     componentDidMount() {
         //for smooth scrolling
         smoothscroll.polyfill();
@@ -93,10 +97,12 @@ class BlastRequest extends Component {
         observer.observe(target);
     }
 
+    //description appears when click on title
     descriptionToggle() {
         this.setState(state => {return {popUp: !state.popUp}})
     }
 
+    //when "GO" is clicked
     runscript() {
         //validation
         let noInput = false;
@@ -249,6 +255,7 @@ class BlastRequest extends Component {
         let gifPreResults = [];
         let txtPreResults = [];
         let finalTxtResults = [];
+        //differentiating results between txt and gif
         response.data.url.forEach(file => {
             if (file.substr(-3, 3) === 'gif') {
                 gifPreResults.push(file);
@@ -256,6 +263,7 @@ class BlastRequest extends Component {
                 txtPreResults.push(file);
             }
         })
+        //first two gifs are alignments, next two are phylogentic trees, final two are heatmaps
         const gifResults = gifPreResults.map((image, index) => {
             if (index === 0 || index === 1) {
                 return (  
@@ -294,9 +302,11 @@ class BlastRequest extends Component {
                 return <img key={`${serverUrl + image}?${Date.now()}`} alt="alignment result" src={`${serverUrl + image}?${Date.now()}`}/> 
             }
         })
+        //getting txt file
         const txtResults = txtPreResults.map(txtFile => {
             return (axios.get(`${serverUrl + txtFile}?${Date.now()}`).then().catch());
         })
+        //after txt files all gotten, display all results
         Promise.all(txtResults).then(txtResponse => {
             finalTxtResults = txtResponse.map((indivRes, index) => {
                 let label;
@@ -540,7 +550,7 @@ class BlastRequest extends Component {
         })
     }
 
-    //has to post to make zip and then get
+    //makes a post to request server to make zip, then downloads zip
     downloadResults() {
         if (this.state.result !== undefined && this.state.result !== '') {
             axios.post(serverUrl + '/api/download', {
@@ -553,6 +563,7 @@ class BlastRequest extends Component {
         }
     }
 
+    //scrolls to bottom, depending on if results have arrived or not
     scrollToGo() {
         if (this.state.resultFormatted !== '') {
             this.setState({showScrollIndicator: false}, () => {

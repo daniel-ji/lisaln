@@ -1,3 +1,5 @@
+// main page, uses Material UI
+
 import React from 'react';
 import BlastRequest from './components/BlastRequest';
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';

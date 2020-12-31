@@ -1,3 +1,5 @@
+// for making headers easy - has fontSize, margin, maxWidth, onClick, className, title, and help icon props 
+
 import React from 'react'
 
 import helpLogo from '../media/info.png';

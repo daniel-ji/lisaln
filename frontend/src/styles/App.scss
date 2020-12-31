@@ -1,3 +1,5 @@
+// Styles for landing / blast page
+
 @font-face {
     font-family: 'JetBrains';
     src: url('../fonts/JetBrainsMono-VariableFont_wght.ttf') format('truetype');
@@ -112,7 +114,8 @@ body {
         justify-content: center;
         align-items: center;
         padding-bottom: 30vh;
-        min-height: 70vh;
+        padding-top: 15vh;
+        min-height: 55vh;
         width: 100%;
         overflow-y: hidden;
         background-color: rgba(0, 0, 0, 0.5);

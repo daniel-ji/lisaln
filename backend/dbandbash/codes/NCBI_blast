@@ -564,6 +564,7 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   echo ""
   echo "=> Paralogues: Human homology proteins saved in $outalnh $outfastalnh"
   #$temp.allaln: NP_476473.1     NA      9999    9899    99%     Rat      transforming protein RhoA precursor  (or: isoform X1)
+  #changed 12/30/20 from just one sort to sort based on if change/nochange option
   if [ "$change" = "" ] ; then
     sort -k 6 $temp.allaln | grep Homo > $temp6  #find human genes
   else 
