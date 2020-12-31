@@ -61,7 +61,7 @@ typings/
 .next
 
 #db files
-/dbandbash/[e, E, b]*
+/dbandbash/[e, E, b, B]*
 /dbandbash/codes/*.tmp
 /dbandbash/codes/clustalo*
 /dbandbash/codes/uploads
