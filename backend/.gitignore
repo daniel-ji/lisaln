@@ -68,6 +68,6 @@ typings/
 /dbandbash/codes/uniprot_sprot_202001.dat
 /dbandbash/codes/*[_landmark_]*
 /dbandbash/codes/*_homoloGene.xls
-
+/public
 sendgrid.env
 *.pem

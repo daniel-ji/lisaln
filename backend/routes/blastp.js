@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage, limits: {fileSize: 20000}});
 
 //file suffixes for output files (will be combined with protein name / filename prefix)
-const filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt', '_blastp_landmark_alnh.txt']; 
+const filesuffixes = ['_landmark_homolo_aln.txt.gif', '_blastp_landmark_alnh.txt.gif', '_landmark_homolo_aln_phylotree_dendo.xls.gif', '_blastp_landmark_alnh_phylotree_dendo.xls.gif', '_landmark_homolo_aln.txt_all.gif', '_landmark_homolo_aln.txt', '_blastp_landmark_alnh.txt', '_landmark_homolo_aln_map_map.gif', '_blastp_landmark_alnh_map_map.gif']; 
 //when server is down, clearing these tmp files that may have been created mid-way
 const serverDownTmpExtList = ['.tmp', '.tmp6', '.tmp.fasta', '.tmp.fasta.txt', '.tmp.out', '.tmp2.dump'];
 //emailRegex to verify email is actual email
@@ -42,6 +42,7 @@ router.post('/name', (req, res) => {
         if (req.body.type === 'emailOnly') {
             scheduleEmail(req, res, filenamePrefix, filenamePrefix);
         } else {
+            //timeout set because clientUpdater needs to set up first 
             setTimeout(() => {runAndOutput(req, res, filenamePrefix, filenamePrefix, clientUpdater.length - 1)}, 2000);
         }
     }
@@ -56,6 +57,7 @@ router.post('/file', upload.single('fasta'), (req, res) => {
         if (req.body.type === 'emailOnly') {
             scheduleEmail(req, res, `uploads/${filenamePrefix}${req.file.path.match(/\.[0-9a-z]+$/i)}`, filenamePrefix);
         } else {
+            //timeout set because clientUpdater needs to set up first
             setTimeout(() => {runAndOutput(req, res, `uploads/${filenamePrefix}${req.file.path.match(/\.[0-9a-z]+$/i)}`, filenamePrefix, clientUpdater.length - 1)}, 2000);
         }
     }
@@ -84,6 +86,10 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
         serverDown = true;
         response.kill('SIGTERM');
     }, 606000);
+    // when client cancels request
+    req.on('close', (err) => {
+        response.kill('SIGTERM');
+    })
 
     //temp file number - needs to delcare here just incase concurrent running of this file
     let tempNumber;
@@ -96,7 +102,7 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
     
     //NCBI_blast args
     let args = ['-LisAln', input];
-    if (req.body.sciName === 'true' || req.body.sciName) {
+    if (req.body.sciName === 'true' || (req.body.sciName && req.body.sciName !== 'false')) {
         args.splice(1, 0, '-nochange');
     }
     if (req.body.reUse === 'false' || !req.body.reUse) {
