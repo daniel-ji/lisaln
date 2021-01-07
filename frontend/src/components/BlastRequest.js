@@ -10,8 +10,8 @@ import smoothscroll from 'smoothscroll-polyfill';
 
 import helpLogo from '../media/info.png';
 
-//const serverUrl = 'https://www.lisaln.org';
-const serverUrl = 'http://localhost:3000';
+const serverUrl = 'https://www.lisaln.org';
+//const serverUrl = 'http://localhost:3000';
 
 let scriptTimeElapsed;
 
