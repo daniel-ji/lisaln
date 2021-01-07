@@ -212,7 +212,7 @@ chembl_target_cmpt:CHEMBL_TC_223 cco:proteinSequence "MAQTPAFDKPKVELHVHLDGSIKPET
     Total Target Components = 9159 with 9132 as proteins 
     Total 2 types are: PROTEIN(9132) RNA(27)
 
- #Find CHEMBL info of a protein
+ #Find CHEMBL inhibitors and info of a protein
   $0 -uni -cluster P00813  
   $0 ADA
   $0 -chembl CHEMBL3927
@@ -275,7 +275,7 @@ drd='/flower_data/hongzhili/database/pipeline_script/'; [ -d $drd ] && ed=$drd #
 drd='/home/holi/database/pipeline_script/'; [ -d $drd ] && ed=$drd  #My newest computer
 thisfolder=`pwd`; thisfolder=$thisfolder'/'
 if [ $thisfolder != $ed ] ; then
- cp -f $ed/pdb_sdf_smi_mae_mol2_convert $ed/ChEMBL2name $ed/sdf2images .
+ cp -f $ed/pdb_sdf_smi_mae_mol2_convert $ed/ChEMBL2name $ed/sdf2images $ed/PubChem_search .
 fi
 
 
@@ -853,7 +853,8 @@ if [ $protein -eq 1 ] ; then
  if [ $less -eq 0 ] ; then
   echo "
  Find inhibitors for target at chembl website: ${targeturl}$tidsingle
- Find inhibitor info or sdf, run: ./ChEMBL2name -head -col 4 -out A.xls -outsdf A.sdf $output                               
+ Find inhibitor info or sdf, run: ./ChEMBL2name -head -col 4 -out A.xls -outsdf A.sdf $output
+ Find vendor/patent/analog etc. info of inhibitors, run: ./PubChem_search $osdf
 "
  fi
  if [ $totna -eq 0 ] ; then

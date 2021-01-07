@@ -4,8 +4,8 @@ const fs = require('fs');
 const whitelist = [
     "NCBI_blast",
     "seq_align_check",
-    "nohup.out",
     "sequence_download",
+    "alignment_ncbi2clustal",
     "back",
     "bin_plot",
     "blast_merge",
@@ -65,9 +65,7 @@ const whitelist = [
     "UniProt_get",
     "watermark",
     "web_blast.pl",
-    "i.fasta.txt",
     "uniprot_sprot_202001.dat",
-    "test.log",
     "species_mapping.txt",
     "symbol.txt",
     "uploads"

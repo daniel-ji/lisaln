@@ -71,3 +71,6 @@ typings/
 /public
 sendgrid.env
 *.pem
+!/dbandbash/codes/alignment_ncbi2clustal
+!/dbandbash/codes/sdf_contactmap
+

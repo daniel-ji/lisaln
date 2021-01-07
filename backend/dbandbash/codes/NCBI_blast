@@ -64,7 +64,8 @@ if [ -n "$1" ] ; then
    -nohomo)dohomo=0;shift;;
    -name)doname=1;hname=$2;shift 2;;
    -change)change=$1;change2=$1;shift;;
-   -nochange)change='';change2=$1;shift;;
+   #-nochange)change='';change2=$1;shift;;
+   -nochange)change2=$1;shift;;
    -less)doless=1;lless=$1;shift;;
    -all)onlyshort=0;shift;;
    -nohuman)nohuman=1;shift;;
@@ -88,24 +89,28 @@ if [ -n "$1" ] ; then
 else
 cat << ttt
     ****NOTE: Copyright belongs to Dr. Hongzhi Li *******  Fully debuged and polished on 2019/8
+
  Do NCBI blast/blastp/megablast/rpsblast by using NCBI script ./web_blast.pl
  Can do alignment across species (also NCBI HomoloGene seqs) and among human homologies when -species
  Can also do domain anotation of a seq by using CDD database : -cdd
   To get pfam domain of a protein run: ./Pfam_domain UniProtID
   To find domains in SMART : 
     perl sequence_search_SMART.pl --input $input --output Out --includePfam --includeSchnipsel --includeDISEMBL --includeSignalP --includeRepeats 
+
  LisAln : LIberal Sequence ALigNment (LisAln) as website name. Debugged to run on 8/6/2019  See summer_student/
+ Website: www.lisaln.org
   0. Input can be fasta, short/full protein name (download seq from Uniprot)
   1. Search NCBI Landmark DB to get orthologue seqs : only for significiant aligment. Each species only return one most close to input fasta   
   2. If less than 10 ($snum) seqs, use HomoloGene DB to add more homolgies
   3. Align picked seqs (sorted by species_mapping.txt) from Clustal web-server
   4. Can show a specific region of alignment by -range
   5. Can show simple name instead of scientific name for species
-  6. Can show seq identity heatmap and clustal pty tree
+  6. Can show seq identity heatmap and clustal phylogenetic tree
   7. can show paralogues of human with short protein names
   8. My own code to show seq aln plot with different colors for residues in ./gnuplot_LisAln
   9. Future: show 2ndary structures in aln plot
   10. Future: will show 3-D pocket residues conservation (give a center residue and radius, search neighbor residues has SAS)
+  11. Future: Download landmark database and clustral aln tool to replace very slow NCBI landmark DB server.
  
  Can also download homolog/orthologue from summer_student/  (not implemented in LisAln yet)
 Ensembl download of orthologues/paralogues:
@@ -115,6 +120,7 @@ Special Instructions: Replace src/ensembl-compara/modules/Bio/EnsEMBL/Compara/Al
 Code to download Ensembl orthologues/paralogues and modified by Daniel : sampleCode.pl
   perl sampleCode.pl ENSG00000138346  (for DNA2)
      
+
 ./web_blast.pl :
 https://ncbi.github.io/blast-cloud/dev/api.html
 https://ncbi.github.io/blast-cloud/blastdb/available-blastdbs.html 
@@ -141,12 +147,14 @@ https://ncbi.github.io/blast-cloud/blastdb/available-blastdbs.html
 #  ID named as NP_xxxx (better, human curated), XP_xxx
 #
 # swissprot : Non-redundant UniProtKB/SwissProt sequences.
+
 Which database to use to align seq across species (Orthologs)?
  refseq_protein is still too many returns. Most of them seq id >97%, not good to find other species
  Use landmark database for 27 diverse species!
   If too less, add more homology from NCBI HomoloGene
  NOTE: SMARTblast is good to search species BUT underdevelopment: 
      https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+
 One way to find sequences across species (Orthologs) is from Gene Tree:
 Gene tree: https://uswest.ensembl.org/Homo_sapiens/Gene/Compara_Tree?g=ENSG00000171105;r=19:7112266-7294045
  Click on Orthologues to show all genes with same protein/gene name across species
@@ -161,6 +169,8 @@ Use summer student Daniel in ~/summer_student/Daniel :
 http://www.ensembl.org/info/docs/api/api_installation.html
 Special Instructions: Replace src/ensembl-compara/modules/Bio/EnsEMBL/Compara/AlignedMember.pm with this modified file AlignedMember.pm
 Code to download Ensembl orthologues/paralogues: sampleCode.pl
+
+
 Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -species or ./NCBI_homoloGene
  Genecard has limited (4 species) Orthologs : https://www.genecards.org/cgi-bin/carddisp.pl?gene=ARID1B#paralogs
  
@@ -185,6 +195,7 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
       Manage seq align file by ./seq_align_rearrange
       Display a range of seq align: ./seq_align_check -cd -fasta -name DNA2_HUMAN -range 215 230 species_fasta.aln.txt
  NOTE: recommend to download Clustral aln format with consensus score (for MultAlien, save the colored text webpage)
+
   Other way use Uniprot blastp:
   A: Use Uniprot to BLAST search sequences first. Then select the intersted species. Then re-align them
     http://www.uniprot.org/blast/
@@ -194,7 +205,9 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
     For DNA2 (P51530): UniRef90 returns 227 records. include 3 humans (100% id) and two mouses (78.7%).
                        Swiss-Prot returns 228 records. include 28 humans (100% id) and 18 mouses. It cannot sort by identity
                           Then map to UniRef90 : 135 records with id 90%
+
  WebLogo can do multiple seq alignment and display it in different way (high ide with larger letter): https://weblogo.berkeley.edu/logo.cgi
+
  Usage: $0 [Options] Fasta|shortName|refseqID|NCBIGeneID|UniprotID|FullName(some not work)|GeneName
   
  Options:
@@ -237,14 +250,15 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
    -half halfResidues : residue number around CenterResid. Must use before -center  [$rhalf]
    -center CenterResid : display seq align range from CenterResid-$rhalf to CenterResid+$rhalf
    -nochange | [-change] : will not change species name to simply one as human, mouse. Mapping file saved in species_mapping.txt
-    But -nochange will force to rerun at current version 
    -nocdd : will not check CDD for domains
    -nopredict : Exclude PREDICTED seq in output named as XP_xxxxx. NP_ is currated 
     [default] : PREDICTED seq will keep as they are also reliable and can give longer sequence
    x-slow : use slow version when input is full/long protein name. Now can all use fast version
     [-fast] : use fast version when input is geneName/UniprotID/Refseq/ENSG, but not full protein name
+
   -rpsblast : use rpsblast : Reverse PSI-BLAST http://nebc.nox.ac.uk/bioinformatics/docs/rpsblast.html
   -DNA : use megablast on nt database for DNA fasta
+
  Example:   
    $0 -pdb ARI1A    #input is protein name
    $0 -pdb ARI1A.fasta.txt
@@ -267,6 +281,7 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
      #Find domains in a protein
    $0 -refseq ARI1A.fasta
      #Find best match protein's name, refseq ID
+
    ########## Standard LisAln calls: Input can be fasta or geneName or long name. It is included in ./UniProt_get 
   $0 -li -range 1 60 RhoA  #Input is protein gene name     
   $0 -LisAln -range 1010 1060 ARI1A.fasta  #Input is fasta
@@ -277,6 +292,7 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
       -noshort : seldom can get protein short names. No worth try
       -nohomo : when got enough Lankmark species, will not check HomoloGene DB
       Use fasta ARI1A.fasta for sequence, as if refseq is DNA/RNA NM_xxx, the autodownload seq is RNA, not protein!
+
  NOTE: To obtain purchase info or SDF from a NCBI CID list file or XML CSV file downloaded or SDF downloaded from NCBI, run ./PubChem_search
  NOTE: To download seq of virus(COVID-19) from different patient: https://www.gisaid.org/ EpiFluTM database has more cases than NCBI 
  NOTE: To download fasta seq from NCBI Refseq# : ./sequence_download -gi -o o.fasta NP_006006.3,XP_009292406.1
@@ -293,6 +309,7 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
  NOTE: To check if a mutation is SNP/DNP/TNP, run ./mutation_check D152Y
  NOTE: In Uniprot, each gene for one UniprotID as protein. But fusion proteins are still counted.
    e.g. BCR/ABL1 fusion gene at https://www.uniprot.org/uniprot/Q8NF93
+
  NOTE: can re-run this script as will use most of previous results
  WARNing: NCBI gives Wrong seq aln for M254 in ACTL6A against 4EFH in ACTL6A/. Do not trust it easily. Check strcuture instead!
  WARNing: If this program waiting to long to get results from NCBI, you can manually blastp at NCBI and save output as txt file
@@ -304,13 +321,15 @@ Otherway is NCBI HomoloGene database, can autosearch in ./seq_align_check -cd -s
  NOTE: My AAD (All-Around Docking), DSP (Drugable Site Prediction), STP/SOP (Structure-based Target/Offtarget Prediction), SAG(Side-chain Auto-Grow) 
  NOTE: LiVS (ligand virtual screening pipeline):
  NOTE: LibaPipe (Library Analysis Pipeline): ./library_sdf_report
- NOTE: LisAln (LIberal Sequence ALigNment): ./NCBI_blast -LisAln
+ NOTE: LisAln (LIberal Sequence ALigNment): ./NCBI_blast -LisAln  (www.lisaln.org)
  NOTE: Lian (Legion Interfaces Analysis) : ./namd_analysis  
  NOTE: LiPav (Ligand information of Patent/Analog/Vendor): ./PubChem_convert 
  NOTE: My sRMSD to cluster protein structures: ./protein_cluster
  NOTE: My UDscore (Universal diversity score) to determine Library diversity: ./diversity_DScore
  NOTE: My normalized mutation-rate to predict cancer driver/passenger genes: ./cluster_Pickmutation -length -cancer -col 3 human_uniprot.xls 
+
  NOTE: To download homology PDBs, run: $0 -getPDB Fasta or same as: ./NCBI_blast_PDBs Fasta
+
 ttt
   exit
 fi
@@ -564,12 +583,10 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   echo ""
   echo "=> Paralogues: Human homology proteins saved in $outalnh $outfastalnh"
   #$temp.allaln: NP_476473.1     NA      9999    9899    99%     Rat      transforming protein RhoA precursor  (or: isoform X1)
-  #changed 12/30/20 from just one sort to sort based on if change/nochange option
-  if [ "$change" = "" ] ; then
+   sort -k 6 $temp.allaln | grep Human > $temp6  #find human genes
+   if [ ! -s $temp6 ] ; then
     sort -k 6 $temp.allaln | grep Homo > $temp6  #find human genes
-  else 
-    sort -k 6 $temp.allaln | grep Human > $temp6  #find human genes
-  fi 
+   fi
   #remove isoforms and precursor in names: Only keep one record for all isoforms
   echo " Will only keep first one of all isoforms. Also remove precursor or isoform from protein full name for clean display"
   awk 'BEGIN{n=0}{k=split($_,a,"\t");name=a[k]
@@ -594,7 +611,8 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
    for(i=1;i<=n;i++){if(a[i]==id){doit=1;break}}
    if(doit>0){print $_}
    }' > $outfastalnh
-  ./clustal_seq_align $fforce -less  -nopair -out $outalnh $outfastalnh > $temp6
+  ./clustal_seq_align $fforce -less  -nopair -out $outalnh $outfastalnh > $temp6  
+   #Also generate Group Seq Identity Heatmap
   [ $quite -ne 1 ] && cat $temp6
   nhomo2=`grep '>' $outfastalnh | wc -l | awk '{print $1}'`
 
@@ -758,7 +776,7 @@ if [ $dospecies -eq 1 ] ; then  #ouput e.g. PBRM1/PBRM1.fasta_blastp_landmark.tx
   ./seq_align_check $change2 -plotout ${outallaln}.gif -less -cd -range $rstart $rend -out $temp.out $outallaln | tee $temp.aln  
   #cat $outallaln ; echo hahaha $change2 display ${outallaln}.gif ; exit
   echo ""
-  ./clustal_identity -multi -1 -nohead  $temp.out
+  ./clustal_identity -multi -1 -nohead  $temp.out 
   #Generate image for full-range alignment: NOT working
   #./seq_align_check $change2 -plotout ${outallaln}_all.gif -less -cd -range $rstart $naa  -out $temp.out $outallaln
   [ $quite -ne 1 ] && echo "  If new species shown without simple name, put it in $ed/$speciesfile"
@@ -835,13 +853,16 @@ echo "
    Another way is ./NCBI_homoloGene RefseqID
     NOTE: SMARTblast is good to search species BUT underdevelopment: 
      https://blast.ncbi.nlm.nih.gov/smartblast/smartBlast.cgi?CMD=Web&PAGE_TYPE=BlastDocs
+
   To cluster proteins by Pathway/Function/Domain/Seqidentity/Structure, run ./protein_cluster
   To download fasta seq from NCBI Refseq# : ./sequence_download -gi -o o.fasta NP_006006.3,XP_009292406.1  
   To run Clustal multiple seq alignments : ./clustal_seq_align seqs.fasta.txt
   To rearrange aligned sequence at different line length, run: ./seq_align_rearrange -keeptit -keepdot -space 3 -len 100 $output
   To display a specific range of alignment, run: ./seq_align_check -cd -range 215 230 $output
+
   WARNing: remember to check SWISS-MODEL repository as well as PubChem may miss short peptide as in FANCJ/ for D1138 
    or wrong aln to kinase for nuclease as in Exo5/
+
 "
 fi #doless
 

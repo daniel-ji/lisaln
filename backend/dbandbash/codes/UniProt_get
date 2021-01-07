@@ -1182,6 +1182,7 @@ echo "
  To Convert ChEMBL inhibitors for a protein into .sdf, image and clustering, run ./pdb_sdf_smi_mae_mol2_convert -ChEMBL
  To find common ChEMBL inhibitors from two proteins, run ./lists_compare -chembl -out o.xls IC50.xls IC502.xls
  To find mutation rate vs. protein length and predict cancer driver/passenger genes, run ./cluster_Pickmutation
+ To find interactions of a residue: ./pymol_pdb_contacts -2D -hydro -noPPI -sel "resid 258 and resn PRO" 5gvr.pdb
 
  Isoforms are counted by Refseq records as NP_ (not include XP_). Also in bracket count Ensembl lines for number of isomers as well as in PCNA
  The full Uniprot data was downloaded at 2019/8 : $unifile

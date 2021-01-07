@@ -1,5 +1,34 @@
 #!/usr/bin/perl
-
+########################################################
+#This is downloaded from REST of:
+#  https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=DeveloperInfo
+# Implemented in my ./NCBI_blast
+#
+#MODULES needed: URI::Escape LWP::UserAgent HTTP::Request::Common qw(POST)
+#It works after installation of modules on 2018/6 at ARI1/ as:
+#  ./web_blast.pl blastp pdb ARI1A.fasta 
+# This is a public resource, so usage limitations apply
+#My old downloaded one ./remote_blast_client.pl may not work any more
+#
+# To access Landmark DB: ./web_blast.pl blastp SMARTBLAST%2Flandmark ARI1A.fasta
+#   When NCBI web-server is busy, it may wait extrem long time to get results as of 2019/8
+#
+# e.g. ./web_blast.pl blastp nr protein.fasta
+#      ./web_blast.pl blastp pdb protein.fasta.txt
+#      ./web_blast.pl rpsblast cdd protein.fasta.txt
+#      ./web_blast.pl megablast nt dna1.fasta dna2.fasta
+#      ./web_blast.pl blastp SMARTBLAST%2Flandmark protein.fasta  #Need use %2F for / in SMARTBLAST/landmark NCBI database      
+#
+# nr: All non-redundant GenBank CDS translations+PDB+SwissProt+PIR+PRF excluding environmental samples from WGS projects
+#
+# refseq_protein : The Reference Sequence (RefSeq) database is an open access, annotated and curated collection of publicly available 
+# nucleotide sequences (DNA, RNA) and their protein products. ... DNA, RNA or protein) for major organisms ranging from 
+# viruses to bacteria to eukaryotes
+#
+# swissprot : Non-redundant UniProtKB/SwissProt sequences.
+#
+#
+#
 # $Id: web_blast.pl,v 1.10 2016/07/13 14:32:50 merezhuk Exp $
 #
 # ===========================================================================
@@ -153,7 +182,6 @@ while (true)
         }
 
     # if we get here, something unexpected happened.
-    print "5";
     exit 5;
     } # end poll loop
 

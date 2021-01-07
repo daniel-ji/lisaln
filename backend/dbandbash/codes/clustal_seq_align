@@ -1,5 +1,6 @@
 #!/bin/sh
 #Save all scripts to ~/database/pipeline_script   Script template is ./template 
+
 dotime=1;starts=`date +%s` ; starttime=`date`
 
 thisfile=$0

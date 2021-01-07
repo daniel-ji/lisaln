@@ -116,8 +116,6 @@ const runAndOutput = (req, res, input, filenamePrefix, updaterIndex) => {
 
     //for SSE event updates on client side
     response.stdout.on("data", data => {
-        console.log(fs.existsSync('./dbandbash/codes/a0sp0o144970ari1a0human0at0rich0i_blastp_landmark_alnh_map_map.gif'));
-        console.log(fs.existsSync('./dbandbash/codes/a0sp0o144970ari1a0human0at0rich0i_landmark_homolo_aln_map_map.gif'));
         for (let i = 0; i < checkpoints.length; i++) {
             if (data.toString().includes(checkpoints[i])) {
                 switch(checkpoints[i]) {
@@ -308,7 +306,6 @@ router.get('/', (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
     clientUpdater[index].on('data', (data) => {
-        console.log(data);
         res.write(`data: ${data}\n\n`);
         res.flush(); /* need to do b/c of compression npm package incompatibility with SSE */
         if (data.includes('Done')) {
