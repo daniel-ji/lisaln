@@ -274,6 +274,7 @@ class BlastRequest extends Component {
                         </fieldset>
                     </div>
                 );
+            // 2 and 3 are actually put below 4 and 5
             } else if (index === 2) {
                 return <div></div>;
             } else if (index === 3) {
@@ -326,8 +327,8 @@ class BlastRequest extends Component {
                     value={indivRes.data}
                 />)
             })
-
-            let resultsFormatted = [gifResults[0], finalTxtResults[0], gifResults[1], finalTxtResults[1], gifResults[2], gifResults[3], gifResults[4], gifResults[5]];
+            // last four images are swapped, go in order: 4, 5, 2, 3
+            let resultsFormatted = [gifResults[0], finalTxtResults[0], gifResults[1], finalTxtResults[1], gifResults[4], gifResults[5], gifResults[2], gifResults[3]];
             this.setState({filenamePrefix: response.data.filenamePrefix, result: response.data.url, resultFormatted: resultsFormatted, goDisabled: false}, () => {
                 setTimeout(
                     () => {
