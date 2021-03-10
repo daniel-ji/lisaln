@@ -592,7 +592,7 @@ class BlastRequest extends Component {
                         <Button className="popButton" disableElevation variant="outlined" component="label" onClick={this.descriptionToggle}>Ok</Button>
                     </Card>
                 </div>
-                <Header className="title" margin="0 0 5vh 0" size="2rem" title="LisAln (LIberal Sequence ALigNment)" onClick={this.descriptionToggle}/>
+                <Header className="title" margin="0 0 5vh 0" size="2rem" title="LisAln (LIberal Sequence ALigNment)" onClick={this.descriptionToggle} help=""/>
                 <div className="inputField">
                     <Header margin="0 0 3vh 0" size="1rem" title="Main input (enter one)" help="If multiple selections filled, will default to Protein Name, then File Upload, and then Pasted Fasta"/>
                     <div className="rowInput">
